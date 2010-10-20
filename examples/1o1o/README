@@ -1,0 +1,36 @@
+This example sets '1o1o.pdb' as the input, and requests verbose output, pickle
+writing, and asks the old resids to be printed in output, instead of reindexed
+ones.
+
+[>] parse.py --input=1o1o.pdb -VP --old_resid
+
+[<] Parsing data from `1o1o.pdb`
+[<] 
+[<] 1o1o: Input formatting set to `pdborg`
+[<] 1o1o: Fixing `chainid`s
+[<] 1o1o: Fixing `resid`s
+[<] 1o1o: Output formatting set to `charmm`
+[<] 1o1o: Loading `model0`
+[<] 1o1o: Output path set to `~/examples`
+[<] 1o1o: Parsing `model0`
+[<] 1o1o: Writing output to file `~/examples/new_1o1o-a-het.pdb`
+[<] 1o1o: Writing output to file `~/examples/new_1o1o-a-goodhet.pdb`
+[<] 1o1o: Writing output to file `~/examples/new_1o1o-a-pro.pdb`
+[<] 1o1o: Writing output to file `~/examples/new_1o1o-b-het.pdb`
+[<] 1o1o: Writing output to file `~/examples/new_1o1o-b-goodhet.pdb`
+[<] 1o1o: Writing output to file `~/examples/new_1o1o-b-pro.pdb`
+[<] 1o1o: Writing output to file `~/examples/new_1o1o-c-het.pdb`
+[<] 1o1o: Writing output to file `~/examples/new_1o1o-c-goodhet.pdb`
+[<] 1o1o: Writing output to file `~/examples/new_1o1o-c-pro.pdb`
+[<] 1o1o: Writing output to file `~/examples/new_1o1o-d-het.pdb`
+[<] 1o1o: Writing output to file `~/examples/new_1o1o-d-goodhet.pdb`
+[<] 1o1o: Writing output to file `~/examples/new_1o1o-d-pro.pdb`
+[<] 1o1o: Writing pickle to file `~/examples/1o1o.chk`
+[<] 
+[<] 
+[<] End of verbosity
+[<] 
+[<] 
+[<] natom=4846
+[<] nwarn=0
+[<] seg=['a-het', 'a-goodhet', 'a-pro', 'b-het', 'b-goodhet', 'b-pro', 'c-het', 'c-goodhet', 'c-pro', 'd-het', 'd-goodhet', 'd-pro']

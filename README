@@ -1,0 +1,94 @@
+CHARMMing Python Library 0.1 README
+===================================
+
+Table of Contents:
+  * License
+  * Description
+  * Dependencies
+  * Installation Directions
+  * Authors
+
+
+Licence
+-------
+
+                          PUBLIC DOMAIN NOTICE
+
+This software/database is a "United States Government Work" under the
+terms of the United States Copyright Act.  It was written as part of
+the authors' official duties as a United States Government employee and
+thus cannot be copyrighted.  This software is freely available
+to the public for use.  There is no restriction on its use or
+reproduction.
+
+Although all reasonable efforts have been taken to ensure the accuracy
+and reliability of the software and data, NIH and the U.S.
+Government do not and cannot warrant the performance or results that
+may be obtained by using this software or data. NIH, NHLBI, and the U.S.
+Government disclaim all warranties, express or implied, including
+warranties of performance, merchantability or fitness for any
+particular purpose.
+
+
+Description
+-----------
+
+The CHARMMing Python Library is a package used by CHARMMing to handle the
+bookkeeping tasts often required in complex molecular simulations.  It is meant
+to automate repetitive tasks, and make the potentially painful world of CHARMM
+less so.  The CPyL is _not_ meant in any way to replicate the functionality of
+other programs such a openbabel or MTSB.  This is a package written by
+CHARMMing developers for CHARMMing developers.
+
+More information can be found at http://www.charmming.org
+
+
+Dependencies
+------------
+
+  * Python (2.6 <= ver < 3.0) - With some (minor) modifications to the source,
+      it is possible to use ver >=2.4.
+  * Numpy (tested on ver 1.2.1, use earlier versions at your own peril)
+
+
+Installation Directions
+-----------------------
+
+To install as a local site package, from the shell, execute the following:
+  % ./setup.py build
+  % ./setup.py install --user
+
+To install machine wide (requires root), execute the following:
+  % ./setup.py build
+  % ./setup.py install
+
+
+Authors
+-------
+
+CHARMMing Python Library 0.1
+
+Frank C. Pickard IV
+Laboratory of Computational Biology
+National Heart, Lung and Blood Institute
+National Institutes of Health
+5635 Fishers Lane
+Rockville, MD
+20852
+
+CHARMMing
+
+B. Timothy Miller
+Laboratory of Computational Biology
+National Heart, Lung and Blood Institute
+National Institutes of Health
+5635 Fishers Lane
+Rockville, MD
+20852
+
+H. Lee Woodcock III
+Deparment of Chemistry
+University of South Florida
+4204 E. Fowler Avenue, CHE 205
+Tampa, FL
+33620

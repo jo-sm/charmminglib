@@ -1,0 +1,23 @@
+The follow sets '~/bigbox/charmming/1yjp/1yjp.pdb' as the input file, and requests
+output to be written to the '.' directory.  It also requests verbose output.
+
+
+[>] ./parse.py -I~/bigbox/charmming/1yjp/1yjp.pdb -O. -V
+
+[<] Parsing data from `~/bigbox/charmming/1yjp/1yjp.pdb`
+[<] 
+[<] 1yjp: Input formatting set to `pdborg`
+[<] 1yjp: Fixing `chainid`s
+[<] 1yjp: Fixing `resid`s
+[<] 1yjp: Output formatting set to `charmm`
+[<] 1yjp: Processing `model0`
+[<] 1yjp: Output path set to `~/python/examples`
+[<] 1yjp: Writing output to file `~/python/examples/new_1yjp-a-pro.pdb`
+[<] 
+[<] 
+[<] End of verbosity
+[<] 
+[<] 
+[<] natom=66
+[<] nwarn=0
+[<] seg=['a-pro']

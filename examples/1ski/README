@@ -1,0 +1,23 @@
+Request the second model structure from the '1ski.pdb' file.
+
+[>] ./parse.py -I 1ski.pdb --model=2 -VP
+
+[<] Parsing data from `1ski.pdb`
+[<] 
+[<] 1ski: Input formatting set to `pdborg`
+[<] 1ski: Fixing `chainid`s
+[<] 1ski: Fixing `resid`s
+[<] 1ski: Output formatting set to `charmm`
+[<] 1ski: Loading `model2`
+[<] 1ski: Output path set to `/v/bigbox5/home/fpickard/python/package_prep/charmming/examples/1ski`
+[<] 1ski: Parsing `model2`
+[<] 1ski: Writing output to file `/v/bigbox5/home/fpickard/python/package_prep/charmming/examples/1ski/new_1ski-a-pro.pdb`
+[<] 1ski: Writing pickle to file `/v/bigbox5/home/fpickard/python/package_prep/charmming/examples/1ski/1ski.chk`
+[<] 
+[<] 
+[<] End of verbosity
+[<] 
+[<] 
+[<] natom=134
+[<] nwarn=0
+[<] seg=['a-pro']
