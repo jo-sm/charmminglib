@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+"""
+DOCME
+"""
+# fcp
+# 10/28/2010
 
 
 from distutils.core import setup
@@ -18,9 +23,10 @@ setup(
     description = 'Python backend to CHARMMing',
     author = 'Frank C. Pickard IV',
     author_email = 'pickard81@gmail.com',
-    url = 'www.charmming.org',
+    url = 'www.charmming.googlecode.com/svn/',
     packages = [
-        'charmming', 'charmming.const', 'charmming.io', 'charmming.lib',
+        'charmming', 'charmming.analysis', 'charmming.analysis.cg',
+        'charmming.cg', 'charmming.const', 'charmming.io', 'charmming.lib',
         'charmming.scripts'
         ],
     package_dir = {'charmming': 'src/charmming'},

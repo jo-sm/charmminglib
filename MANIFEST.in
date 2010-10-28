@@ -1,0 +1,14 @@
+include LICENSE
+include README
+include src/charmming/*py
+include src/charmming/analysis/*py
+include src/charmming/analysis/cg/*py
+include src/charmming/cg/*py
+include src/charmming/const/*py
+include src/charmming/io/*py
+include src/charmming/lib/*py
+include src/charmming/scripts/*py
+recursive-include src/charmming/data/ *
+recursive-include doc/ *
+recursive-include examples/ *
+recursive-include test/ *
