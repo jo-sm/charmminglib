@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-
-
 """
 Python implementation by Frank C. Pickard IV
 Bernard R. Brooks Group
@@ -10,9 +8,10 @@ Originally implemented by Rick Venable in csh
 Rich Pastor Group
 NIH,NHLBI,LCB
 
-# 08/05/2010
 v 0.
 """
+# fcp
+# 08/05/2010
 
 
 import sys
@@ -32,7 +31,7 @@ propSuffixes = {
     }
 
 
-helpString = """\
+helpString = """
 Usage %s prop1 prop2 ... propN fileName
 
 Each prop is of the form prefixsuffix, for example avertote.
@@ -40,7 +39,7 @@ Valid prefixes are:
     %r\n
 Valid suffixes are:
     %r\n
-""" % (sys.argv[0],propPrefixes,propSuffixes.keys())
+""" % (sys.argv[0], propPrefixes, propSuffixes.keys())
 
 
 def parse_prop(prop):
@@ -48,37 +47,41 @@ def parse_prop(prop):
     suffix = prop[4:]
     if prefix not in propPrefixes:
         print helpString
-        raise TypeError('parse_prop: invalid prefix %s'%prop[:4])
+        raise TypeError('parse_prop: invalid prefix %s' % prop[:4])
     while 1:
         if suffix:
             if suffix in propSuffixes.keys():
-                return (prop,prefix,suffix)
+                return (prop, prefix, suffix)
             else:
                 suffix = suffix[:-1]
         else:
             print helpString
-            raise TypeError('parse_prop: invalid suffix %s'%prop[4:])
+            raise TypeError('parse_prop: invalid suffix %s' % prop[4:])
 
 
 def getProp(iterable,*props,**kwargs):
     """
-    Returns a dictionary whose keys are the requested properties, and whose
-    values are np.array(prop(t)).  Two key/value pairs are created per property:
-    propX and propX_time.
+    Returns a dictionary whose keys are the requested properties, and
+    whose values are list(prop(t)).  Two key/value pairs are created
+    per property: propX and propX_time.
 
     Usage: getProp(iterable,props*)
     Example:
     >>> getProp(open('charmm.out'),'averener','dynavdw')
     
     Each prop is of the form prefixsuffix, for example 'avertote'
+
     Valid prefixes are:
         ['dyna','aver','fluc','lave','lflc']
+
     Valid suffixes are:
-        ['ener','hbon','volu','dihe','virk','vire','hfct','tote','totk','presse',
-         'pressi','ehfc','asp','hfck','step','user','urey','grms','impr','elec',
-         'vdw','temp','angl','time','viri','bond']
+        ['ener','hbon','volu','dihe','virk','vire','hfct','tote',
+        'totk','presse','pressi','ehfc','asp','hfck','step','user',
+        'urey','grms','impr','elec','vdw','temp','angl','time','viri',
+        'bond']
+
     Valid kwargs:
-        'stopIter' = int
+        `stopIter` = int
     """
     props = [ prop.lower() for prop in props ]
     assert len(props) >= 1
@@ -94,9 +97,9 @@ def getProp(iterable,*props,**kwargs):
     # Initialize Lists
     outDict = {}
     for prop in propList:
-        outDict['%s_time'%prop[0]] = []
+        outDict['%s_time' % prop[0]] = []
         outDict[prop[0]] = []
-    stepIterator = paragraphs(iterable,'DYNA>')
+    stepIterator = paragraphs(iterable, ['DYNA>', ' DYNA>'])
     stepIterator.next() # Discard Header
     stepIterator.next() # Discard Step 0
     # Do Work
@@ -104,24 +107,31 @@ def getProp(iterable,*props,**kwargs):
         if stopIter:
             if i >= stopIter:
                 return outDict
-        subSteps = paragraphs(step,' ----------')
+        subSteps = paragraphs(step,[' ----------'])
         for subStep in subSteps:
-            tmp = [ line for line in subStep if not line.startswith(' ') ] # Strip extraneous lines
-            if tmp: # Ignore empty blocks
-                if tmp[0].startswith('AVER DYN'): continue  # Ignore label block
+            # Strip extraneous lines
+            tmp = [ line for line in subStep if not line.startswith(' ') ]
+            # Ignore empty blocks
+            if tmp:
+                # Ignore label block
+                if tmp[0].startswith('AVER DYN'):
+                    continue
                 tmpSuffix = tmp[0][0:4].lower()
                 for prop in propList:
                     if prop[1] == tmpSuffix:
                         lineNum,start,stop = propSuffixes[prop[2]]
-                        outDict['%s_time'%prop[0]].append(i+1)
+                        outDict['%s_time' % prop[0]].append(i + 1)
                         outDict[prop[0]].append(float(tmp[lineNum][start:stop]))
     return outDict
 
 
 if __name__ == '__main__':
+
+
     import gzip
     import os
     from itertools import izip
+
 
     # Parse command line
     try:
@@ -147,14 +157,14 @@ if __name__ == '__main__':
         filePointer = open(fileName)
 
     # Main
-    outDict = getProp(filePointer,*props)
+    outDict = getProp(filePointer, *props)
     for prop in props:
-        outFileName = '%s_%s.dat' % (os.path.basename(fileName),prop)
+        outFileName = '%s_%s.dat' % (os.path.basename(fileName), prop)
         print 'Writing data to %s' % outFileName
-        iterator = izip(outDict['%s_time'%prop],outDict[prop])
-        tmp = [ '%12s %15s'%('time',prop) ]
+        iterator = izip(outDict['%s_time' % prop], outDict[prop])
+        tmp = [ '%12s %15s' % ('time', prop) ]
         for item in iterator:
-            tmp.append( '%12d %15.5f' % (item[0],item[1]) )
-        write_to = open('%s%s%s' % (os.getcwd(),os.sep,outFileName),'w')
+            tmp.append( '%12d %15.5f' % (item[0], item[1]) )
+        write_to = open('%s%s%s' % (os.getcwd(), os.sep, outFileName), 'w')
         write_to.write('\n'.join(tmp))
         write_to.close()

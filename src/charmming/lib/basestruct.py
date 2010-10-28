@@ -1,6 +1,15 @@
+"""
+DOCME
+"""
+# fcp
+# 10/26/2010
+
+
 from itertools import tee
-from charmming.lib.baseatom import BaseAtom
-from charmming.tools import Property,expandPath
+from numpy import array
+from charmming.lib.metaatom import MetaAtom
+from charmming.tools import Property, expandPath, lowerKeys
+
 
 class StructError(Exception):
     """
@@ -11,116 +20,200 @@ class StructError(Exception):
     def __str__(self):
         return repr(self.value)
 
+
 class BaseStruct(list):
     """
-    This is more or less a dummy class, until we figure out the exact details!
-    Candidates for the BaseStruct to inherit from include...
-        np.array
-        OrderedSet
-        OrderedDict
-        blist
+    This is the base class for all classes that are containers for
+    "atom-like" objects.
+
+    The current implementation uses `list` as a base class, this is not
+    finalized, other candidates to derive from include:
+        `np.array`
+        `OrderedSet`
+        `OrderedDict`
+        `blist`
+
+    Private Attributes
+        `_autoFix`
+    Properties
+        `addr`              STUB
+        `code`
+        `com`
+        `mass`
+        `name`
+    Public Methods
+        `del_atoms`
+        `rotate`            TODO
+        `translate`         TODO
+        `write`
     """
-    def __init__(self,iterable=None,**kwargs):
+    def __init__(self, iterable=None, **kwargs):
         """
-        BaseStruct
         kwargs:
-            name        string
-            code        string  # pdbcode
-            autoFix     [True,False]
+            `autofix`       [True,False]
+            `code`          string          # pdbcode
+            `name`          string
         """
-        super(BaseStruct, self).__init__()
         # kwargs
-        self._name  = kwargs.pop('name','None')
-        self._code  = kwargs.pop('code','None')
-        autoFix     = kwargs.pop('autoFix',True)
-        if kwargs.keys():
-            raise TypeError('Unprocessed kwargs(%r)' % kwargs.keys())
+        kwargs = lowerKeys(kwargs)
+        self._autoFix = kwargs.pop('autofix', True)
+        self._code = kwargs.pop('code', 'None')
+        self._name = kwargs.pop('name', 'None')
         # Gatekeeper
         if iterable is None:
-            list.__init__(self)
+            super(BaseStruct, self).__init__()
         else:
-            if autoFix:
-                iterable = ( key for key in iterable if isinstance(key,BaseAtom) )
+            if self._autoFix:
+                iterable = ( key for key in iterable if isinstance(key, MetaAtom) )
             else:
-                iterable,iterchk = tee(iterable,2)  # make a copy of the iterator for checking
+                iterable,iterchk = tee(iterable, 2)
                 for key in iterchk:
-                    if not isinstance(key,BaseAtom):
-                        raise StructError('Only objects derived from BaseAtom class may be added to a BaseStruct object')
-            list.__init__(self,iterable)
+                    if not isinstance(key, MetaAtom):
+                        raise StructError('Only objects derived from `MetaAtom`\
+                                        class may be added to a BaseStruct object')
+            super(BaseStruct, self).__init__(iterable)
+
+##############
+# Properties #
+##############
 
     @Property
-    def name():
-        doc = "The name property."
+    def addr():
+        doc =\
+        """
+        The `addr` property provides a human readable unique string
+        representation for each `BaseStruct` instance.
+
+        STUB
+        """
         def fget(self):
-            return self._name
-        def fset(self, value):
-            self._name = value
+            raise NotImplementedError
         return locals()
 
     @Property
     def code():
-        doc = "The pdb code of a struct."
+        doc =\
+        """
+        A string representing the Protein Data Bank code from which
+        this `BaseStruct` object was derived.
+        """
         def fget(self):
             return self._code
         def fset(self, value):
             self._code = value
         return locals()
 
-    def del_atoms(self,iterable):
+    @Property
+    def com():
+        doc =\
         """
-        Deletes, in place, one or more atoms as specified by iterable. The atoms themselves should
-        go in the iterable which indicates the atoms to delete.
+        The center of mass in Angstrom.
+        """
+        def fget(self):
+            result = array([ atom.mass * atom.cart for atom in self ])
+            result = result.sum(axis=0)
+            return result / self.mass
+        return locals()
+
+    @Property
+    def mass():
+        doc =\
+        """
+        The total mass, in AMU.
+        """
+        def fget(self):
+            return sum( ( atom.mass for atom in self ) )
+        return locals()
+
+    @Property
+    def name():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            return self._name
+        def fset(self, value):
+            self._name = value
+        return locals()
+
+##################
+# Public Methods #
+##################
+
+    def del_atoms(self, iterable):
+        """
+        Deletes, in place, one or more `Atoms` as specified by `iterable`.
+        The `Atoms` themselves should go in the iterable which indicates
+        the atoms to delete.
+
         >>> BaseStruct.del_atoms(BaseStruct[3:6])
         """
         for key in iterable:
-            if not isinstance(key,BaseAtom):
-                raise StructError('del_atoms: only objects from BaseAtom class may be deleted')
+            if not isinstance(key, MetaAtom):
+                raise StructError('del_atoms: only objects from \
+                                `MetaAtom` class may be deleted')
         del_atoms = set(iterable)
-        del_indicies = [ i for i,atom in enumerate(self) if atom in del_atoms ]
+        del_indicies = [ i for i, atom in enumerate(self) if atom in del_atoms ]
         for index in reversed(del_indicies):
             self.pop(index)
 
-    def write(self,fileName,**kwargs):
+    def rotate(self, rotVector, angle):
+        """
+        TODO
+        """
+        raise NotImplementedError
+
+    def translate(self, transVector):
+        """
+        TODO
+        """
+        raise NotImplementedError
+
+    def write(self, filename, **kwargs):
         """
         Writes a file containing the molecular information contained in the
-        BaseStruct object.
+        `BaseStruct` object.
+
         kwargs:
-            format          ['charmm','pdborg','debug','xdebug','crd','xcrd']
-            old_chainid     [False,True]
-            old_segType     [False,True]
-            old_resid       [False,True]
-            old_atomNum     [False,True]
-            ter             [False,True]
-            end             True if format in ['pdborg','charmm']
-        >>> thisSeg.write('~/charmming/1yjp/1yjp.pdb',Format='charmm',old_resid=True)
+            `outformat`     ["charmm","pdborg","debug","xdebug","crd","xcrd"]
+            `old_chainid`   [False,True]
+            `old_segType`   [False,True]
+            `old_resid`     [False,True]
+            `old_atomNum`   [False,True]
+            `ter`           [False,True]
+            `end`           True if `outformat` in ["pdborg","charmm"]
+
+        >>> thisSeg.write('~/1yjp.pdb',outformat='charmm',old_resid=True)
         """
         # kwargs
-        Format  = kwargs.get('format','charmm')
-        ter     = kwargs.pop('ter',None)
-        end     = kwargs.pop('end',None)
+        kwargs = lowerKeys(kwargs)
+        outFormat = kwargs.get('outformat', 'charmm')
+        end = kwargs.pop('end', None)
+        ter = kwargs.pop('ter', None)
         #
-        fileName = expandPath(fileName)
+        filename = expandPath(filename)
         writeMe = []
-        if Format in ['pdborg','charmm']:
+        if outFormat in ['pdborg', 'charmm']:
             for atom in self:
                 writeMe.append(atom.Print(**kwargs))
                 if end is None:
                     end = True
-        elif Format in ['debug','xdebug']:
+        elif outFormat in ['debug', 'xdebug']:
             for atom in self:
                 writeMe.append(atom.Print(**kwargs))
-        elif Format in ['crd','xcrd']:
-            writeMe.append('*\n')
-            writeMe.append('   %d\n' % len(self))
+        elif outFormat in ['crd', 'xcrd']:
+            writeMe.append('*')
+            writeMe.append('   %d' % len(self))
             for atom in self:
                 writeMe.append(atom.Print(**kwargs))
         # TER/END
         if ter:
-            writeMe.append('TER\n')
+            writeMe.append('TER')
         if end:
-            writeMe.append('END\n')
+            writeMe.append('END')
         # Write file
-        writeMe = ''.join(writeMe)
-        writeTo = open(fileName,'w')
+        writeMe = '\n'.join(writeMe)
+        writeTo = open(filename,'w')
         writeTo.write(writeMe)
         writeTo.close()

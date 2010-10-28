@@ -1,46 +1,61 @@
+"""
+DOCME
+"""
+# fcp
+# 10/26/2010
+
+
 from charmming.const.etc import alphanum
+from charmming.lib.atom import Atom
 from charmming.lib.basestruct import BaseStruct
 from charmming.lib.chain import Chain
-from charmming.tools import Property
+from charmming.tools import Property, lowerKeys
 
 
 class Mol(BaseStruct):
     """
-    Private Attributes
-    Properties
+    Public Attributes
+        `warnings`
     Public Methods
-        iter_chain
-        iter_seg
-        iter_res
-        reindex_atomNum
-        reindex_resid
-        reindex_resIndex
-        parse
-        write               STUB
-        write_charmming
+        `iter_chain`
+        `iter_res`
+        `iter_seg`
+        `parse`
+        `reindex_atomNum`
+        `reindex_resid`
+        `reindex_resIndex`
+        `write`             TODO
+        `write_charmming`
     Private Methods
-        _fix_multi_models
-        _diff_nuc
-        _compliance_charmm_terminalOxygen
-        _compliance_charmm_names
-    Special Methods
+        `_compliance_charmmTerminalOxygen`
+        `_compliance_charmmNames`
+        `_diff_nuc`
+        `_fix_multi_models`
     """
-    def __init__(self,iterable=None,**kwargs):
-        super(Mol,self).__init__(iterable,**kwargs)
+    def __init__(self, iterable=None, **kwargs):
+        super(Mol, self).__init__(iterable, **kwargs)
         self.warnings = []
 
-    def iter_chain(self,**kwargs):
+##################
+# Public Methods #
+##################
+
+    def iter_chain(self, **kwargs):
         """
-        For looping over chains.
+        A generator that returns one `Chain` per iteration.
+
         kwargs:
-            chainids
+            `chainids`
+
+        The kwarg `chainids` can be used to specify which chains are
+        iterated over, and in which order.  By default, all chains are
+        iterated over in alpha order.
+
         >>> thisMol.iter_chain(chainids=['a','b'])
         """
         # kwargs
-        chainids = kwargs.pop('chainids',None)
-        kwargs.pop('segTypes',None)
-        if kwargs.keys():
-            raise TypeError('Unprocessed kwargs(%r)' % kwargs.keys())
+        kwargs = lowerKeys(kwargs)
+        chainids = kwargs.pop('chainids', None)
         #
         if chainids is None:
             chainids = list(set(( atom.chainid for atom in self )))
@@ -48,39 +63,73 @@ class Mol(BaseStruct):
         # Do Work
         for chainid in chainids:
             iterator = ( atom for atom in self if atom.chainid == chainid )
-            result = Chain(iterable=iterator,code=self.code,autoFix=False)
+            result = Chain(iterable=iterator, code=self.code, autoFix=False)
             if result:
                 yield result
 
-    def iter_seg(self,**kwargs):
+    def iter_res(self, **kwargs):
         """
-        For looping over segments.
-        kwargs:
-            chainids
-            segTypes
-        >>> thisMol.iter_seg(chainids=['a'],segTypes=['pro','dna'])
-        """
-        for chain in self.iter_chain(**kwargs):
-            for seg in chain.iter_seg(**kwargs):
-                if seg:
-                    yield seg
+        A generator that returns one `Res` per iteration.
 
-    def iter_res(self,**kwargs):
-        """
-        For looping over residues.
         kwargs:
-            chainids
-            segTypes
-        >>> thisMol.iter_res(chainids=['a','d'],segTypes=['pro','dna'])
+            `chainids`
+            `segtypes`
+
+        The kwargs `chainids` and `segtypes` can be used to specify
+        which residues are iterated over, and in which order.  By
+        default, all residues are iterated over in alpha order of
+        `chainid` and then `segtype`.
+
+        >>> thisMol.iter_res(chainids=['a','d'],segtypes=['pro','dna'])
         """
         for chain in self.iter_chain(**kwargs):
             for seg in chain.iter_seg(**kwargs):
                 for res in seg.iter_res():
                     yield res
 
-    def reindex_atomNum(self,start=1):
+    def iter_seg(self, **kwargs):
         """
-        Reindex the atom numbers of a Mol object, starting at 'start' value.
+        A generator that returns one `Seg` per iteration.
+
+        kwargs:
+            `chainids`
+            `segtypes`
+
+        The kwargs `chainids` and `segtypes` can be used to specify
+        which segments are iterated over, and in which order.  By
+        default, all segments are iterated over in alpha order of
+        `chainid` and then `segtype`.
+
+        >>> thisMol.iter_seg(chainids=['a'],segtypes=['pro','dna'])
+        """
+        for chain in self.iter_chain(**kwargs):
+            for seg in chain.iter_seg(**kwargs):
+                if seg:
+                    yield seg
+
+    def parse(self):
+        """
+        Performs all of the functions of the CHARMMing parser.
+
+        * Multi-model Cleanup
+        * Differentiate Nucleic Acids
+        * Sorting
+        * Reindexing
+        * Renaming as per CHARMM conventions and compatability
+        """
+        self._fix_multiModels()
+        self._diff_nuc()
+        self.sort()
+        self.reindex_atomNum(start=1)
+        self.reindex_resid(start=1)
+        self.reindex_resIndex(start=1)
+        self._compliance_charmmTerminalOxygen()
+        self._compliance_charmmNames()
+
+    def reindex_atomNum(self, start=1):
+        """
+        Reindex the `Atom.atomNum` value of each atom in the `Mol`
+        object, starting from `start`.
         """
         for seg in self.iter_seg():
             i = start
@@ -88,9 +137,10 @@ class Mol(BaseStruct):
                 atom.atomNum = i
                 i += 1
 
-    def reindex_resid(self,start=1):
+    def reindex_resid(self, start=1):
         """
-        Reindex the resids of a residue, starting at 'start' value.
+        Reindex the `Atom.resid` value of each atom in the `Mol` object,
+        starting from `start`.
         """
         for seg in self.iter_seg():
             i = start
@@ -98,36 +148,33 @@ class Mol(BaseStruct):
                 res.resid = i
                 i += 1
 
-    def reindex_resIndex(self,start=1):
+    def reindex_resIndex(self, start=1):
         """
-        Creates a master residue index on a per Mol basis. The index ordering
-        will be alpha ordering, with priority: chainids > segTypes > resid.
+        Creates a master residue index on a per `Mol` basis. The index
+        ordering will be by `chainids` > `segTypes` > `resid`, followed
+        by alpha ordering.
         """
         i = start
         for res in self.iter_res():
             res.resIndex = i
             i += 1
 
-    def write(self,fileName,**kwargs):
-        """
-        Writes a single output file containing all of the Mol object's data.
-        kwargs:
-            format
-        """
-        Format      = kwargs.pop('format','charmm')
+    def write(self, filename, **kwargs):
         raise NotImplementedError
 
     def write_charmming(self):
         """
         Macro for writing CHARMMing style output.
         """
-        segDict = {'nuc':'nuc','pro':'pro','good':'goodhet','bad':'het','dna':'dna','rna':'rna'}
+        segDict = {'nuc':'nuc', 'pro':'pro', 'good':'goodhet', 'bad':'het',
+                'dna':'dna', 'rna':'rna'}
         stdoutList = []
         # Write files
         for seg in self.iter_seg():
-            stdoutList.append('%s-%s' % (seg.chainid,segDict[seg.segType]))
-            name = 'new_%s-%s-%s.pdb' % (self.pdbCode,seg.chainid,segDict[seg.segType])
-            seg.write(filename=name,format='charmm',ter=True,end=False)
+            stdoutList.append('%s-%s' % (seg.chainid, segDict[seg.segType]))
+            name = 'new_%s-%s-%s.pdb' % (self.pdbCode, seg.chainid,
+                                        segDict[seg.segType])
+            seg.write(filename=name, outformat='charmm', ter=True, end=False)
         # To STDOUT
         print 'natom=%d' % len(self)
         print 'nwarn=%d' % len(self.warnings)
@@ -135,36 +182,103 @@ class Mol(BaseStruct):
             print 'warnings=%r' % self.warnings
         print 'seg=%r' % stdoutList
 
-###########
-# Parsing #
-###########
+###################
+# Private Methods #
+###################
 
-    def parse(self):
+    def _compliance_charmmTerminalOxygen(self):
         """
-        Performs all of the functions of the CHARMMing parser. Multi-model
-        sections are tidied up, meaning the most heavily weighted atom in each
-        section is kept, and the rest are deleted. DNA/RNA are differentiated
-        based on chemical information and naming conventions of the PDB. Atoms,
-        residues are reindexed to be CHARMM compatable. Finally residues and
-        atom types are renamed for CHARMM compatability.
+        Fix the atom types of terminal oxygen atoms to be CHARMM
+        compliant.
         """
-        self._fix_multi_models()
-        self._diff_nuc()
-        self.sort()
-        self.reindex_atomNum(start=1)
-        self.reindex_resid(start=1)
-        self.reindex_resIndex(start=1)
-        self._compliance_charmm_terminalOxygen()
-        self._compliance_charmm_names()
+        for seg in self.iter_seg(segtypes=['pro']):
+            resList = list(seg.iter_res())
+            lastRes = resList[-1]
+            for atom in lastRes:
+                if atom.atomType == ' o  ':
+                    atom.atomType = ' ot1'
+                elif atom.atomType == ' oxt':
+                    atom.atomType = ' ot2'
 
-    def _fix_multi_models(self):
+    def _compliance_charmmNames(self):
+        """
+        On a per atom basis, fix residue names and atom types to be
+        CHARMM compliant.
+        """
+        for atom in self:
+            atom._compliance_resName()
+            atom._compliance_atomType()
+
+    def _diff_nuc(self):
+        """
+        Loop over all the segments in the Mol, and differentiate them
+        between dna/rna, then set their seg type appropriately. Throw a
+        warning if the determination cannot be made. The list of
+        warnings is returned, segType is set inline.
+        """
+        badSegAddr = []
+        warnings = []
+        # Use Thymine/Uracil to determine dna/rna.
+        thyCheck = set(['t', 'thy', 'dt'])
+        uraCheck = set(['u', 'ura', 'du'])
+        for seg in self.iter_seg(segtypes=['nuc']):
+            thymine = False
+            uracil  = False
+            for atom in seg:
+                if atom.resName in thyCheck:
+                    thymine = True
+                if atom.resName in uraCheck:
+                    uracil  = True
+#WARN       # Throw a warning when Uracil and Thymine are found in the same segment
+            if thymine and uracil:
+                msg = '_diff_nuc: URA & THY in same segment, seg.addr = "%s"' \
+                        % seg.addr
+                badSegAddr.append(seg.addr)
+                warnings.append(msg)
+            elif thymine:
+                seg.segType = 'dna'
+            elif uracil:
+                seg.segType = 'rna'
+        # Use pdb residue names to infer dna/rna.
+        for seg in self.iter_seg(segtypes=['nuc']):
+            ribo = False
+            deoxy = False
+            riboCheck = ['a', 'c', 'g', 'u', 'i']
+            deoxyCheck = ['da', 'dc', 'dg', 'dt', 'di']
+            for atom in seg:
+                if atom.resName in riboCheck:
+                    ribo = True
+                if atom.resName in deoxyCheck:
+                    deoxy = True
+#WARN       # Throw a warning when ribo- and deoxy- are found in the same segment
+            if ribo and deoxy:
+                msg = '_diff_nuc: ribo- & deoxy- in same segment, seg.addr = "%s"' \
+                        % seg.addr
+                badSegAddr.append(seg.addr)
+                warnings.append(msg)
+            elif ribo:
+                seg.segType = 'rna'
+            elif deoxy:
+                seg.segType = 'dna'
+        # Final check
+        for seg in self.iter_seg(segtypes=['nuc']):
+            if seg.addr not in badSegAddr:
+                msg = '_diff_nuc: undetermined nucleotide, seg.addr = "%s"' \
+                        % seg.addr
+                badSegAddr.append(seg.addr)
+                warnings.append(msg)
+        self.warnings = warnings
+
+    def _fix_multiModels(self):
         """
         Searches for multi-model sections, and 'fixes' them. Renames
         residues, and deletes atoms.
-        For example...
+
+        For example:
         15  CE AMET A   1      16.764  26.891  42.696  0.73 60.01           C
         16  CE BMET A   1      18.983  29.323  38.169  0.27 60.30           C
-        maps to:
+
+        Becomes:
         15  CE  MET A   1      16.764  26.891  42.696  0.73 60.01           C
         """
         delete_these = []
@@ -176,14 +290,16 @@ class Mol(BaseStruct):
             keep = False
             for i,atom in enumerate(res):
                 try:
-                    # Comparison atom, check ahead if first, check behind for all others
+                    # Comparison atom:
+                    ##### check ahead if first, check behind for all others
                     if i == 0:
                         comp = res[1]
                     else:
-                        comp = res[i-1]
+                        comp = res[i - 1]
                     # Check last 3 chars are different, and first char is the same.
                     # for example: AMET and BMET
-                    if atom.resName[-3:] == comp.resName[-3:] and atom.resName[0] != comp.resName[0]:
+                    if atom.resName[-3:] == comp.resName[-3:] and \
+                        atom.resName[0] != comp.resName[0]:
                         # If buffer is empty, load it up.
                         if not tmp:
                             tmp.append(atom)
@@ -229,82 +345,3 @@ class Mol(BaseStruct):
                     keep = False
         # Delete things
         self.del_atoms(delete_these)
-
-    def _diff_nuc(self):
-        """
-        Loop over all the segments in the Mol, and differentiate them between
-        dna/rna, then set their seg type appropriately. Throw a warning if the
-        determination cannot be made. The list of warnings is returned, segType
-        is set inline.
-        """
-        badSegAddr = []
-        warnings = []
-        # Use Thymine/Uracil to determine dna/rna.
-        for seg in self.iter_seg(segTypes=['nuc']):
-            thymine = False
-            uracil  = False
-            thyCheck = set(['t','thy','dt'])
-            uraCheck = set(['u','ura','du'])
-            for atom in seg:
-                if atom.resName in thyCheck:
-                    thymine = True
-                if atom.resName in uraCheck:
-                    uracil  = True
-#WARN       # Throw a warning when Uracil and Thymine are found in the same segment
-            if thymine and uracil:
-                msg = '_diff_nuc: URA & THY in same segment, seg.addr = "%s"' % seg.addr
-                badSegAddr.append(seg.addr)
-                warnings.append(msg)
-            elif thymine:
-                seg.segType = 'dna'
-            elif uracil:
-                seg.segType = 'rna'
-        # Use pdb residue names to infer dna/rna.
-        for seg in self.iter_seg(segTypes=['nuc']):
-            ribo = False
-            deoxy = False
-            riboCheck = ['a','c','g','u','i',]
-            deoxyCheck = ['da','dc','dg','dt','di']
-            for atom in seg:
-                if atom.resName in riboCheck:
-                    ribo = True
-                if atom.resName in deoxyCheck:
-                    deoxy = True
-#WARN       # Throw a warning when ribo- and deoxy- are found in the same segment
-            if ribo and deoxy:
-                msg = '_diff_nuc: ribo- & deoxy- in same segment, seg.addr = "%s"' % seg.addr
-                badSegAddr.append(seg.addr)
-                warnings.append(msg)
-            elif ribo:
-                seg.segType = 'rna'
-            elif deoxy:
-                seg.segType = 'dna'
-        # Final check
-        for seg in self.iter_seg(segTypes=['nuc']):
-            if seg.addr not in badSegAddr:
-                msg = '_diff_nuc: undetermined nucleotide, seg.addr = "%s"' % seg.addr
-                badSegAddr.append(seg.addr)
-                warnings.append(msg)
-        self.warnings = warnings
-
-    def _compliance_charmm_terminalOxygen(self):
-        """
-        Fix the atom types of terminal oxygen atoms to be CHARMM compliant.
-        """
-        for seg in self.iter_seg(segTypes=['pro']):
-            resList = list(seg.iter_res())
-            lastRes = resList[-1]
-            for atom in lastRes:
-                if atom.atomType == ' o  ':
-                    atom.atomType = ' ot1'
-                elif atom.atomType == ' oxt':
-                    atom.atomType = ' ot2'
-
-    def _compliance_charmm_names(self):
-        """
-        On a per atom basis, fix residue names and atom types to be CHARMM
-        compliant.
-        """
-        for atom in self:
-            atom._compliance_resName()
-            atom._compliance_atomType()

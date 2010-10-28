@@ -1,3 +1,10 @@
+"""
+DOCME
+"""
+# fcp
+# 10/26/2010
+
+
 from copy import deepcopy
 from numpy import array
 from charmming.const.bio import aaMass
@@ -9,8 +16,9 @@ class NoAlphaCarbonError(Exception):
     """
     Exception to raise when an alpha carbon is expected but not found.
     """
-    def __init__(self,value):
+    def __init__(self, value):
         self.value = value
+
     def __str__(self):
         return repr(self.value)
 
@@ -19,8 +27,9 @@ class ProError(Exception):
     """
     Exception to raise when errors occur involving the Pro class.
     """
-    def __init__(self,value):
+    def __init__(self, value):
         self.value = value
+
     def __str__(self):
         return repr(self.value)
 
@@ -28,33 +37,40 @@ class ProError(Exception):
 class Pro(Res):
     """
     Properties
-        scCom
+        `scCom`
     Public Methods
-        sanity              STUB
-        get_alphaCarbon
-        get_goBB
-        get_goSC
+        `get_alphaCarbon`
+        `get_goBB`
+        `get_goSC`
+        `sanity`            STUB
     """
-    def __init__(self,iterable=None,**kwargs):
-        super(Pro,self).__init__(iterable,**kwargs)
+    def __init__(self, iterable=None, **kwargs):
+        super(Pro, self).__init__(iterable, **kwargs)
 
-# Properties
+##############
+# Properties #
+##############
+
     @Property
     def scCom():
-        doc = "The scCom property."
+        doc =\
+        """
+        The center of mass of the resdiue's "side chain" atoms.
+        """
         def fget(self):
             if self.resName == 'gly':
                 raise NoAlphaCarbonError()
-            scList = [ atom for atom in self if atom.element != 'h' and not atom.isBackBone() ]
-            tmp = array([ atom.mass * atom.cart for atom in scList ])
-            tmp = tmp.sum(axis=0)
+            scList = [ atom for atom in self
+                    if atom.element != 'h' and not atom.is_backbone() ]
+            result = array([ atom.mass * atom.cart for atom in scList ])
+            result = result.sum(axis=0)
             mass = sum( ( atom.mass for atom in scList ) )
-            return tmp/mass
+            return result / mass
         return locals()
 
-# Public Methods
-    def sanity(self):
-        NotImplementedError
+##################
+# Public Methods #
+##################
 
     def get_alphaCarbon(self):
         """
@@ -67,33 +83,41 @@ class Pro(Res):
         raise NoAlphaCarbonError()
 
     def get_goBB(self):
-        tmp = self.get_alphaCarbon()
-        tmp.tag        = 'atom'
-        tmp.atomNum    = tmp.resid
-        tmp.atomType   = '   b'
-        tmp.weight     = 0
-        tmp.bFactor    = 0
-        tmp.mass       = Aux.aaMass['gly']
-        tmp.segType    = 'ktgo'
-        tmp.addr0      = tmp.addr
-        del tmp.element
+        """
+        DOCME
+        """
+        result = self.get_alphaCarbon()
+        result.tag = 'atom'
+        result.atomNum = result.resid
+        result.atomType = '   b'
+        result.weight = 0
+        result.bFactor = 0
+        result.mass = aaMass['gly']
+        result.segType = 'ktgo'
+        result.addr0 = result.addr
         # TODO Other things need checking
-        return tmp
+        return result
 
     def get_goSC(self):
+        """
+        DOCME
+        """
         if self.resName == 'gly':
-            raise ProError('get_alphaCarbon: No Alpha Carbon')
-        tmp = self.get_alphaCarbon()
-        tmp.tag        = 'atom'
-        tmp.atomNum    = self.resid
-        tmp.atomType   = '   s'
-        tmp.cart       = self.scCom
-        tmp.weight     = 0
-        tmp.bFactor    = 0
-        tmp.mass       = Aux.aaMass[tmp.resName] - Aux.aaMass['gly']
-        tmp.segType    = 'ktgo'
-        tmp.addr0      = tmp.addr
-        del tmp.element
+            raise NoAlphaCarbonError()
+        result = self.get_alphaCarbon()
+        result.tag = 'atom'
+        result.atomNum = self.resid
+        result.atomType = '   s'
+        result.cart = self.scCom
+        result.weight = 0
+        result.bFactor = 0
+        result.mass = aaMass[result.resName] - aaMass['gly']
+        result.segType = 'ktgo'
+        result.addr0 = result.addr
+        del result.element
         # TODO Other things need checking
-        return tmp
+        return result
+
+    def sanity(self):
+        raise NotImplementedError
 

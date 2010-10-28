@@ -1,12 +1,27 @@
+"""
+This module contains a 'random' assortment of useful utility functions
+and classes.  If a utility function is closely associated with a single
+particular module, it should be located in said module; otherwise, it
+should be put here for general use.
+
+TODO:
+    The optparse module is depricated starting with python 2.6, and so
+    we should probably move to the newer argparse.
+"""
+# fcp
+# 10/22/2010
+
+
 import optparse
 import os
 
 
 def paragraphs(iterable,splitter):
     """
-    Cut a text steam up into 'paragraphs,' where partitions are
+    Cut a text stream up into 'paragraphs,' where partitions are
     determined by a list named splitter.
     """
+    assert isinstance(splitter, (tuple, list))
     splitter = tuple(splitter)
     paragraph = []
     for line in iterable:
@@ -141,7 +156,7 @@ def get_inpProp(prop,iterable):
     Parse through the iterable, looking for string 'prop'.  If it is
     found, return the word directly following prop in the same line.
     """
-    for line in stripBare(iterable):
+    for line in cleanStrings(iterable,CC='!'):
         llist = line.split()
         try:
             propIndex = index(prop,llist) + 1
@@ -225,3 +240,11 @@ class OptionParser(optparse.OptionParser):
                 if not getattr(values, option.dest):
                     self.error("option %s is required" % (str(option)))
         return optparse.OptionParser.check_values(self, values, args)
+
+def lowerKeys(dictionary):
+    """
+    Modifies a dictionary by applying `string.lower` to each of its keys.
+
+    This is helpful for making kwargs case insensitive.
+    """
+    return dict(((key.lower(), value) for key, value in dictionary.iteritems()))

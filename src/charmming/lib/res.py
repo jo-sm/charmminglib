@@ -1,3 +1,10 @@
+"""
+DOCME
+"""
+# fcp
+# 10/26/2010
+
+
 from numpy import array
 from charmming.lib.basestruct import BaseStruct
 from charmming.tools import Property
@@ -6,45 +13,69 @@ from charmming.tools import Property
 class Res(BaseStruct):
     """
     Properties
-        chainid
-        segType
-        segid
-        resid
-        resName
-        mass
-        com
-        heavyCom
+        `addr`
+        `chainid`
+        `heavyCom`
+        `resid`
+        `resIndex`
+        `resName`
+        `segid`
+        `segType`
     """
-    def __init__(self,iterable=None,**kwargs):
-        super(Res,self).__init__(iterable,**kwargs)
+    def __init__(self, iterable=None, **kwargs):
+        super(Res, self).__init__(iterable, **kwargs)
+
+##############
+# Properties #
+##############
+
+    @Property
+    def addr():
+        doc =\
+        """
+        The `addr` property provides a human readable unique string
+        representation for each `Res` instance.
+        """
+        def fget(self):
+            return '%s.%4s.%04d' % (self.chainid, self.segType, self.resid)
+        return locals()
 
     @Property
     def chainid():
-        doc = "The chainid property."
+        doc =\
+        """
+        DOCME
+        """
         def fget(self):
             for atom in self:
                 return atom.chainid
         return locals()
 
     @Property
-    def segType():
-        doc = "The segType property."
-        def fget(self):
-            for atom in self:
-                return atom.segType
-        return locals()
+    def heavyCom():
+        doc =\
+        """
+        The center of mass of residue, computed using only "heavy"
+        (non-hydrogen) atoms.
 
-    @Property
-    def segid():
-        doc = "The segid property."
+        Care should be taken with this method, as it filters with
+        `BaseAtom.element` which won't necesarily be defined for all
+        atoms.
+        """
         def fget(self):
-            for atom in self:
-                return atom.segid
+            result = array([ atom.mass * atom.cart for atom in self
+                        if atom.element == 'h' ])
+            result = result.sum(axis=0)
+            mass = sum( ( atom.mass for atom in self if atom.element == 'h' ) )
+            return result / mass
         return locals()
 
     @Property
     def resid():
-        doc = "The resid property."
+        doc =\
+        """
+        DOCME
+        """
         def fget(self):
             for atom in self:
                 return atom.resid
@@ -55,7 +86,10 @@ class Res(BaseStruct):
 
     @Property
     def resIndex():
-        doc = "The resIndex property."
+        doc =\
+        """
+        DOCME
+        """
         def fget(self):
             for atom in self:
                 return atom.resIndex
@@ -66,7 +100,10 @@ class Res(BaseStruct):
 
     @Property
     def resName():
-        doc = "The resName property."
+        doc =\
+        """
+        DOCME
+        """
         def fget(self):
             for atom in self:
                 return atom.resName
@@ -76,34 +113,23 @@ class Res(BaseStruct):
         return locals()
 
     @Property
-    def addr():
-        doc = "The addr property."
+    def segid():
+        doc =\
+        """
+        DOCME
+        """
         def fget(self):
-            return '%s.%4s.%04d' % (self.chainid,self.segType,self.resid)
+            for atom in self:
+                return atom.segid
         return locals()
 
     @Property
-    def mass():
-        doc = "The mass property."
+    def segType():
+        doc =\
+        """
+        DOCME
+        """
         def fget(self):
-            return sum( ( atom.mass for atom in self ) )
-        return locals()
-
-    @Property
-    def com():
-        doc = "The com property."
-        def fget(self):
-            tmp = array([ atom.mass * atom.cart for atom in self ])
-            tmp = tmp.sum(axis=0)
-            return tmp/self.mass
-        return locals()
-
-    @Property
-    def heavyCom():
-        doc = "The heavyCom property."
-        def fget(self):
-            tmp = array([ atom.mass * atom.cart for atom in self if atom.element == 'h' ])
-            tmp = tmp.sum(axis=0)
-            mass = sum( ( atom.mass for atom in self if atom.element == 'h' ) )
-            return tmp/mass
+            for atom in self:
+                return atom.segType
         return locals()
