@@ -19,10 +19,10 @@ if not (ver[0] == 2 and ver[1] in [6,7]):
 
 setup(
     name = 'charmming',
-    version = '0.1',
+    version = '0.2',
     description = 'Python backend to CHARMMing',
-    author = 'Frank C. Pickard IV',
-    author_email = 'pickard81@gmail.com',
+    author = 'Frank C. Pickard IV and Tim Miller',
+    author_email = 'pickard81@gmail.com, btamiller@gmail.com',
     url = 'www.charmming.googlecode.com/svn/',
     packages = [
         'charmming', 'charmming.analysis', 'charmming.analysis.cg',
