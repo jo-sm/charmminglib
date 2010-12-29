@@ -93,7 +93,8 @@ class Atom(BaseAtom):
         Recognized `inFormat` values are:
             `"pdborg"`
             `"charmm"`
-            `"crd"`     STUB
+            `"shortcard"`     
+            `"longcard"`     
             `"amber"`   STUB
         """
         if inFormat == 'pdborg':
@@ -120,8 +121,31 @@ class Atom(BaseAtom):
             self.bFactor = self._text[61:66]
             self.element = 'auto'
             self.resIndex = self.resid
-        elif inFormat == 'crd':
-            raise NotImplementedError
+        elif inFormat == 'shortcard':
+            self.atomNum = self._text[0:5]
+            self.atomType = self._text[16:20]
+            self.resName = self._text[11:15]
+            self.segType = 'auto'
+            self.chainid = self._text[51:55]
+            self.resid = self._text[5:10]
+            self.cart = (self._text[20:30], self._text[30:40], self._text[40:50])
+            self.weight = "    0"
+            self.bFactor = "  1.0"
+            self.element = 'auto'
+            self.resIndex = self.resid
+        # ToDo: verify these against the format statements in CHARMM
+        elif inFormat == 'longcard':
+            self.atomNum = self._text[0:10]
+            self.atomType = self._text[32:37]
+            self.resName = self._text[22:27]
+            self.segType = 'auto'
+            self.chainid = self._text[102:107]
+            self.resid = self._text[10:20]
+            self.cart = (self._text[40:60], self._text[60:80], self._text[80:100])
+            self.weight = "    0"  
+            self.bFactor = "  1.0"
+            self.element = 'auto' 
+            self.resIndex = self.resid
         elif inFormat == 'amber':
             raise NotImplementedError
         else:
