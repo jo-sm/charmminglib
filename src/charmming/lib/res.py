@@ -25,6 +25,18 @@ class Res(BaseStruct):
     def __init__(self, iterable=None, **kwargs):
         super(Res, self).__init__(iterable, **kwargs)
 
+##################
+# Public methods #
+##################
+
+    def iter_atom(self):
+        doc =\
+        """
+        A generator that returns each atom in the residue
+        """
+        for atom in self:
+            yield atom
+
 ##############
 # Properties #
 ##############

@@ -136,7 +136,7 @@ class Atom(BaseAtom):
         # ToDo: verify these against the format statements in CHARMM
         elif inFormat == 'longcard':
             self.atomNum = self._text[0:10]
-            self.atomType = self._text[32:37]
+            self.atomType = self._text[32:36] # NB, I am leaving this @ 4 chars for now for format compatibility
             self.resName = self._text[22:27]
             self.segType = 'auto'
             self.chainid = self._text[102:107]

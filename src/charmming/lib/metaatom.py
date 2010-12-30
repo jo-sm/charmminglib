@@ -82,7 +82,12 @@ class MetaAtom(object):
         if text is None:
             self.cart = (0., 0., 0.)
         else:
-            self._text  = text.lower().split(commentChar)[0].strip()
+            # card format files are whitespace sensitive
+            if inFormat == 'shortcard' or inFormat == 'longcard':
+                self._text  = text.lower()
+            else:
+                self._text  = text.lower().split(commentChar)[0].strip()
+            
             self.parse(inFormat)
             self._addr0 = self.addr
         # Finally

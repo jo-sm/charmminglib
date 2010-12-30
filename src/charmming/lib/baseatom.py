@@ -183,11 +183,14 @@ class BaseAtom(MetaAtom):
             return self._chainid
         def fset(self, value):
             value = str(value).strip().lower()
-            if len(value) > 1:
+
+            # BTM: 12-30-2010: I changed this to 5 characters so that we can read
+            # chain IDs from CARD formatted files.
+            if len(value) > 5:
                 if self._autoFix:
                     value = value[0]
                 else:
-                    raise AtomError('chainid %s: %s is longer than 1 character' %
+                    raise AtomError('chainid %s: %s is longer than 5 characters' %
                                     (self.addr0, value))
             self._chainid = value
         return locals()
