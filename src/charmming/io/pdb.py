@@ -85,6 +85,7 @@ class PDBFile(object):
             `autofix`       [True,False]    # Flag for atom._autoFix
             `verbose`       [False,True]
         """
+        super(PDBFile, self).__init__()
         # kwargs
         kwargs = lowerKeys(kwargs)
         inFormat = kwargs.pop('informat', 'auto')

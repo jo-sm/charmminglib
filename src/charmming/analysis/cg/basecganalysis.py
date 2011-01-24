@@ -214,6 +214,8 @@ class BaseAnalysis(object):
         def fget(self):
             if self._correlSkip == 'auto':
                 return int(self.nstep / self.correlArrayLength)
+            else:
+                return self._correlSkip
         def fset(self, value):
             self._correlSkip = value
         return locals()
@@ -274,25 +276,29 @@ class BaseAnalysis(object):
             print 'removing %s' % pickleFile
             os.remove(pickleFile)
 
-    def get_correlInputHeader(self):
+    def get_correlInputHeader(self, header=[]):
+        """
+        DOCME
+        """
         String = []
-        String.append('* A first attempt at native contact scripting')
+        for line in header:
+            String.append('* %s' % line)
         String.append('*')
         String.append('bomlev -1')
         String.append('wrnlev 5')
         String.append('')
         String.append('! toppar')
-        String.append('    read rtf  card name %s' % self.rtfFile)
-        String.append('    read para card name %s' % self.prmFile)
+        String.append('read rtf  card name %s' % self.rtfFile)
+        String.append('read para card name %s' % self.prmFile)
         String.append('')
         String.append('! psfcor')
-        String.append('    read psf  card name %s' % self.psfFile)
-        String.append('    read coor card name %s' % self.crdFile)
+        String.append('read psf  card name %s' % self.psfFile)
+        String.append('read coor card name %s' % self.crdFile)
         String.append('')
         String.append('bomlev -2')
         String.append('')
         String.append('! open trajectory for reading')
-        String.append('    open unit 10 read unform name %s' % self.dcdFile)
+        String.append('open unit 10 read unform name %s' % self.dcdFile)
         String.append('')
         return '\n'.join(String)
 

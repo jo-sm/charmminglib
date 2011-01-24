@@ -87,7 +87,7 @@ class MetaAtom(object):
                 self._text  = text.lower()
             else:
                 self._text  = text.lower().split(commentChar)[0].strip()
-            
+
             self.parse(inFormat)
             self._addr0 = self.addr
         # Finally

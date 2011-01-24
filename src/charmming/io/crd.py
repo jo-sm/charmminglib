@@ -21,25 +21,23 @@ def get_formatting(input):
     formatting of the pdb data: "shortcard", "longcard" or "unknown".
     """
     try:
-        iterator = ( line.lower() for line in open(input) if
-                     not line.lower().startswith(('*')) and len(line) > 22 )
+        iterator = ( line.lower() for line in open(input)
+                    if not line.lower().startswith(('*')) and len(line) > 22 )
     except IOError:
         iterator = ( line.lower() for line in input
                      if not line.lower().startswith(('*')) and len(line) > 22 )
 
     short  = False
     long   = False
-    badlen = False
+
     for line in iterator:
         if len(line) == 71:
             short = True
         elif len(line) == 141:
             long = True
         else:
-            badlen = True
+            return 'unknown'
 
-    if badlen:
-        return 'unknown'
     if short and not long:
         return 'shortcard'
     if long and not short:
@@ -86,10 +84,11 @@ class CRDFile(object):
             `autofix`       [False,True]    # Flag for atom._autoFix
             `verbose`       [False,True]
         """
+        super(CRDFile, self).__init__()
         # kwargs
         kwargs = lowerKeys(kwargs)
         inFormat = kwargs.pop('informat', 'auto')
-        self._autoFix = kwargs.pop('autoFix', False)
+        self._autoFix = kwargs.pop('autofix', False)
         self._verbose = kwargs.pop('verbose', False)
         #
         self._models = {}

@@ -30,6 +30,8 @@ class CGAtom(BaseAtom):
         `tag`
         `weight`
     Public Methods
+        `is_ktgo`       TODO
+        `is_bln`        TODO
         `Print`
     """
 
@@ -108,16 +110,26 @@ class CGAtom(BaseAtom):
             return 0.
         return locals()
 
-    @Property
-    def tag():
-        doc =\
-        """
-        Always returns a `'atom'` string, as 'hetatm' are not currently
-        implemented in coarse grained models.
-        """
-        def fget(self):
-            return 'atom'
-        return locals()
+@Property
+def segType():
+    doc =\
+    """
+    DOCME
+    """
+    def fget(self):
+        return self._segType
+    def fset(self, value):
+        value = str(value).strip().lower()
+        if value == 'auto':
+            if self.is_ktgo():
+                self._segType = 'ktgo'
+            elif self.is_bln():
+                self._segType = 'bln'
+            else:
+                self._segType = 'bad'
+        else:
+            self._segType = value
+    return locals()
 
     @Property
     def weight():
@@ -133,6 +145,24 @@ class CGAtom(BaseAtom):
 ##################
 # Public Methods #
 ##################
+
+    def is_ktgo(self):
+        """
+        Logic for determining if an atom was constructed using the KT
+        Go model, returns a bool.
+
+        TODO
+        """
+        return self.atomType in ['   B','   S']
+
+    def is_bln(self):
+        """
+        Logic for determining if an atom was constructed using the BLN
+        (hydrophobic/hydrophillic/apolar) model, returns a bool.
+
+        TODO
+        """
+        pass
 
     def Print(self, **kwargs):
         """

@@ -37,18 +37,19 @@ class Gyro(BaseAnalysis):
             del self._RgOfT
             try:
                 os.remove(fileName)
-            except IOError: pass
+            except IOError:
+                pass
         return locals()
 
 # Charmm input creation
-    def write_singleCorrelInput(self,comments=[]):
+    def write_singleCorrelInput(self, header=[], comments=[]):
         """
         This method writes a single charmm .inp file for a radius of gyration calculation.
         """
         String = []
-        String.append(self.get_correlInputHeader())
+        String.append(self.get_correlInputHeader(header))
         String.append('!open files for writing')
-        String.append('    open unit 100 write card name gyro_%s.anl' % self.correlAtomSelect)
+        String.append('open unit 100 write card name gyro_%s.anl' % self.correlAtomSelect)
         String.append('')
         if self.correlAtomSelect == 'all':
             String.append('defi taco select all end')
@@ -63,12 +64,12 @@ class Gyro(BaseAnalysis):
         String.append('traj query unit 10')
         String.append('correl maxtimesteps %d maxatom %d maxseries 1' % (self.correlArrayLength,self.correlMaxAtom))
         String.append('enter gyro gyration')
-        String.append('traj firstu 10 nunit 1 begin %d stop %d skip %d taco' % (self.correlStart,self.correlStop,self.correlSkip))
+        String.append('traj firstu 10 nunit 1 begin %d stop %d skip %d select taco end' % (self.correlStart,self.correlStop,self.correlSkip))
         String.append('')
         String.append('write gyro card unit 100 ')
         String.append('* Radius of Gyration - Selection: %s' % self.correlAtomSelect)
         for comment in comments:
-            String.append('%s%s' % ('* ',comment))
+            String.append('* %s' % comment)
         String.append('*')
         String.append('')
         String.append('stop')

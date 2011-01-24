@@ -93,9 +93,9 @@ class Atom(BaseAtom):
         Recognized `inFormat` values are:
             `"pdborg"`
             `"charmm"`
-            `"shortcard"`     
-            `"longcard"`     
-            `"amber"`   STUB
+            `"shortcard"`
+            `"longcard"`
+            `"amber"`   TODO
         """
         if inFormat == 'pdborg':
             self.atomNum = self._text[6:11]
@@ -121,30 +121,30 @@ class Atom(BaseAtom):
             self.bFactor = self._text[61:66]
             self.element = 'auto'
             self.resIndex = self.resid
-        elif inFormat == 'shortcard':
+        elif inFormat in ['crd', 'cor', 'card', 'short', 'shortcard']:
             self.atomNum = self._text[0:5]
-            self.atomType = self._text[16:20]
-            self.resName = self._text[11:15]
-            self.segType = 'auto'
-            self.chainid = self._text[51:55]
             self.resid = self._text[5:10]
+            self.resName = self._text[11:15]
+            self.atomType = self._text[16:20]
             self.cart = (self._text[20:30], self._text[30:40], self._text[40:50])
-            self.weight = "    0"
-            self.bFactor = "  1.0"
+            self.chainid = self._text[51:55]
+            self.segType = 'auto'
+            self.weight = 0
+            self.bFactor = 1.
             self.element = 'auto'
             self.resIndex = self.resid
-        # ToDo: verify these against the format statements in CHARMM
-        elif inFormat == 'longcard':
+        # TODO: verify these against the format statements in CHARMM
+        elif inFormat in ['xcrd', 'xcor', 'xcard', 'long', 'longcard']:
             self.atomNum = self._text[0:10]
-            self.atomType = self._text[32:36] # NB, I am leaving this @ 4 chars for now for format compatibility
-            self.resName = self._text[22:27]
-            self.segType = 'auto'
-            self.chainid = self._text[102:107]
             self.resid = self._text[10:20]
+            self.resName = self._text[22:27]
+            self.atomType = self._text[32:36] # NB, I am leaving this @ 4 chars for now for format compatibility
             self.cart = (self._text[40:60], self._text[60:80], self._text[80:100])
-            self.weight = "    0"  
-            self.bFactor = "  1.0"
-            self.element = 'auto' 
+            self.chainid = self._text[102:107]
+            self.segType = 'auto'
+            self.weight = 0
+            self.bFactor = 1.
+            self.element = 'auto'
             self.resIndex = self.resid
         elif inFormat == 'amber':
             raise NotImplementedError
@@ -205,9 +205,9 @@ class Atom(BaseAtom):
                 elif self.is_nuc():
                     self._segType = 'nuc'
                 elif self.is_good():
-                    self.segType = 'good'
+                    self._segType = 'good'
                 else:
-                    self.segType = 'bad'
+                    self._segType = 'bad'
             else:
                 self._segType = value
         return locals()
@@ -316,11 +316,11 @@ class Atom(BaseAtom):
         elif outFormat == 'repr':
             taco = '%15s :: %4s%4s    %8.3f%8.3f%8.3f' % \
                 (self.addr, self.atomType, self.resName, x, y, z)
-        elif outFormat in ['crd','cor','card']:
+        elif outFormat in ['crd', 'cor', 'card', 'short', 'shortcard']:
             taco = '%5i%5i %-4s %-4s%10.5f%10.5f%10.5f %-4s %-4i%10.5f' % \
                 (atomNum, self.resIndex, self.resName, self.atomType,
                 x, y, z, chainid, resid, self.weight)
-        elif outFormat in ['xcrd','xcor','xcard']:
+        elif outFormat in ['xcrd', 'xcor', 'xcard', 'long', 'longcard']:
             taco = '%10i%10i  %-4s      %-4s    %20.10f%20.10f%20.10f  %-5s    %-4i    %20.10f' % \
                 (atomNum, self.resIndex, self.resName, self.atomType,
                 x, y, z, chainid + segType, resid, self.weight)
