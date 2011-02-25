@@ -40,6 +40,7 @@ class Atom(BaseAtom):
     Private Methods
         `_compliance_resName`
         `_compliance_atomType`
+        `_init_null`
     """
 
     _autoInFormat = 'pdborg'
@@ -48,7 +49,17 @@ class Atom(BaseAtom):
     instances.
     """
 
-    _sortSegType = {'pro':1,'dna':2,'rna':3,'nuc':4,'good':5,'bad':6}
+    _properties = dict(BaseAtom._properties)
+    _properties.update({
+        'element': 'x'
+        })
+    """
+    A dictionary which tells the class which properties (keys) it is
+    associated with.  The corresponding values serve as default values
+    for said properties.
+    """
+
+    _sortSegType = {'pro':1,'dna':2,'rna':3,'nuc':4,'good':5,'bad':10}
     """
     This is a dictionary which defines the recognized `segTypes` (keys)
     for the `_sort` scoring method, and their weighting (values).
@@ -101,7 +112,6 @@ class Atom(BaseAtom):
             self.atomNum = self._text[6:11]
             self.atomType = self._text[12:16]
             self.resName = self._text[16:20]
-            self.segType = 'auto'
             self.chainid = self._text[21]
             self.resid = self._text[22:26]
             self.cart = (self._text[30:38], self._text[38:46], self._text[46:54])
@@ -109,18 +119,19 @@ class Atom(BaseAtom):
             self.bFactor = self._text[61:66]
             self.element = self._text[66:]
             self.resIndex = self.resid
+            self.segType = 'auto'
         elif inFormat == 'charmm':
             self.atomNum = self._text[6:11]
             self.atomType = self._text[12:16]
             self.resName = self._text[17:21]
-            self.segType = 'auto'
             self.chainid = self._text[72:76]
             self.resid = self._text[22:26]
             self.cart = (self._text[30:38], self._text[38:46], self._text[46:54])
             self.weight = self._text[55:60]
             self.bFactor = self._text[61:66]
-            self.element = 'auto'
             self.resIndex = self.resid
+            self.segType = 'auto'
+            self.element = 'auto'
         elif inFormat in ['crd', 'cor', 'card', 'short', 'shortcard']:
             self.atomNum = self._text[0:5]
             self.resid = self._text[5:10]
@@ -128,11 +139,11 @@ class Atom(BaseAtom):
             self.atomType = self._text[16:20]
             self.cart = (self._text[20:30], self._text[30:40], self._text[40:50])
             self.chainid = self._text[51:55]
-            self.segType = 'auto'
             self.weight = 0
             self.bFactor = 1.
-            self.element = 'auto'
             self.resIndex = self.resid
+            self.segType = 'auto'
+            self.element = 'auto'
         # TODO: verify these against the format statements in CHARMM
         elif inFormat in ['xcrd', 'xcor', 'xcard', 'long', 'longcard']:
             self.atomNum = self._text[0:10]
@@ -141,11 +152,11 @@ class Atom(BaseAtom):
             self.atomType = self._text[32:36] # NB, I am leaving this @ 4 chars for now for format compatibility
             self.cart = (self._text[40:60], self._text[60:80], self._text[80:100])
             self.chainid = self._text[102:107]
-            self.segType = 'auto'
             self.weight = 0
             self.bFactor = 1.
-            self.element = 'auto'
             self.resIndex = self.resid
+            self.segType = 'auto'
+            self.element = 'auto'
         elif inFormat == 'amber':
             raise NotImplementedError
         else:
@@ -172,6 +183,7 @@ class Atom(BaseAtom):
             value = str(value).strip().lower()
             if value == 'auto':
                 self._element = self.derive_element()
+                self.mass = atomMass[self._element]
             else:
                 if value in atomMass.keys():
                     self._element = value
@@ -261,7 +273,7 @@ class Atom(BaseAtom):
         defaults to the `_autoInFormat` formatting.
 
         kwargs:
-            `outformat`     ["charmm","pdborg","debug","xdebug","crd","xcrd"]
+            `outformat`     ["pdborg","charmm","debug","xdebug","crd","xcrd"]
             `old_chainid`   [False,True]
             `old_segtype`   [False,True]
             `old_resid`     [False,True]
@@ -314,7 +326,7 @@ class Atom(BaseAtom):
                 (self.addr0, self.addr, atomNum, self.atomType, self.resName,
                 chainid, resid, x, y, z, self.weight, self.bFactor, self.element)
         elif outFormat == 'repr':
-            taco = '%15s :: %4s%4s    %8.3f%8.3f%8.3f' % \
+            taco = '%15s :: %4s %4s    %8.3f %8.3f %8.3f' % \
                 (self.addr, self.atomType, self.resName, x, y, z)
         elif outFormat in ['crd', 'cor', 'card', 'short', 'shortcard']:
             taco = '%5i%5i %-4s %-4s%10.5f%10.5f%10.5f %-4s %-4i%10.5f' % \

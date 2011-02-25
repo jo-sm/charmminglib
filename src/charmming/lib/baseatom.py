@@ -45,6 +45,28 @@ class BaseAtom(MetaAtom):
         `_sort`
     """
 
+
+    _properties = dict(MetaAtom._properties)
+    _properties.update(
+        {
+        'atomNum': 0,
+        'atomType': 'unkt',
+        'bFactor': 0,
+        'chainid': '?',
+        'resid': 0,
+        'resIndex': 0,
+        'resName': 'unkr',
+        'segType': 'bad',
+        'weight': 0
+        }
+    )
+    """
+    A dictionary which tells the class which properties (keys) it is
+    associated with.  The corresponding values serve as default values
+    for said properties.
+    """
+
+
     _sortSegType = None
     """
     This is a dictionary which defines the recognized `segTypes` (keys)

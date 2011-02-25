@@ -84,7 +84,7 @@ class Mol(BaseStruct):
         """
         for chain in self.iter_chain(**kwargs):
             for seg in chain.iter_seg(**kwargs):
-                for res in seg.iter_res():
+                for res in seg.iter_res(**kwargs):
                     yield res
 
     def iter_seg(self, **kwargs):
@@ -158,9 +158,6 @@ class Mol(BaseStruct):
         for res in self.iter_res():
             res.resIndex = i
             i += 1
-
-    def write(self, filename, **kwargs):
-        raise NotImplementedError
 
     def write_charmming(self):
         """

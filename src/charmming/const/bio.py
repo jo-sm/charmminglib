@@ -142,5 +142,3 @@ pro = set(aaVDW.keys())
 
 # Atom.resName
 rna = set(['a','g','c','u'])
-
-

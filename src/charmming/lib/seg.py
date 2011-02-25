@@ -5,10 +5,11 @@ DOCME
 # 10/26/2010
 
 
+from charmming.cg.cgpro import CGPro
 from charmming.lib.basestruct import BaseStruct
 from charmming.lib.pro import Pro
 from charmming.lib.res import Res
-from charmming.tools import Property
+from charmming.tools import lowerKeys, Property
 
 
 class Seg(BaseStruct):
@@ -81,20 +82,30 @@ class Seg(BaseStruct):
 # Public Methods #
 ##################
 
-    def iter_res(self):
+    def iter_res(self,**kwargs):
         """
         A generator that returns one `Res` per iteration.
 
-        Also, if this method's instance is a protein,
-        (self.segType == 'pro'), then `Pro` objects are returned as an
-        added bonus!
+        kwargs:
+                `restype`
 
-        >>> thisSeg.iter_res()
+        The kwarg `restype` allows you to specify which type of
+        residue is iterated over by passing the class through
+        Examples include: `Pro`, `Res` and `CGPro`.  The default
+        behavior is to detect the appropriate one.
+
+        >>> thisSeg.iter_res(restype=Pro)
         """
-        if self.segType == 'pro':
-            newObj = Pro
+        # kwargs
+        kwargs = lowerKeys(kwargs)
+        resType = kwargs.pop('restype', None)
+        if resType is None:
+            if self.segType == 'pro':
+                newObj = Pro
+            else:
+                newObj = Res
         else:
-            newObj = Res
+            newObj = resType
         result = newObj(iterable=None ,code=self.code, autofix=False)
         for atom in self:
             if len(result) == 0:

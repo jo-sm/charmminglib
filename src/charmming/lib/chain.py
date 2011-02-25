@@ -69,7 +69,7 @@ class Chain(BaseStruct):
         >>> thisChain.iter_res(segtypes=['pro','good'])
         """
         for seg in self.iter_seg(**kwargs):
-            for res in seg.iter_res():
+            for res in seg.iter_res(**kwargs):
                 yield res
 
     def iter_seg(self, **kwargs):

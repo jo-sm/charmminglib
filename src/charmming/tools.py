@@ -14,6 +14,8 @@ TODO:
 
 import optparse
 import os
+from math import pi
+from charmming.const.units import RAD2DEG
 
 
 def paragraphs(iterable,splitter):
@@ -138,17 +140,21 @@ def logicalLines(iterable,continueChar='-'):
     Convert an iterable of physical lines with `continuationChar` into
     an iterator of logical lines.
     """
-    tmp = ''
+    iterable = ( line.strip() for line in iterable )
+    tmp = []
     for line in iterable:
-        line = line.strip()
         if line.endswith(continueChar):
-            line = line[:-len(continueChar)]
-            tmp += line
+            tmp.append(line[:-1])
         else:
             if tmp:
-                yield tmp
-                tmp = ''
-            yield line
+                tmp.append(line)
+                yield ' '.join(tmp)
+                tmp = []
+            else:
+                yield line
+    # flush
+    if tmp:
+        yield ' '.join(tmp)
 
 
 def get_inpProp(prop,iterable):
@@ -248,3 +254,19 @@ def lowerKeys(dictionary):
     This is helpful for making kwargs case insensitive.
     """
     return dict(((key.lower(), value) for key, value in dictionary.iteritems()))
+
+def modPi(arg, units='deg'):
+    """
+    Takes an angle, and adds or subtracts 2PI until the resulting angle is
+    between -PI and PI."""
+    if units == 'deg':
+        PI = pi * RAD2DEG
+    elif units in ['rad','au']:
+        PI = pi
+    while abs(arg) > PI:
+        if arg < -PI:
+            arg += 2 * PI
+        else:
+            arg -= 2 * PI
+    return arg
+

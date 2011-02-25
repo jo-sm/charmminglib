@@ -48,7 +48,7 @@ class Gyro(BaseAnalysis):
         """
         String = []
         String.append(self.get_correlInputHeader(header))
-        String.append('!open files for writing')
+        String.append('! anl :: write')
         String.append('open unit 100 write card name gyro_%s.anl' % self.correlAtomSelect)
         String.append('')
         if self.correlAtomSelect == 'all':

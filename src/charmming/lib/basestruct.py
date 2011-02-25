@@ -6,7 +6,9 @@ DOCME
 
 
 from itertools import tee
-from numpy import array
+from numpy import array, fromiter, float, dot, sin, cos
+from numpy.linalg import eig, norm
+from charmming.const.units import DEG2RAD
 from charmming.lib.metaatom import MetaAtom
 from charmming.tools import Property, expandPath, lowerKeys
 
@@ -141,6 +143,9 @@ class BaseStruct(list):
 # Public Methods #
 ##################
 
+    def center(self):
+        self.translate(-1*self.com)
+
     def del_atoms(self, iterable):
         """
         Deletes, in place, one or more `Atoms` as specified by `iterable`.
@@ -158,17 +163,84 @@ class BaseStruct(list):
         for index in reversed(del_indicies):
             self.pop(index)
 
-    def rotate(self, rotVector, angle):
+    def get_inertiaTensor(self, eigen=False):
+        """
+        """
+        xx, yy, zz, xy, xz, yz = (0., 0., 0., 0., 0., 0.)
+        for atom in self:
+            x, y, z = atom.cart
+            m = atom.mass
+            #
+            xx += m*(y*y+z*z)
+            yy += m*(x*x+z*z)
+            zz += m*(x*x+y*y)
+            xy += m*x*y
+            xz += m*x*z
+            yz += m*y*z
+        #
+        I = array([
+            [ xx, -yz, -xz],
+            [-yz,  yy, -yz],
+            [-xz, -yz,  zz]
+            ])
+        if eigen:
+            return eig(I)
+        else:
+            return I
+
+    def orient(self):
+        """
+        """
+        self.center()
+        self.rotateByMatrix(self.get_inertiaTensor(eigen=True)[1].transpose())
+
+    def rotate(self, rotVector, angle, units='deg'):
         """
         TODO
         """
-        raise NotImplementedError
+        # axis
+        assert len(rotVector) == 3
+        rotVector = array(rotVector)
+        rotVector /= norm(rotVector)
+        x, y, z = rotVector
+        # angle
+        if units == 'deg':
+            t = angle * DEG2RAD
+        else:
+            t = angle
+        # rotation matrix
+        ct = cos(t)
+        ct1 = 1 - cos(t)
+        st = sin(t)
+        #
+        R = array([
+            [ct+x*x*ct1,   x*y*ct1-z*st, x*z*ct1+y*st],
+            [y*x*ct1+z*st, ct+y*y*ct1,   y*z*ct1-x*st],
+            [z*x*ct1-y*st, z*y*ct1+x*st, ct+z*z*ct1  ]
+            ])
+        #
+        self.rotateByMatrix(R)
+
+    def rotateByMatrix(self, rotMatrix):
+        """
+        """
+        # create coordinate matrix
+        iterator = ( crd for atom in self for crd in atom.cart )
+        tmp = fromiter(iterator, float)
+        tmp.resize((len(self), 3))
+        # rotate
+        tmp = dot(tmp, rotMatrix.transpose())
+        # unpack results
+        for i, atom in enumerate(self):
+            atom.cart = tmp[i]
 
     def translate(self, transVector):
         """
         TODO
         """
-        raise NotImplementedError
+        transVector = array(transVector)
+        for atom in self:
+            atom.cart += transVector
 
     def write(self, filename, **kwargs):
         """
@@ -202,7 +274,8 @@ class BaseStruct(list):
         elif outFormat in ['debug', 'xdebug']:
             for atom in self:
                 writeMe.append(atom.Print(**kwargs))
-        elif outFormat in ['crd', 'xcrd']:
+        elif outFormat in ['crd', 'cor', 'card', 'short', 'shortcard',
+                        'xcrd', 'xcor', 'xcard', 'long', 'longcard']:
             writeMe.append('*')
             writeMe.append('   %d' % len(self))
             for atom in self:
@@ -217,3 +290,8 @@ class BaseStruct(list):
         writeTo = open(filename,'w')
         writeTo.write(writeMe)
         writeTo.close()
+
+###################
+# Private Methods #
+###################
+

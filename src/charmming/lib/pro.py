@@ -7,7 +7,6 @@ DOCME
 
 from copy import deepcopy
 from numpy import array
-from charmming.const.bio import aaMass
 from charmming.lib.res import Res
 from charmming.tools import Property
 
@@ -16,11 +15,8 @@ class NoAlphaCarbonError(Exception):
     """
     Exception to raise when an alpha carbon is expected but not found.
     """
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
+    def __init__(self):
+        super(NoAlphaCarbonError, self).__init__()
 
 
 class ProError(Exception):
@@ -42,7 +38,7 @@ class Pro(Res):
         `get_alphaCarbon`
         `get_goBB`
         `get_goSC`
-        `sanity`            STUB
+        `sanity`            TODO
     """
     def __init__(self, iterable=None, **kwargs):
         super(Pro, self).__init__(iterable, **kwargs)
@@ -59,7 +55,7 @@ class Pro(Res):
         """
         def fget(self):
             if self.resName == 'gly':
-                raise NoAlphaCarbonError()
+                raise NoAlphaCarbonError
             scList = [ atom for atom in self
                     if atom.element != 'h' and not atom.is_backbone() ]
             result = array([ atom.mass * atom.cart for atom in scList ])
@@ -80,44 +76,21 @@ class Pro(Res):
         for atom in self:
             if atom.atomType == ' ca ':
                 return copy.deepcopy(atom)
-        raise NoAlphaCarbonError()
+        raise NoAlphaCarbonError
 
-    def get_goBB(self):
+    def iter_bbAtoms(self):
         """
-        DOCME
         """
-        result = self.get_alphaCarbon()
-        result.tag = 'atom'
-        result.atomNum = result.resid
-        result.atomType = '   b'
-        result.weight = 0
-        result.bFactor = 0
-        result.mass = aaMass['gly']
-        result.segType = 'ktgo'
-        result.addr0 = result.addr
-        # TODO Other things need checking
-        return result
+        for atom in self:
+            if atom.is_backbone():
+                yield atom
 
-    def get_goSC(self):
+    def iter_scAtoms(self):
         """
-        DOCME
         """
-        if self.resName == 'gly':
-            raise NoAlphaCarbonError()
-        result = self.get_alphaCarbon()
-        result.tag = 'atom'
-        result.atomNum = self.resid
-        result.atomType = '   s'
-        result.cart = self.scCom
-        result.weight = 0
-        result.bFactor = 0
-        result.mass = aaMass[result.resName] - aaMass['gly']
-        result.segType = 'ktgo'
-        result.addr0 = result.addr
-        del result.element
-        # TODO Other things need checking
-        return result
+        for atom in self:
+            if not atom.is_backbone():
+                yield atom
 
     def sanity(self):
         raise NotImplementedError
-

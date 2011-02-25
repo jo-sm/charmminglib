@@ -1,496 +1,647 @@
-#!/usr/bin/env python
+"""
+DOCME
+"""
+# fcp
+# 02/17/2011
 
-from BaseStruct import BaseStruct
-from Mol import Mol
 
-class ktgo(Mol):
-    def __init__(self,iterable=None,autoFix=True):
-        if iterable:
-            iterable = ( atom for atom in iterable if atom._segType == 'pro' )
-        Mol.__init__(self,iterable,autoFix)
+from commands import getstatusoutput
+from numpy import ndarray
+from tempfile import NamedTemporaryFile
+from charmming.cg.cgatom import CGAtom
+from charmming.cg.cgpro import CGPro
+from charmming.cg.const import bt_matrix, bt_map, kgs_matrix, kgs_map, \
+        mj_matrix, mj_map
+from charmming.const.bio import aaVDW
+from charmming.lib.basestruct import BaseStruct
+from charmming.lib.mol import Mol
+from charmming.lib.pro import NoAlphaCarbonError
+from charmming.tools import Property, lowerKeys, modPi
 
-    def set_backboneAtoms(self):
-        self._backboneAtoms = BaseStruct( ( atom for atom in self if atom.isBackbone() ) )
 
-    def set_sidechainAtoms(self):
-        self._sidechainAtoms = BaseStruct( ( atom for atom in self if not atom.isBackbone() ) )
+class KTGo(Mol):
+    """
+    Class Attributes
+        `_parameters`
+    Properties
+        `nScale`
+        `contactSet`
+    Public Methods
+        `set_cgStruct`
+        `get_avgEpsilon`
+    Private Methods
+        ``
+    """
 
-    def set_cgStructure(self):
+    _parameters = {
+        'nscale':1.00,
+        'domainscale':1,
+        'fnn':0.65,
+        'contactrad':4.5,
+        'kbond':50,
+        'kangle':30,
+        'kdihedralhelix_1':0.30,
+        'kdihedralhelix_3':0.15,
+        'kdihedralnohelix_1':0.55,
+        'kdihedralnohelix_3':0.275,
+        'hbondenergyhelix':-0.25,
+        'hbondenergynohelix':-0.50,
+        'epsilonnn':1e-12,
+        'bbscinteraction':-0.37,
+        'contactoffset':0
+        }
+
+    def __init__(self, iterable=None, **kwargs):
+        self.warnings = []
+        super(KTGo, self).__init__(iterable=None, **kwargs)
+        # kwargs
+        self.strideBin = kwargs.pop('stridebin', 'stride')
+        self.contactSet = kwargs.pop('contactset', 'kgs')
+        #
+        if iterable is None:
+            raise TypeError('You must initialize a KTGo instance with an\
+                            iterable of `Atom` like objects.')
+        else:
+            self.set_allAtoms(iterable, **kwargs)
+            self.extend(self.gen_cgStruct())
+            self.reindex_atomNum()
+
+##############
+# Properties #
+##############
+
+    @Property
+    def contactSet():
+        doc =\
         """
-        Reductively map the all-atom structure in the the 2-center cg structure.
+        DOCME
         """
-        tmp = BaseStruct()
-        for res in self.iter_res():
-            tmp.add(res.get_alphaCarbon)
+        def fget(self):
+            return self._contactSet
+        def fset(self, value):
+            self._contactSet = value
+            if value == 'kgs':
+                self.contactMatrix = kgs_matrix
+                self.contactMap = kgs_map
+                self._parameters['contactoffset'] = 1.8
+            elif value == 'bt':
+                self.contactMatrix = bt_matrix
+                self.contactMap = bt_map
+                self._parameters['contactoffset'] = 0.6
+            elif value == 'mj':
+                self.contactMatrix = mj_matrix
+                self.contactMap = mj_map
+                self._parameters['contactoffset'] = 1.2
+            elif value == 'other':
+                raise NotImplementedError
+            else:
+                raise TypeError('Invalid `contactSet` specified specified')
+            self.contactMatrix = self.nScale * abs(self.contactMatrix -
+                                                self._parameters['contactoffset'])
+        return locals()
+
+    @Property
+    def nScale():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            return self._parameters['nscale']
+        def fset(self, value):
+            self._parameters['nscale'] = value
+        return locals()
+
+##################
+# Public Methods #
+##################
+
+    def get_avgEpsilon(self):
+        top = self.contactMatrix.sum() + self.contactMatrix.diagonal().sum()
+        bottom = self.contactMatrix.size + self.contactMatrix.diagonal().size
+        return top/bottom
+
+    def gen_cgStruct(self):
+        """
+        """
+        for res in self.allAtoms.iter_res(restype=CGPro):
+            yield res.get_goBB()
             try:
-                tmp.add(res.get_sc())
-            except ProError: pass
-        self._cgStructure = tmp
+                yield res.get_goSC()
+            except NoAlphaCarbonError:
+                pass
 
-    def set_domains(self,arg=None):
+    def get_hbond(self):
+        # multiplicity
+        hbondMult = {}
+        iterator = ( (int(line[15:20]), int(line[35:40])) for line in self.hbondOut )
+        for pair in iterator:
+            if pair in hbondMult:
+                hbondMult[pair] += 1
+            else:
+                hbondMult[pair] = 1
+        # ugly hack to map from res index -> cgatom index
+        keys = xrange(self[-1].resid)
+        values = ( i for i, cg in enumerate(self) if cg.atomType == 'b' )
+        bb2cg = dict(zip(keys, values))
+        # hbond list
+        tmp = []
+        for i, j in sorted(hbondMult.keys()):
+            bb_i = self[bb2cg[i]]
+            bb_j = self[bb2cg[j]]
+            if 'alphahelix' == bb_i.structure == bb_j.structure:
+                energy = self._parameters['hbondenergyhelix']
+            else:
+                energy = self._parameters['hbondenergynohelix']
+            tmp.append( (bb_i, bb_j, energy, hbondMult[(i, j)]) )
+        return tmp
+
+    def get_nativeBBSC(self):
+        bb = [ res for res in self.allAtoms.iter_res(restype=CGPro) ]
+        sc = [ res for res in self.allAtoms.iter_res(restype=CGPro)
+            if res.resName != 'gly' ]
+        iterator = ( (res_i, res_j) for res_i in bb for res_j in sc
+                    if abs(res_j.resid - res_i.resid) > 2 )
+        #
+        tmp = []
+        contactRad = self._parameters['contactrad']
+        for res_i, res_j in iterator:
+            try:
+                for atom_i in res_i.iter_bbAtoms():
+                    for atom_j in res_j.iter_scAtoms():
+                        if self.get_Rij(atom_i, atom_j) < contactRad:
+                            tmp.append( (res_i.get_goBB(), res_j.get_goSC()) )
+                            raise AssertionError
+            except AssertionError:
+                pass
+        return tmp
+
+    def get_nativeSCSC(self):
+        sc1 = [ res for res in self.allAtoms.iter_res(restype=CGPro)
+            if res.resName != 'gly' ]
+        sc2 = [ res for res in self.allAtoms.iter_res(restype=CGPro)
+            if res.resName != 'gly' ]
+        iterator = ( (res_i, res_j) for res_i in sc1 for res_j in sc2
+                    if res_j.resid - res_i.resid > 2 )
+        tmp = []
+        contactRad = self._parameters['contactrad']
+        for res_i, res_j in iterator:
+            try:
+                for atom_i in res_i.iter_scAtoms():
+                    for atom_j in res_j.iter_scAtoms():
+                        if self.get_Rij(atom_i, atom_j) < contactRad:
+                            tmp.append( (res_i.get_goSC(), res_j.get_goSC()) )
+                            raise AssertionError
+            except AssertionError:
+                pass
+        return tmp
+
+    def get_parm(self, resName_i, resName_j):
         """
-        Sets _chainid to indicate domain membership
         """
-        if type(arg) == NoneType:
-            return
-        elif type(arg) == str:
-            def fixString(String):
-                if String.startswith(':'):
-                    String = '0' + String
-                else:
-                    String = '0:' + String
-                if String.endswith(':'):
-                    String = String + '10000'
-                else:
-                    String = String + ':10000'
-                return String
-
-            def string2list(String):
-                String = String.split(':')
-                return map(int,String)
-
-            def get_chainid(arg,arg2):
-                for i,domain in enumerate(arg2):
-                    if arg <= domain:
-                        return i
-            for cgAtom in self._cgStructure:
-                if last_resid < cgAtom._resid <= next_resid:
-                    cgAtom._chainid = get_chainid()
-                elif
-            def get_chainid(iterate=False):
-                domainid = iter(Aux.alphanum)
-                while 1:
-                    if iterate:
-                        try:
-                            thisDomainid = domainid.next()
-                        except StopIteration: pass
-                    yield thisDomainid
-            domains = arg.split(':')
-            domains = iter(map(int,domains))
-            nextDomain = 0
-            for atom in self:
-                if atom._resid <= nextDomain:
-                    atom._chainid = get_chainid()
-                else:
-                    try:
-                        nextDomain = domains.next()
-                    except StopIteration: pass
-                    atom._chainid = get_chainid(iterate=True)
-            pass
-        elif type(arg) == dict:
-            pass
-        elif type(arg) == file: # TODO Fix this
-            pass
-        # Defaults to different seg gets different domain
-###
-
-# ( 3 ) Assign each residue to a domain
-#    (a) Assign
-if domainString:    # When explicitly specified
-    domains = domainString.split(':')
-    domains = map(int,domains)
-    assert len(resDict) == domains[-1]
-    thisDomain = 0
-    for i,res in enumerate(resList):
-        if i+1 <= domains[thisDomain]:
-            pass
-        else:
-            thisDomain += 1
-        resDict[res].domainid       = thisDomain
-        cgbbDict[res].domainid      = thisDomain
         try:
-            cgscDict[res].domainid  = thisDomain
-        except KeyError: pass
-else:               # Default: each segment gets it's own domain
-    alpha2int   = dict( [ (char,i+1) for i,char in enumerate(string.uppercase) ] )
-    for res in resList:
-        resDict[res].domainid       = alpha2int[res[:1]]
-        cgbbDict[res].domainid        = alpha2int[res[:1]]
+            res_i = self.contactMap[resName_i.lower()]
+        except KeyError:
+            raise KeyError('The %s contact set has no parameters for the residue: %s'
+                        % (self.contactSet, resName_i))
         try:
-            cgscDict[res].domainid  = alpha2int[res[:1]]
-        except KeyError: pass
-#   (b) Czech that all residues have a domain assignment
-for res in resList:
-    try:
-        dummy = resDict[res].domainid
-        dummy = cgbbDict[res].domainid
+            res_j = self.contactMap[resName_j.lower()]
+        except KeyError:
+            raise KeyError('The %s contact set has no parameters for the residue: %s'
+                        % (self.contactSet, resName_j))
+        return self.contactMatrix[res_i][res_j]
+
+    def get_Rij(self, atom_i, atom_j):
         try:
-            dummy = cgscDict[res].domainid
-        except KeyError: pass
-    except AttributeError:
-        print 'domains: residue %s has no domain assignment' % res
-        raise GhastlyDeath
+            return self._Rij[(atom_i.addr, atom_j.addr)]
+        except KeyError:
+            try:
+                return self._Rij[(atom_j.addr, atom_i.addr)]
+            except KeyError:
+                distance = atom_i.calc_length(atom_j)
+                self._Rij[(atom_i.addr, atom_j.addr)] = distance
+                return distance
 
-# ( 4 ) Load contact potential
-#   (a) Parse Specified Contact File
-resNameMap      = {}
-contactMatrix   = []
-for line in Etc.stripBare(open(contactFileName)):
-    if line.startswith('AA'):
-        buffer = line.split(':')[1].split()
-        resNameMap = dict( zip(buffer,range(len(buffer))) )
-    else:
-        scaledContacts = [ nScale * abs(float(contact) - contactOffset) for contact in line.split() ]
-        contactMatrix.append(scaledContacts)
-#   (b) Calculate average interaction
-avgEpsilon = sum(Etc.flatten(contactMatrix))/len(Etc.flatten(contactMatrix))
-#   (c) Create ResName -> ContactEnergy mapper
-def get_contact_energy(resName1,resName2):
-    res1 = resNameMap[resName1]
-    res2 = resNameMap[resName2]
-    try:
-        return float(contactMatrix[res1][res2])
-    except IndexError:
-        return float(contactMatrix[res2][res1])
+    def run_stride(self):
+        # tmp file
+        tmp = NamedTemporaryFile()
+        tmpOut = []
+        for atom in self.allAtoms:
+            tmpOut.append(atom.Print(outformat='pdborg'))
+        tmpOut = '\n'.join(tmpOut)
+        tmp.file.write(tmpOut)
+        tmp.file.flush()
+        # execute stride
+        strideOut = getstatusoutput('%s -h %s' %
+                                    (self.strideBin, tmp.name))[1].split('\n')
+        if strideOut[0].startswith('Error'):
+            raise IOError('run_stride: %s' % strideOut[0])
+        tmp.close()
+        self.structureOut = [ line for line in strideOut
+                            if line.startswith('ASG') ]
+        self.hbondOut = [ line for line in strideOut
+                        if line.startswith(('ACC', 'DNR')) and int(line[15:20])
+                        < int(line[35:40]) ]
+        # parse structure
+        iterator = ( atom for atom in self if atom.atomType == 'b' )
+        for i, atom in enumerate(iterator):
+            atom.structure = self.structureOut[i][25:39].strip().lower()
 
-# ( 5 ) Define more efficient Rij machinery
-Rij = {}
-def get_Rij(atom_i,atom_j):
-    i = atom_i.segid + str(atom_i.atomNumber)
-    j = atom_j.segid + str(atom_j.atomNumber)
-    try:
-        return Rij[(i,j)]
-    except KeyError:
-        Rij[(i,j)] = atom_i.bond_length(atom_j)
-        return Rij[(i,j)]
+    def set_allAtoms(self, iterable, **kwargs):
+        iterable = ( atom for atom in iterable if atom.segType == 'pro' and
+                    atom.element != 'h' )
+        self.allAtoms = Mol(iterable, **kwargs)
+        self._Rij = {}
 
-# ( 6 ) Determine Native Contacts
-#   (a) SC/SC Contacts
-lowerOffAlmostDiagonal = ( (resCode_i,resCode_j) for i,resCode_i in enumerate(resList) for j,resCode_j in enumerate(resList) if j - i > 2 and resDict[resCode_i].resName != 'GLY' and resDict[resCode_j].resName != 'GLY' )
-scContact = []
-for resCode_i,resCode_j in lowerOffAlmostDiagonal:
-    contact = False
-    try:
-        for atom_i in scDict[resCode_i]:
-            for atom_j in scDict[resCode_j]:
-                if get_Rij(atom_i,atom_j) < contactRad:
-                    scContact.append( (cgscDict[resCode_i],cgscDict[resCode_j]) )
-                    raise AssertionError
-    except AssertionError: pass
-
-#   (b) BB/SC Contacts
-lowerOffAlmostDiagonal = ( (resCode_i,resCode_j) for i,resCode_i in enumerate(resList) for j,resCode_j in enumerate(resList) if abs(j - i) > 2 and resDict[resCode_j].resName != 'GLY' )
-bbscContact = []
-for resCode_i,resCode_j in lowerOffAlmostDiagonal:
-    contact = False
-    try:
-        for atom_i in bbDict[resCode_i]:
-            for atom_j in scDict[resCode_j]:
-                if get_Rij(atom_i,atom_j) < contactRad:
-                    bbscContact.append( (cgbbDict[resCode_i],cgscDict[resCode_j]) )
-                    raise AssertionError
-    except AssertionError:
-        pass
-
-# ( 7 ) STRIDE
-strideOutput = commands.getstatusoutput('%s -h %s' % (stridePath,inputPath+inputFile) )[1].split('\n')
-if strideOutput[0].startswith('Error'): raise IOError('stride: %s' % strideOutput[0])
-#   (a) Get helical secondary structure
-strideHelixOutput = [ line for line in strideOutput if line.startswith('ASG') ]
-for i,line in enumerate(strideHelixOutput):
-    if line[34:39] == 'Helix':
-        cgbbDict[resList[i]].helix = True
-    else:
-        cgbbDict[resList[i]].helix = False
-
-#   (b) Get hydrogen bonds
-strideHBondOutput = [ line for line in strideOutput if line[:3] in ['ACC','DNR'] and int(line[15:20]) < int(line[35:40]) ]
-#       (i) Multiplicity, ie anti-parallel beta sheets will have 'double' hbonds
-hBondMult = {}
-for line in strideHBondOutput:
-    res_i = int(line[15:20])
-    res_j = int(line[35:40])
-    if (res_i,res_j) in hBondMult:
-        hBondMult[(res_i,res_j)] += 1
-    else:
-        hBondMult[(res_i,res_j)] = 1
-#       (ii) Build hbond list, 'double' bonds, get double energy
-orderDict = ( (i,j) for i in range(len(resList)) for j in range(len(resList)) if i < j )
-bbHBond = []
-for (i,j) in orderDict:
-    try:
-        bb_i = cgbbDict[resList[i]]
-        bb_j = cgbbDict[resList[j]]
-        if bb_i.helix and bb_j.helix:
-            hBondEnergy = hBondEnergyHelix
+    def write_crd(self, filename=None):
+        String = []
+        String.append('*')
+        String.append('%5d' % len(self))
+        for atom in self:
+            String.append(atom.Print(outformat='crd'))
+        if filename is None:
+            for line in String:
+                print line
         else:
-            hBondEnergy = hBondEnergyNoHelix
-        bbHBond.append( (bb_i,bb_j,hBondEnergy,hBondMult[(i,j)]) )
-    except KeyError:
-        pass
+            String = '\n'.join(String)
+            writeTo = open(filename, 'w')
+            writeTo.write(String)
+            writeTo.close()
 
-# ( 8 ) Reindex CG.atomNumber
-for i,cg in enumerate(cgList):
-    cg.atomNumber = i+1
-
-# ( 9 ) Write .crd file
-outputName = 'cg_' + pdbName + '.crd'
-writeTo = open(outputPath + outputName,'w')
-writeTo.write('*\n')
-writeTo.write('%5d\n' % len(cgList) )
-for line in cgList:
-    writeTo.write(line.Print('cgcrd'))
-writeTo.close()
-
-# (10 ) Write a .seq file
-outputName = 'cg_' + pdbName + '.seq'
-writeTo = open(outputPath + outputName,'w')
-writeTo.write(' '.join(resList))
-writeTo.close()
-
-# (11 ) Write .pdb file
-outputName = 'cg_' + pdbName + '.pdb'
-writeTo = open(outputPath + outputName,'w')
-for line in cgList:
-    writeTo.write(line.Print('cgcharmm'))
-writeTo.write('TER\n')
-writeTo.close()
-
-# (12 ) Write .rtf file
-outputName = 'cg_' + pdbName + '.rtf'
-writeTo = open(outputPath + outputName,'w')
-writeTo.write('* This CHARMM .rtf file describes a Go model of %s\n' % pdbName)
-writeTo.write('*\n')
-writeTo.write('%5d%5d\n' % (20,1) )
-writeTo.write('\n')
-
-# Mass Section
-for i,cg in enumerate(cgList):
-    stringBuffer = 'MASS %-5d%-8s%10.6f\n' % (i+1,cg.resCode+cg.atomType.strip(),cg.mass)
-    writeTo.write(stringBuffer)
-writeTo.write('\n')
-
-# Declare statements & Defaults
-writeTo.write('DECL +B\n')
-writeTo.write('DECL -B\n')
-writeTo.write('DECL #B\n')
-writeTo.write('DEFAULT FIRST NONE LAST NONE\n')
-writeTo.write('\n')
-
-# Residue Topology Section
-for res in resList:
-    if resDict[res].resName == 'GLY':
-        writeTo.write('RESI %-5s       0.0\n' % res )
-        writeTo.write('GROUP\n')
-        writeTo.write('ATOM   B  %-5s  0.0\n' % (res+'B') )
-        writeTo.write('BOND   B +B\n')
-        writeTo.write('ANGLE -B  B +B\n')
-        writeTo.write('DIHE  -B  B +B #B\n')
-        writeTo.write('\n')
-    else:
-        writeTo.write('RESI %-5s       0.0\n' % res )
-        writeTo.write('GROUP\n')
-        writeTo.write('ATOM   B  %-5s  0.0\n' % (res+'B') )
-        writeTo.write('ATOM   S  %-5s  0.0\n' % (res+'S') )
-        writeTo.write('BOND   B  S  B +B\n')
-        writeTo.write('ANGLE -B  B  S  S  B +B -B  B +B\n')
-        writeTo.write('DIHE  -B  B +B #B\n')
-        writeTo.write('IMPH   B -B +B  S\n')
-        writeTo.write('\n')
-writeTo.write('\n')
-writeTo.write('END\n')
-writeTo.close()
-
-# (13 ) Write a .prm file
-#   (0) CG Parameter Values
-#   (a) Bond
-#   (b) Angle
-#   (c) Dihedral
-#   (d) Improper Dihedral
-#   (e) Non-Bonded
-#   (f) Backbone hydrogen bonding
-#   (g) Native sidechain interaction
-#   (h) Backbone sidechain interaction
-#   (i) END of file information & Checksum
-
-outputName = 'cg_' + pdbName + '.prm'
-writeTo = open(outputPath + outputName,'w')
-writeTo.write('* This CHARMM .param file describes a Go model of %s\n' % pdbName)
-writeTo.write('* contactParmSet     = %s   \n' % contactParmSet)
-writeTo.write('* nScale             = %6.3f\n' % nScale)
-writeTo.write('* domainScale        = %6.3f\n' % domainScale)
-writeTo.write('* fnn                = %6.3f\n' % fnn)
-writeTo.write('* contactRad         = %6.3f\n' % contactRad)
-writeTo.write('* kBond              = %6.3f\n' % kBond)
-writeTo.write('* kAngle             = %6.3f\n' % kAngle)
-writeTo.write('* kDiheHelix_1       = %6.3f\n' % kDiheHelix_1)
-writeTo.write('* kDiheHelix_3       = %6.3f\n' % kDiheHelix_3)
-writeTo.write('* kDiheNoHelix_1     = %6.3f\n' % kDiheNoHelix_1)
-writeTo.write('* kDiheNoHelix_3     = %6.3f\n' % kDiheNoHelix_3)
-writeTo.write('* hBondEnergyHelix   = %6.3f\n' % hBondEnergyHelix)
-writeTo.write('* hBondEnergyNoHelix = %6.3f\n' % hBondEnergyNoHelix)
-writeTo.write('* epsilonNN          = %6.3e\n' % epsilonNN)
-writeTo.write('* bbscInteraction    = %6.3f\n' % bbscInteraction)
-writeTo.write('*\n')
-writeTo.write('\n')
-
-writeTo.write('\n')                                    # (a)
-writeTo.write('BOND\n')
-
-#   BB(i)/BB(i+1) length
-for i,res in enumerate(resList):
-    try:
-        bondLength = cgbbDict[res].bond_length(cgbbDict[resList[i+1]])
-        stringBuffer = '%-8s%-8s  %12.6f%12.6f\n' % (\
-                res+'B',resList[i+1]+'B',kBond,bondLength)
-        writeTo.write(stringBuffer)
-    except IndexError:
-        pass
-
-#   BB(i)/SC(i) length
-for res in resList:
-    try:
-        bondLength = cgbbDict[res].bond_length(cgscDict[res])
-        stringBuffer = '%-8s%-8s  %12.6f%12.6f\n' % (\
-                res+'B',res+'S',kBond,bondLength)
-        writeTo.write(stringBuffer)
-    except KeyError:
-        pass
-
-writeTo.write('\n')                                    # (b)
-writeTo.write('ANGLE\n')
-
-#   BB(i)/BB(i+1)/BB(i+2) angle
-for i,res in enumerate(resList):
-    try:
-        bondAngle = cgbbDict[res].bond_angle(cgbbDict[resList[i+1]],cgbbDict[resList[i+2]],'deg')
-        stringBuffer = '%-8s%-8s%-8s  %12.6f%12.6f\n' % (\
-                res+'B',resList[i+1]+'B',resList[i+2]+'B',kAngle,bondAngle)
-        writeTo.write(stringBuffer)
-    except IndexError:
-        pass
-
-#   SC(i)/BB(i)/BB(i+1) angle
-for i,res in enumerate(resList):
-    try:
-        bondAngle = cgscDict[res].bond_angle(cgbbDict[res],cgbbDict[resList[i+1]],'deg')
-        stringBuffer = '%-8s%-8s%-8s  %12.6f%12.6f\n' % (\
-                res+'S',res+'B',resList[i+1]+'B',kAngle,bondAngle)
-        writeTo.write(stringBuffer)
-    except IndexError:
-        pass
-    except KeyError:
-        pass
-
-#   BB(i)/BB(i+1)/SC(i+1) angle
-for i,res in enumerate(resList):
-    try:
-        bondAngle = cgbbDict[res].bond_angle(cgbbDict[resList[i+1]],cgscDict[resList[i+1]],'deg')
-        stringBuffer = '%-8s%-8s%-8s  %12.6f%12.6f\n' % (\
-                res+'B',resList[i+1]+'B',resList[i+1]+'S',kAngle,bondAngle)
-        writeTo.write(stringBuffer)
-    except IndexError:
-        pass
-    except KeyError:
-        pass
-
-writeTo.write('\n')                                    # (c)
-writeTo.write('DIHEDRAL\n')
-writeTo.write('! Backbone\n')
-
-#   BB(i)/BB(i+1)/BB(i+2)/BB(i+3) dihedral
-for i,res in enumerate(resList):
-    try:
-        dihedral = cgbbDict[res].bond_signed_dihedral(cgbbDict[resList[i+1]],cgbbDict[resList[i+2]],cgbbDict[resList[i+3]],'deg')
-        if cgbbDict[resList[i+1]].helix and cgbbDict[resList[i+2]].helix:
-            kDihe   = ['',kDiheHelix_1,'',kDiheHelix_3]
+    def write_pdb(self, filename=None):
+        String = []
+        for atom in self:
+            String.append(atom.Print(outformat='charmm'))
+        String.append('TER')
+        #
+        if filename is None:
+            for line in String:
+                print line
         else:
-            kDihe   = ['',kDiheNoHelix_1,'',kDiheNoHelix_3]
+            String = '\n'.join(String)
+            writeTo = open(filename, 'w')
+            writeTo.write(String)
+            writeTo.close()
 
-        for multiplicity in [1,3]:
-            delta       = Etc.dihedral_mod( multiplicity * dihedral - 180. )
-            kDihedral   = kDihe[multiplicity]
+    def write_rtf(self, filename=None):
+        String = []
+        String.extend(self._rtf_header())
+        String.append('')
+        String.extend(self._rtf_mass())
+        String.append('')
+        String.extend(self._rtf_declare())
+        String.append('')
+        String.extend(self._rtf_residue())
+        String.append('')
+        String.append('END')
+        #
+        if filename is None:
+            for line in String:
+                print line.upper()
+        else:
+            String = '\n'.join(String).upper()
+            writeTo = open(filename, 'w')
+            writeTo.write(String)
+            writeTo.close()
 
-            stringBuffer = '%-8s%-8s%-8s%-8s  %12.6f%3d%12.6f\n' % (\
-                    res+'B',resList[i+1]+'B',resList[i+2]+'B',resList[i+3]+'B',kDihedral,multiplicity,delta)
-            writeTo.write(stringBuffer)
-    except IndexError:
-        pass
+    def write_prm(self, filename=None):
+        # compute some things...
+        self.run_stride()
+        self.bbAtoms = []
+        self.scAtoms = []
+        for res in self.iter_res():
+            self.bbAtoms.append(res[0])
+            try:
+                self.scAtoms.append(res[1])
+            except IndexError:
+                self.scAtoms.append(None)
+        #
+        String = []
+        String.extend(self._prm_header())
+        String.append('')
+        String.extend(self._prm_bond())
+        String.append('')
+        String.extend(self._prm_angle())
+        String.append('')
+        String.extend(self._prm_dihedral())
+        String.append('')
+        String.extend(self._prm_improper())
+        String.append('')
+        String.extend(self._prm_nonbond())
+        String.append('')
+        String.extend(self._prm_nbfix())
+        String.append('')
+        String.append('END')
+        #
+        del self.bbAtoms
+        del self.scAtoms
+        #
+        if filename is None:
+            for line in String:
+                print line.upper()
+        else:
+            String = '\n'.join(String).upper()
+            writeTo = open(filename, 'w')
+            writeTo.write(String)
+            writeTo.close()
 
-writeTo.write('\n')                                    # (d)
-writeTo.write('IMPROPERS\n')
-writeTo.write('! Sidechain\n')
+###################
+# Private Methods #
+###################
 
-#   BB(i+1)/BB(i)/BB(i+2)/SC(i+1) dihedral
-for i,res in enumerate(resList):
-    try:
-        dihedral = cgbbDict[resList[i+1]].bond_signed_dihedral(cgbbDict[res],cgbbDict[resList[i+2]],cgscDict[resList[i+1]],'deg')
-        multiplicity = 1
-        kDihedral    = 20. * abs(avgEpsilon)
-        delta        = dihedral + 180.
-        stringBuffer = '%-8s%-8s%-8s%-8s  %12.6f%3d%12.6f\n' % (\
-                resList[i+1]+'B',res+'B',resList[i+2]+'B',resList[i+1]+'S',kDihedral,multiplicity,delta)
-    except IndexError:
-        pass
-    except KeyError:
-        pass
+    def _rtf_header(self):
+        String = []
+        #
+        String.append('* This CHARMM .rtf file describes a KTGo model of %s' %
+                    self.code)
+        String.append('*')
+        String.append('%5d%5d' % (20,1))
+        return String
 
-writeTo.write('\n')                                    # (e)
-writeTo.write('NONBONDED NBXMOD 4 ATOM CDIEL SHIFT VATOM VDISTANCE VSWITCH -\n')
-writeTo.write('CUTNB 23 CTOFNB 20 CTONNB 18 EPS 1.0 WMIN 1.5 E14FAC 0.7\n')
-writeTo.write('!atom\n')
+    def _rtf_mass(self):
+        String = []
+        #
+        for cg in self:
+            String.append('MASS %-5d%-8s%10.6f' % (cg.atomNum, cg.prmString,
+                                                cg.mass))
+        return String
 
-for res in cgList:
-    if res.atomType == '   B':
-        rMinDiv2 = 20.
-    elif res.atomType == '   S':
-        rMinDiv2 = 10. * Etc.get_aa_vdw( res.resName ) * 2.**(1./6.) * fnn
-    else:
-        raise DeadlyErrorOfDeath
-    stringBuffer = '%-8s  %3.1f%10s%12.6f\n' % (\
-            res.resCode+res.atomType.strip(),0,str(-1*epsilonNN),rMinDiv2)
-    writeTo.write(stringBuffer)
+    def _rtf_declare(self):
+        String = []
+        #
+        String.append('DECL +B')
+        String.append('DECL -B')
+        String.append('DECL #B')
+        String.append('DEFAULT FIRST NONE LAST NONE')
+        return String
 
-writeTo.write('\n')                                    # (f)
-writeTo.write('NBFIX\n')
-writeTo.write('! backbone hydrogen bonding\n')
+    def _rtf_residue(self):
+        String = []
+        #
+        for res in self.iter_res():
+            if len(res) == 1:
+                String.append('RESI %-5s       0.0' % res.resName)
+                String.append('GROUP')
+                String.append('ATOM   B  %-5s  0.0' % res[0].prmString)
+                String.append('BOND   B +B')
+                String.append('ANGLE -B  B +B')
+                String.append('DIHE  -B  B +B #B')
+            else:
+                String.append('RESI %-5s       0.0' % res.resName)
+                String.append('GROUP')
+                String.append('ATOM   B  %-5s  0.0' % res[0].prmString)
+                String.append('ATOM   S  %-5s  0.0' % res[1].prmString)
+                String.append('BOND   B  S  B +B')
+                String.append('ANGLE -B  B  S  S  B +B -B  B +B')
+                String.append('DIHE  -B  B +B #B')
+                String.append('IMPH   B -B +B  S')
+            String.append('')
+        return String
 
-bbEnergySum = 0
-for hBond in bbHBond:
-    bondLength  = hBond[0].bond_length(hBond[1])
-    comment     = ''
-    hBondEnergy = hBond[2]
-    if hBond[0].domainid != hBond[1].domainid:
-        comment     += '! Interface between domains %d, %d ' % (hBond[0].domainid,hBond[1].domainid)
-        hBondEnergy *= domainScale
-    if hBond[3] != 1:
-        comment     += '! hBond multiplcity is %d ' % hBond[3]
-        hBondEnergy *= hBond[3]
-    bbEnergySum += hBondEnergy
-    stringBuffer = '%-8s%-8s  %12.6f%12.6f %s\n' % (\
-            hBond[0].resCode+'B',hBond[1].resCode+'B',hBondEnergy,bondLength,comment)
-    writeTo.write(stringBuffer)
+    def _prm_header(self):
+        String = []
+        taco = self._parameters
+        #
+        String.append('* This CHARMM .param file describes a Go model of %s' % self.code)
+        String.append('* contactSet         = %s' % self.contactSet)
+        String.append('* nscale             = %6.3f' % taco['nscale'])
+        String.append('* domainscale        = %6.3f' % taco['domainscale'])
+        String.append('* fnn                = %6.3f' % taco['fnn'])
+        String.append('* contactrad         = %6.3f' % taco['contactrad'])
+        String.append('* kbond              = %6.3f' % taco['kbond'])
+        String.append('* kangle             = %6.3f' % taco['kangle'])
+        String.append('* kdihedralhelix_1   = %6.3f' % taco['kdihedralhelix_1'])
+        String.append('* kdihedralhelix_3   = %6.3f' % taco['kdihedralhelix_3'])
+        String.append('* kdihedralnohelix_1 = %6.3f' % taco['kdihedralnohelix_1'])
+        String.append('* kdihedralnohelix_3 = %6.3f' % taco['kdihedralnohelix_3'])
+        String.append('* hBondenergyhelix   = %6.3f' % taco['hbondenergyhelix'])
+        String.append('* hBondenergynohelix = %6.3f' % taco['hbondenergynohelix'])
+        String.append('* epsilonnn          = %6.3e' % taco['epsilonnn'])
+        String.append('* bbscinteraction    = %6.3f' % taco['bbscinteraction'])
+        String.append('* contactoffset      = %6.3f' % taco['contactoffset'])
+        String.append('*')
+        return String
 
-writeTo.write('! native side-chain interactions\n')    # (g)
-scEnergySum = 0
-for contact in scContact:
-    bondLength  = contact[0].bond_length(contact[1])
-    comment     = ''
-    ljDepth     = -1. * get_contact_energy( contact[0].resName,contact[1].resName )
-    if contact[0].domainid != contact[1].domainid:
-        comment     += '! Interface between domains %d, %d ' % (contact[0].domainid,contact[1].domainid)
-        ljDepth     *= domainScale/nScale
-    scEnergySum += ljDepth
-    stringBuffer = '%-8s%-8s  %12.6f%12.6f %s\n' % (\
-            contact[0].resCode+'S',contact[1].resCode+'S',ljDepth,bondLength,comment)
-    writeTo.write(stringBuffer)
+    def _prm_bond(self):
+        String = []
+        kbond = self._parameters['kbond']
+        #
+        String.append('BOND')
+        # bb(i)/bb(i+1)
+        for i, atom in enumerate(self.bbAtoms):
+            try:
+                bb_0 = atom
+                bb_1 = self.bbAtoms[i+1]
+                tmp = '%-8s%-8s%14.6f%12.6f' % \
+                        (bb_0.prmString, bb_1.prmString, kbond,
+                        bb_0.calc_length(bb_1))
+                String.append(tmp)
+            except IndexError:
+                pass
+        # bb(i)/sc(i)
+        for i, atom in enumerate(self.bbAtoms):
+            try:
+                bb = atom
+                sc = self.scAtoms[i]
+                tmp = '%-8s%-8s%14.6f%12.6f' % \
+                        (bb.prmString, sc.prmString, kbond,
+                        bb.calc_length(sc))
+                String.append(tmp)
+            except AttributeError:
+                    pass
+        return String
 
-writeTo.write('! backbone side-chain interactions\n')  # (h)
-bbscEnergySum = 0
-for contact in bbscContact:
-    bondLength  = contact[0].bond_length(contact[1])
-    comment     = ''
-    ljDepth     = bbscInteraction
-    if contact[0].domainid != contact[1].domainid:
-        comment     += '! Interface between domains %d, %d ' % (contact[0].domainid,contact[1].domainid)
-        ljDepth     *= domainScale
-    bbscEnergySum += ljDepth
-    stringBuffer = '%-8s%-8s  %12.6f%12.6f %s\n' % (\
-            contact[0].resCode+'B',contact[1].resCode+'S',ljDepth,bondLength,comment)
-    writeTo.write(stringBuffer)
+    def _prm_angle(self):
+        String = []
+        kangle = self._parameters['kangle']
+        #
+        String.append('ANGLE')
+        # bb(i)/bb(i+1)/bb(i+2)
+        for i, atom in enumerate(self.bbAtoms):
+            try:
+                bb_0 = atom
+                bb_1 = self.bbAtoms[i+1]
+                bb_2 = self.bbAtoms[i+2]
+                tmp = '%-8s%-8s%-8s%14.6f%12.6f' % \
+                        (bb_0.prmString, bb_1.prmString, bb_2.prmString,
+                        kangle, bb_0.calc_angle(bb_1, bb_2))
+                String.append(tmp)
+            except IndexError:
+                pass
+        # sc(i)/bb(i)/bb(i+1)
+        for i, atom in enumerate(self.scAtoms):
+            try:
+                sc = atom
+                bb_0 = self.bbAtoms[i]
+                bb_1 = self.bbAtoms[i+1]
+                tmp = '%-8s%-8s%-8s%14.6f%12.6f' % \
+                        (sc.prmString, bb_0.prmString, bb_1.prmString,
+                        kangle, sc.calc_angle(bb_0, bb_1))
+                String.append(tmp)
+            except IndexError:
+                pass
+            except AttributeError:
+                pass
+        # bb(i)/bb(i+1)/sc(i+1)
+        for i, atom in enumerate(self.bbAtoms):
+            try:
+                bb_0 = atom
+                bb_1 = self.bbAtoms[i+1]
+                sc_1 = self.scAtoms[i+1]
+                tmp = '%-8s%-8s%-8s%14.6f%12.6f' % \
+                        (bb_0.prmString, bb_1.prmString, sc_1.prmString,
+                        kangle, bb_0.calc_angle(bb_1, sc_1))
+                String.append(tmp)
+            except IndexError:
+                pass
+            except AttributeError:
+                pass
+        return String
 
-writeTo.write('\n')                                    # (i)
-writeTo.write('! Czech Sum Info:%5d,%8.2f,%8.2f\n' % (bbEnergySum,scEnergySum,bbscEnergySum) )
-writeTo.write('END\n')
-writeTo.close()
+    def _prm_dihedral(self):
+        String = []
+        kdihel_1 = self._parameters['kdihedralhelix_1']
+        kdihel_3 = self._parameters['kdihedralhelix_3']
+        kdinohel_1 = self._parameters['kdihedralnohelix_1']
+        kdinohel_3 = self._parameters['kdihedralnohelix_3']
+        #
+        String.append('DIHEDRAL')
+        String.append('! Backbone')
+        # bb(i)/bb(i+1)/bb(i+2)/bb(i+3)
+        for i, atom in enumerate(self.bbAtoms):
+            try:
+                bb_0 = atom
+                bb_1 = self.bbAtoms[i+1]
+                bb_2 = self.bbAtoms[i+2]
+                bb_3 = self.bbAtoms[i+3]
+                #
+                dihedral = bb_0.calc_signedDihedral(bb_1, bb_2, bb_3)
+                #
+                if 'alphahelix' == bb_1.structure == bb_2.structure:
+                    k = [kdihel_1, kdihel_3]
+                else:
+                    k = [kdinohel_1, kdinohel_3]
+                for i, mult in enumerate([1, 3]):
+                    delta = modPi( mult * dihedral - 180. )
+                    tmp = '%-8s%-8s%-8s%-8s%14.6f%3d%12.6f' % \
+                            (bb_0.prmString, bb_1.prmString, bb_2.prmString,
+                            bb_3.prmString, k[i], mult, delta)
+                    String.append(tmp)
+            except IndexError:
+                pass
+        return String
+
+    def _prm_improper(self):
+        String = []
+        #
+        String.append('IMPROPER')
+        String.append('! Sidechain')
+        # bb(i+1)/bb(i)/bb(i+2)/sc(i+1)
+        for i, atom in enumerate(self.bbAtoms):
+            try:
+                bb_1 = self.bbAtoms[i+1]
+                bb_0 = atom
+                bb_2 = self.bbAtoms[i+2]
+                sc_1 = self.scAtoms[i+1]
+                #
+                dihedral = bb_1.calc_signedDihedral(bb_0, bb_2, sc_1)
+                #
+                k = 20. * abs(self.get_avgEpsilon())
+                mult = 1
+                delta = dihedral + 180.
+                tmp = '%-8s%-8s%-8s%-8s%14.6f%3d%12.6f' % \
+                        (bb_1.prmString, bb_0.prmString, bb_2.prmString,
+                        sc_1.prmString, k, mult, delta)
+                String.append(tmp)
+            except IndexError:
+                pass
+            except AttributeError:
+                pass
+        return String
+
+    def _prm_nonbond(self):
+        String = []
+        fnn = self._parameters['fnn']
+        epsilonnn = self._parameters['epsilonnn']
+        #
+        String.append('NONBONDED NBXMOD 4 ATOM CDIEL SHIFT VATOM VDISTANCE VSWITCH -')
+        String.append('CUTNB 23 CTOFNB 20 CTONNB 18 EPS 1.0 WMIN 1.5 E14FAC 0.7')
+        String.append('!atom')
+        for atom in self:
+            if atom.atomType == 'b':
+                rMinDiv2 = 20.
+            elif atom.atomType == 's':
+                rMinDiv2 = 10. * aaVDW[atom.derivedResName] * 2**(1/6.) * fnn
+            else:
+                raise AssertionError('How did I get here?')
+            tmp = '%-8s%5.1f%10.2e%12.6f' % (atom.prmString, 0, -epsilonnn, rMinDiv2)
+            String.append(tmp)
+        return String
+
+    def _prm_nbfix(self):
+        String = []
+        nscale = self._parameters['nscale']
+        domainscale = self._parameters['domainscale']
+        bbscinteraction = self._parameters['bbscinteraction']
+        #
+        String.append('NBFIX')
+        # hbonds
+        String.append('! backbone hydrogen bonding')
+        hbondEnergySum = 0.
+        for hbond in self.get_hbond():
+            hb_0, hb_1, energy, mult = hbond
+            comment = ' '
+            if hb_0.domain != hb_1.domain:
+                comment += '! Interface between domains %d, %d ' % \
+                        (hb_0.domain, hb_1.domain)
+                energy *= domainscale
+            if mult != 1:
+                comment += '! H-Bond multiplicty is %d' % mult
+                energy *= mult
+            hbondEnergySum += energy
+            tmp = '%-8s%-8s%14.6f%12.6f%s' % (hb_0.prmString, hb_1.prmString,
+                                            energy, hb_0.calc_length(hb_1), comment)
+            String.append(tmp)
+        # bbsc
+        String.append('! backbone side-chain interactions')
+        bbscEnergySum = 0.
+        for bbsc in self.get_nativeBBSC():
+            bb, sc = bbsc
+            ljDepth = bbscinteraction
+            comment = ' '
+            if bb.domain != sc.domain:
+                comment += '! Interface between domains %d, %d ' % (bb.domain, sc.domain)
+                ljDepth *= domainscale
+            bbscEnergySum += ljDepth
+            tmp = '%-8s%-8s%14.6f%12.6f%s' % (bb.prmString, sc.prmString,
+                                            ljDepth, bb.calc_length(sc), comment)
+            String.append(tmp)
+        # scsc
+        String.append('! native side-chain interactions')
+        scscEnergySum = 0.
+        for scsc in self.get_nativeSCSC():
+            sc_0, sc_1 = scsc
+            ljDepth = -self.get_parm(sc_0.derivedResName, sc_1.derivedResName)
+            comment = ' '
+            if sc_0.domain != sc_1.domain:
+                comment += '! Interface between domains %d, %d ' % \
+                        (sc_0.domain, sc_1.domain)
+                ljDepth *= domainscale/nscale
+            scscEnergySum += ljDepth
+            tmp = '%-8s%-8s%14.6f%12.6f%s' % (sc_0.prmString, sc_1.prmString,
+                                            ljDepth, sc_0.calc_length(sc_1), comment)
+            String.append(tmp)
+        String.append('! Czech Sum Info:%8.2f,%8.2f,%8.2f' %
+                    (hbondEnergySum, bbscEnergySum, scscEnergySum) )
+        return String
+
+################
+# Over-written #
+################
+
+    def parse(self):
+        """
+        Not implemented.
+        """
+        raise NotImplementedError
 
