@@ -28,7 +28,6 @@ class KTGo(Mol):
         `contactSet`
     Public Methods
         `set_cgStruct`
-        `get_avgEpsilon`
     Private Methods
         ``
     """
@@ -48,7 +47,6 @@ class KTGo(Mol):
         'hbondenergynohelix':-0.50,
         'epsilonnn':1e-12,
         'bbscinteraction':-0.37,
-        'contactoffset':0
         }
 
     def __init__(self, iterable=None, **kwargs):
@@ -83,21 +81,30 @@ class KTGo(Mol):
             if value == 'kgs':
                 self.contactMatrix = kgs_matrix
                 self.contactMap = kgs_map
-                self._parameters['contactoffset'] = 1.8
             elif value == 'bt':
                 self.contactMatrix = bt_matrix
                 self.contactMap = bt_map
-                self._parameters['contactoffset'] = 0.6
             elif value == 'mj':
                 self.contactMatrix = mj_matrix
                 self.contactMap = mj_map
-                self._parameters['contactoffset'] = 1.2
             elif value == 'other':
                 raise NotImplementedError
             else:
                 raise TypeError('Invalid `contactSet` specified specified')
-            self.contactMatrix = self.nScale * abs(self.contactMatrix -
-                                                self._parameters['contactoffset'])
+            self.contactMatrix = self.nScale * (self.contactMatrix -
+                                                self.contactMatrix.max())
+        return locals()
+
+    @Property
+    def domainScale():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            return self._parameters['domainscale']
+        def fset(self, value):
+            self._parameters['domainscale'] = value
         return locals()
 
     @Property
@@ -115,11 +122,6 @@ class KTGo(Mol):
 ##################
 # Public Methods #
 ##################
-
-    def get_avgEpsilon(self):
-        top = self.contactMatrix.sum() + self.contactMatrix.diagonal().sum()
-        bottom = self.contactMatrix.size + self.contactMatrix.diagonal().size
-        return top/bottom
 
     def gen_cgStruct(self):
         """
@@ -418,7 +420,6 @@ class KTGo(Mol):
         String.append('* hBondenergynohelix = %6.3f' % taco['hbondenergynohelix'])
         String.append('* epsilonnn          = %6.3e' % taco['epsilonnn'])
         String.append('* bbscinteraction    = %6.3f' % taco['bbscinteraction'])
-        String.append('* contactoffset      = %6.3f' % taco['contactoffset'])
         String.append('*')
         return String
 
@@ -546,7 +547,7 @@ class KTGo(Mol):
                 #
                 dihedral = bb_1.calc_signedDihedral(bb_0, bb_2, sc_1)
                 #
-                k = 20. * abs(self.get_avgEpsilon())
+                k = 20. * abs(self.contactMatrix.mean())
                 mult = 1
                 delta = dihedral + 180.
                 tmp = '%-8s%-8s%-8s%-8s%14.6f%3d%12.6f' % \
@@ -569,9 +570,9 @@ class KTGo(Mol):
         String.append('!atom')
         for atom in self:
             if atom.atomType == 'b':
-                rMinDiv2 = 20.
+                rMinDiv2 = 20
             elif atom.atomType == 's':
-                rMinDiv2 = 10. * aaVDW[atom.derivedResName] * 2**(1/6.) * fnn
+                rMinDiv2 = 10 * aaVDW[atom.derivedResName] * 2**(1/6.) * fnn
             else:
                 raise AssertionError('How did I get here?')
             tmp = '%-8s%5.1f%10.2e%12.6f' % (atom.prmString, 0, -epsilonnn, rMinDiv2)
@@ -621,7 +622,7 @@ class KTGo(Mol):
         scscEnergySum = 0.
         for scsc in self.get_nativeSCSC():
             sc_0, sc_1 = scsc
-            ljDepth = -self.get_parm(sc_0.derivedResName, sc_1.derivedResName)
+            ljDepth = self.get_parm(sc_0.derivedResName, sc_1.derivedResName)
             comment = ' '
             if sc_0.domain != sc_1.domain:
                 comment += '! Interface between domains %d, %d ' % \

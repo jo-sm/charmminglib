@@ -7,14 +7,33 @@ DOCME
 
 from charmming.cg.const import blnSolv_map, blnSolv_matrix, blnSolvSC_map
 from charmming.cg.ktgo import KTGo
+from charmming.tools import Property
 
 
 class KTGoSolv(KTGo):
     """
     DOCME
     """
+
+    _parameters = dict(KTGo._parameters)
+    _parameters.update({
+        'solvscale':1.00
+        })
+
     def __init__(self, iterable=None, **kwargs):
         super(KTGoSolv, self).__init__(iterable, **kwargs)
+
+    @Property
+    def solvScale():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            return self._parameters['solvscale']
+        def fset(self, value):
+            self._parameters['solvscale'] = value
+        return locals()
 
     def set_hbondDonorAcceptor(self):
         acceptors = []
@@ -56,8 +75,12 @@ class KTGoSolv(KTGo):
 
     def write_prm(self, filename=None):
         self.solventMap = blnSolv_map
-        self.solventMatrix = self.nScale * abs(blnSolv_matrix)
+        self.solventMatrix = self.solvScale * abs(blnSolv_matrix)
         super(KTGoSolv, self).write_prm(filename)
+
+###################
+# Private Methods #
+###################
 
     def _rtf_mass(self):
         String = super(KTGoSolv, self)._rtf_mass()
@@ -65,28 +88,55 @@ class KTGoSolv(KTGo):
         String.append('MASS %-5d%-8s%10.6f' % (atomNum, 'p', 72))
         return String
 
+    def _rtf_residue(self):
+        String = super(KTGoSolv, self)._rtf_residue()
+        String.append('RESI %-5s       0.0' % 'WAT')
+        String.append('GROUP')
+        String.append('ATOM   P  %-5s  0.0' % 'P')
+        return String
+
+    def _prm_header(self):
+        String = []
+        taco = self._parameters
+        #
+        String.append('* This CHARMM .param file describes a GoSolv model of %s' % self.code)
+        String.append('* contactSet         = %s' % self.contactSet)
+        String.append('* nscale             = %6.3f' % taco['nscale'])
+        String.append('* solvscale          = %6.3f' % taco['solvscale'])
+        String.append('* domainscale        = %6.3f' % taco['domainscale'])
+        String.append('* fnn                = %6.3f' % taco['fnn'])
+        String.append('* contactrad         = %6.3f' % taco['contactrad'])
+        String.append('* kbond              = %6.3f' % taco['kbond'])
+        String.append('* kangle             = %6.3f' % taco['kangle'])
+        String.append('* kdihedralhelix_1   = %6.3f' % taco['kdihedralhelix_1'])
+        String.append('* kdihedralhelix_3   = %6.3f' % taco['kdihedralhelix_3'])
+        String.append('* kdihedralnohelix_1 = %6.3f' % taco['kdihedralnohelix_1'])
+        String.append('* kdihedralnohelix_3 = %6.3f' % taco['kdihedralnohelix_3'])
+        String.append('* hBondenergyhelix   = %6.3f' % taco['hbondenergyhelix'])
+        String.append('* hBondenergynohelix = %6.3f' % taco['hbondenergynohelix'])
+        String.append('* epsilonnn          = %6.3e' % taco['epsilonnn'])
+        String.append('* bbscinteraction    = %6.3f' % taco['bbscinteraction'])
+        String.append('*')
+        return String
+
     def _prm_nonbond(self):
         String = super(KTGoSolv, self)._prm_nonbond()
-        # PUT WATER PRM HERE
-        # PUT WATER PRM HERE
-        # PUT WATER PRM HERE
-        # PUT WATER PRM HERE
-        # PUT WATER PRM HERE
-        String.append('! Solvent Parameter goes here')
-        # PUT WATER PRM HERE
-        # PUT WATER PRM HERE
-        # PUT WATER PRM HERE
-        # PUT WATER PRM HERE
-        # PUT WATER PRM HERE
+        fnn = self._parameters['fnn']
+        epsilonnn = self._parameters['epsilonnn']
+        rMinDiv2 = 4.7 * 2**(1/6.) * fnn
+        String.append('! Solvent Parameter')
+        String.append('%-8s%5.1f%10.2e%12.6f' % ('p', 0, -epsilonnn, rMinDiv2))
         return String
 
     def _prm_nbfix(self):
         String = super(KTGoSolv, self)._prm_nbfix()
         self.set_hbondDonorAcceptor()
+        fnn = self._parameters['fnn']
+        rMinDiv2 = 4.7 * 2**(1/6.) * fnn
         #
         String.append('! Solvent Parameters')
         String.append('%-8s%-8s%14.6f%12.6f' % ('p', 'p',
-                        -self.get_solvParm('p', 'p'), 2.63779) )
+                        -self.get_solvParm('p', 'p'), rMinDiv2) )
         #
         solvEnergySum = 0
         for atom in self:
@@ -101,7 +151,7 @@ class KTGoSolv(KTGo):
             ljDepth = -self.get_solvParm('p', key)
             solvEnergySum += ljDepth
             tmp = '%-8s%-8s%14.6f%12.6f' % ('p', atom.prmString, ljDepth,
-                                            2.63779)
+                                            rMinDiv2)
             String.append(tmp)
         String.append('! Solvent Czech Sum: %8.2f' % solvEnergySum)
         return String
