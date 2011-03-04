@@ -6,10 +6,10 @@ DOCME
 
 
 from charmming.const.etc import alphanum
-from charmming.lib.atom import Atom
+from charmming.tools import Property, lowerKeys
 from charmming.lib.basestruct import BaseStruct
 from charmming.lib.chain import Chain
-from charmming.tools import Property, lowerKeys
+from charmming.lib.atom import Atom
 
 
 class Mol(BaseStruct):

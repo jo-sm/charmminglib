@@ -5,11 +5,10 @@ DOCME
 # 10/26/2010
 
 
-from charmming.cg.cgpro import CGPro
-from charmming.lib.basestruct import BaseStruct
-from charmming.lib.pro import Pro
-from charmming.lib.res import Res
 from charmming.tools import lowerKeys, Property
+from charmming.lib.basestruct import BaseStruct
+from charmming.lib.res import Res
+from charmming.lib.pro import Pro
 
 
 class Seg(BaseStruct):

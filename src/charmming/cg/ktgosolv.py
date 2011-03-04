@@ -5,9 +5,9 @@ DOCME
 # 02/24/2011
 
 
+from charmming.tools import Property
 from charmming.cg.const import blnSolv_map, blnSolv_matrix, blnSolvSC_map
 from charmming.cg.ktgo import KTGo
-from charmming.tools import Property
 
 
 class KTGoSolv(KTGo):

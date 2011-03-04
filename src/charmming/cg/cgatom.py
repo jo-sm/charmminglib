@@ -6,10 +6,10 @@ DOCME
 
 
 from charmming.const.etc import alpha2num
-from charmming.lib.atom import Atom
-from charmming.lib.baseatom import BaseAtom
-from charmming.lib.metaatom import AtomError
 from charmming.tools import Property, lowerKeys
+from charmming.lib.metaatom import AtomError
+from charmming.lib.baseatom import BaseAtom
+from charmming.lib.atom import Atom
 
 
 class CGAtom(BaseAtom):

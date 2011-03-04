@@ -1,37 +1,21 @@
 
 
-from charmming.analysis.cg.basecganalysis import BaseAnalysis,load_correlOutput
 from charmming.tools import Property
+from charmming.analysis.baseanalysis import BaseAnalysis,load_correlOutput
+from charmming.io.pdb import PDBFile
+from charmming.cg.ktgo import KTGo
 
 
 class NatQ(BaseAnalysis):
     """
     docstring for NatQ
     """
-    def __init__(self, aaCrdFileName):
-        super(NatQ, self).__init__(aaCrdFileName)
+    def __init__(self, arg=None):
+        super(NatQ, self).__init__(arg)
+        #
+        if arg is not None:
+            self.aa = PDBFile(self.pdbFilename)[0]
+            self.aa.parse()
+            self.cg = KTGo(self.aa)
+            self.natq = self.cg.get_nativeSCSC()
 
-    @Property
-    def all():
-        doc = "The all property."
-        def fget(self):
-            return self._all
-        def fset(self, value):
-            self._all = value
-        return locals()
-
-
-# GoAtom class too
-# WRITE THE CG CLASS ALREADY
-
-# CG .pdb representation
-# - Write cg.pdb file
-# - Parse into cgMol object
-
-# Determine all native contacts
-# - List all contacts
-# --- cgAtom.atomType == '   S'
-# --- i < j pairs of cgAtoms
-# - Wean then to all native contacts
-# --- pairs which are <= 10A apart
-# --- If any atoms between 2 residues are < 8A -> native

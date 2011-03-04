@@ -9,8 +9,8 @@ DOCME
 import os
 import cPickle as pickle
 from numpy import ndarray
-from charmming.analysis.cg.basecganalysis import BaseAnalysis, load_correlOutput
 from charmming.tools import Property
+from charmming.analysis.baseanalysis import BaseAnalysis, load_correlOutput
 
 
 class BB_RMSD(BaseAnalysis):

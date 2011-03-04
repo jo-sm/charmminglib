@@ -5,9 +5,9 @@ DOCME
 # 10/26/2010
 
 
+from charmming.tools import Property, lowerKeys
 from charmming.lib.basestruct import BaseStruct
 from charmming.lib.seg import Seg
-from charmming.tools import Property, lowerKeys
 
 
 class Chain(BaseStruct):

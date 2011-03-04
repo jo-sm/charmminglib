@@ -8,15 +8,13 @@ DOCME
 from commands import getstatusoutput
 from numpy import ndarray
 from tempfile import NamedTemporaryFile
-from charmming.cg.cgatom import CGAtom
-from charmming.cg.cgpro import CGPro
+from charmming.const.bio import aaVDW
+from charmming.tools import Property, lowerKeys, modPi
+from charmming.lib.pro import NoAlphaCarbonError
+from charmming.lib.mol import Mol
 from charmming.cg.const import bt_matrix, bt_map, kgs_matrix, kgs_map, \
         mj_matrix, mj_map
-from charmming.const.bio import aaVDW
-from charmming.lib.basestruct import BaseStruct
-from charmming.lib.mol import Mol
-from charmming.lib.pro import NoAlphaCarbonError
-from charmming.tools import Property, lowerKeys, modPi
+from charmming.cg.cgpro import CGPro
 
 
 class KTGo(Mol):

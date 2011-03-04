@@ -5,9 +5,9 @@ DOCME
 # 01/25/2011
 
 
-from charmming.cg.cgatom import CGAtom
 from charmming.const.bio import aaMass
 from charmming.lib.pro import NoAlphaCarbonError, ProError, Pro
+from charmming.cg.cgatom import CGAtom
 
 
 class CGPro(Pro):

@@ -1,10 +1,10 @@
 
 
 import charmming.const
-import charmming.io
-import charmming.lib
-import charmming.scripts
 import charmming.tools
+import charmming.lib
+import charmming.io
 
-__all__ = ['const','io','lib','scripts','tools']
+
+__all__ = ['const', 'tools', 'lib', 'io']
 __version__ = '0.2'

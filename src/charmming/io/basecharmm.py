@@ -19,7 +19,7 @@ class BaseCHARMMFile(object):
     charmmBin = 'cg_mscale'
 
     def __init__(self, arg=None):
-        super(BaseAnalysis, self).__init__()
+        super(BaseCHARMMFile, self).__init__()
         if arg is not None:
             self.pdbFilename = arg
         #

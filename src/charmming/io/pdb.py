@@ -9,10 +9,10 @@ import re
 import os
 import itertools
 from charmming.const.etc import alphanum
-from charmming.lib.mol import Mol
-from charmming.lib.atom import Atom
 from charmming.tools import Property, expandPath, cleanStrings, paragraphs,\
         lowerKeys
+from charmming.lib.atom import Atom
+from charmming.lib.mol import Mol
 
 
 def get_formatting(input):

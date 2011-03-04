@@ -9,8 +9,8 @@ from itertools import tee
 from numpy import array, fromiter, float, dot, sin, cos
 from numpy.linalg import eig, norm
 from charmming.const.units import DEG2RAD
-from charmming.lib.metaatom import MetaAtom
 from charmming.tools import Property, expandPath, lowerKeys
+from charmming.lib.metaatom import MetaAtom
 
 
 class StructError(Exception):

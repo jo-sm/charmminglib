@@ -5,8 +5,8 @@ import cPickle as pickle
 from math import floor,ceil
 from numpy import ndarray
 import matplotlib.pyplot as pyplot
-from charmming.analysis.cg.basecganalysis import BaseAnalysis,load_correlOutput
 from charmming.tools import Property
+from charmming.analysis.baseanalysis import BaseAnalysis, load_correlOutput
 
 
 class Gyro(BaseAnalysis):

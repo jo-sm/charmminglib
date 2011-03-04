@@ -7,6 +7,7 @@ DOCME
 
 from numpy import array
 
+
 bln_map = {
     'p':0,
     'n0':1,

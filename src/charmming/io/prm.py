@@ -5,10 +5,10 @@ DOCME
 # 02/22/2011
 
 
-from charmming.io.basecharmm import BaseCHARMMFile
+from charmming.tools import paragraphs
 from charmming.lib.toppar import AnglePRM, BondPRM, DihedralPRM, ImproperPRM, \
         MassPRM, NonBondPRM, NBFixPRM
-from charmming.tools import paragraphs
+from charmming.io.basecharmm import BaseCHARMMFile
 
 
 class PRMFile(BaseCHARMMFile):

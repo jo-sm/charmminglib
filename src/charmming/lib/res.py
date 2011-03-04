@@ -6,8 +6,8 @@ DOCME
 
 
 from numpy import array
-from charmming.lib.basestruct import BaseStruct
 from charmming.tools import Property
+from charmming.lib.basestruct import BaseStruct
 
 
 class Res(BaseStruct):

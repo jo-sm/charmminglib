@@ -7,8 +7,8 @@ DOCME
 
 from copy import deepcopy
 from numpy import array
-from charmming.lib.res import Res
 from charmming.tools import Property
+from charmming.lib.res import Res
 
 
 class NoAlphaCarbonError(Exception):

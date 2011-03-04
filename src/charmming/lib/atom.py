@@ -7,9 +7,9 @@ DOCME
 
 from charmming.const.bio import atomMass, backbone, charmm2pdbAtomNames, good, \
         pro, nuc
-from charmming.lib.baseatom import BaseAtom
-from charmming.lib.metaatom import AtomError
 from charmming.tools import Property, lowerKeys
+from charmming.lib.metaatom import AtomError
+from charmming.lib.baseatom import BaseAtom
 
 
 class Atom(BaseAtom):
