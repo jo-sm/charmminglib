@@ -25,9 +25,9 @@ setup(
     author_email = 'pickard81@gmail.com, btamiller@gmail.com',
     url = 'www.charmming.googlecode.com/svn/',
     packages = [
-        'charmming', 'charmming.analysis', 'charmming.analysis.cg',
-        'charmming.cg', 'charmming.const', 'charmming.io', 'charmming.lib',
-        'charmming.scripts'
+        'charmming', 'charmming.analysis', 'charmming.cg',
+        'charmming.cg.analysis', 'charmming.const', 'charmming.io',
+        'charmming.lib', 'charmming.scripts'
         ],
     package_dir = {'charmming': 'src/charmming'},
     package_data = {'charmming': ['data/*']},
