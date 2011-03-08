@@ -115,6 +115,7 @@ class KTGo(Mol):
             return self._parameters['nscale']
         def fset(self, value):
             self._parameters['nscale'] = value
+            self.contactSet = self.contactSet
         return locals()
 
 ##################
