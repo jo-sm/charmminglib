@@ -313,7 +313,7 @@ class BaseAtom(MetaAtom):
         DOCME
         """
         def fget(self):
-            return '%s%s' % (self.chainid, self.segType)
+            return '%s-%s' % (self.chainid, self.segType)
         return locals()
 
     @Property
