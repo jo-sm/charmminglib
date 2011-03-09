@@ -37,11 +37,14 @@ class KTGo(Mol):
         'contactrad':4.5,
         'kbond':50,
         'kangle':30,
-        'kdihedralhelix_1':0.30,
-        'kdihedralhelix_3':0.15,
+        'kdihedralalphahelix_1':0.30,
+        'kdihedralalphahelix_3':0.15,
+        'kdihedral310helix_1':0.30,
+        'kdihedral310helix_3':0.15,
         'kdihedralnohelix_1':0.55,
         'kdihedralnohelix_3':0.275,
-        'hbondenergyhelix':-0.25,
+        'hbondenergyalphahelix':-0.25,
+        'hbondenergy310helix':-0.25,
         'hbondenergynohelix':-0.50,
         'epsilonnn':1e-12,
         'bbscinteraction':-0.37,
@@ -77,20 +80,22 @@ class KTGo(Mol):
         def fset(self, value):
             self._contactSet = value
             if value == 'kgs':
-                self.contactMatrix = kgs_matrix
+                self.rawContactMatrix = kgs_matrix
                 self.contactMap = kgs_map
+                self.contactOffset = 1.8
             elif value == 'bt':
-                self.contactMatrix = bt_matrix
+                self.rawContactMatrix = bt_matrix
                 self.contactMap = bt_map
+                self.contactOffset = 0.6
             elif value == 'mj':
-                self.contactMatrix = mj_matrix
+                self.rawContactMatrix = mj_matrix
                 self.contactMap = mj_map
+                self.contactOffset = 1.2
             elif value == 'other':
                 raise NotImplementedError
             else:
                 raise TypeError('Invalid `contactSet` specified specified')
-            self.contactMatrix = self.nScale * (self.contactMatrix -
-                                                self.contactMatrix.max())
+            self.calc_contactMatrix()
         return locals()
 
     @Property
@@ -115,12 +120,18 @@ class KTGo(Mol):
             return self._parameters['nscale']
         def fset(self, value):
             self._parameters['nscale'] = value
-            self.contactSet = self.contactSet
+            self.calc_contactMatrix()
         return locals()
 
 ##################
 # Public Methods #
 ##################
+
+    def calc_contactMatrix(self):
+        """
+        """
+        matrix = self.rawContactMatrix
+        self.contactMatrix = self.nScale * (matrix - self.contactOffset)
 
     def gen_cgStruct(self):
         """
@@ -146,14 +157,24 @@ class KTGo(Mol):
         values = ( i for i, cg in enumerate(self) if cg.atomType == 'b' )
         bb2cg = dict(zip(keys, values))
         # hbond list
+        energyAlhel = self._parameters['hbondenergyalphahelix']
+        energy310hel = self._parameters['hbondenergy310helix']
+        energyHel = (energyAlhel + energy310hel) / 2
+        energyNohel = self._parameters['hbondenergynohelix']
         tmp = []
         for i, j in sorted(hbondMult.keys()):
             bb_i = self[bb2cg[i]]
             bb_j = self[bb2cg[j]]
             if 'alphahelix' == bb_i.structure == bb_j.structure:
-                energy = self._parameters['hbondenergyhelix']
+                energy = energyAlhel
+            elif '310helix' == bb_i.structure == bb_j.structure:
+                energy = energy310hel
+            elif ('alphahelix' == bb_i.structure and '310helix' ==
+                bb_j.structure) or ('310helix' == bb_i.structure and
+                                    'alphahelix' == bb_j.structure):
+                energy = energyHel
             else:
-                energy = self._parameters['hbondenergynohelix']
+                energy = energyNohel
             tmp.append( (bb_i, bb_j, energy, hbondMult[(i, j)]) )
         return tmp
 
@@ -404,21 +425,24 @@ class KTGo(Mol):
         taco = self._parameters
         #
         String.append('* This CHARMM .param file describes a Go model of %s' % self.code)
-        String.append('* contactSet         = %s' % self.contactSet)
-        String.append('* nscale             = %6.3f' % taco['nscale'])
-        String.append('* domainscale        = %6.3f' % taco['domainscale'])
-        String.append('* fnn                = %6.3f' % taco['fnn'])
-        String.append('* contactrad         = %6.3f' % taco['contactrad'])
-        String.append('* kbond              = %6.3f' % taco['kbond'])
-        String.append('* kangle             = %6.3f' % taco['kangle'])
-        String.append('* kdihedralhelix_1   = %6.3f' % taco['kdihedralhelix_1'])
-        String.append('* kdihedralhelix_3   = %6.3f' % taco['kdihedralhelix_3'])
-        String.append('* kdihedralnohelix_1 = %6.3f' % taco['kdihedralnohelix_1'])
-        String.append('* kdihedralnohelix_3 = %6.3f' % taco['kdihedralnohelix_3'])
-        String.append('* hBondenergyhelix   = %6.3f' % taco['hbondenergyhelix'])
-        String.append('* hBondenergynohelix = %6.3f' % taco['hbondenergynohelix'])
-        String.append('* epsilonnn          = %6.3e' % taco['epsilonnn'])
-        String.append('* bbscinteraction    = %6.3f' % taco['bbscinteraction'])
+        String.append('* contactSet             = %s' % self.contactSet)
+        String.append('* nscale                 = %6.3f' % taco['nscale'])
+        String.append('* domainscale            = %6.3f' % taco['domainscale'])
+        String.append('* fnn                    = %6.3f' % taco['fnn'])
+        String.append('* contactrad             = %6.3f' % taco['contactrad'])
+        String.append('* kbond                  = %6.3f' % taco['kbond'])
+        String.append('* kangle                 = %6.3f' % taco['kangle'])
+        String.append('* kdihedralalphahelix_1  = %6.3f' % taco['kdihedralalphahelix_1'])
+        String.append('* kdihedralalphahelix_3  = %6.3f' % taco['kdihedralalphahelix_3'])
+        String.append('* kdihedral310helix_1    = %6.3f' % taco['kdihedral310helix_1'])
+        String.append('* kdihedral310helix_3    = %6.3f' % taco['kdihedral310helix_3'])
+        String.append('* kdihedralnohelix_1     = %6.3f' % taco['kdihedralnohelix_1'])
+        String.append('* kdihedralnohelix_3     = %6.3f' % taco['kdihedralnohelix_3'])
+        String.append('* hBondenergyalphahelix  = %6.3f' % taco['hbondenergyalphahelix'])
+        String.append('* hBondenergy310helix    = %6.3f' % taco['hbondenergy310helix'])
+        String.append('* hBondenergynohelix     = %6.3f' % taco['hbondenergynohelix'])
+        String.append('* epsilonnn              = %6.3e' % taco['epsilonnn'])
+        String.append('* bbscinteraction        = %6.3f' % taco['bbscinteraction'])
         String.append('*')
         return String
 
@@ -500,10 +524,15 @@ class KTGo(Mol):
 
     def _prm_dihedral(self):
         String = []
-        kdihel_1 = self._parameters['kdihedralhelix_1']
-        kdihel_3 = self._parameters['kdihedralhelix_3']
+        kdialhel_1 = self._parameters['kdihedralalphahelix_1']
+        kdialhel_3 = self._parameters['kdihedralalphahelix_3']
+        kdi310hel_1 = self._parameters['kdihedral310helix_1']
+        kdi310hel_3 = self._parameters['kdihedral310helix_3']
         kdinohel_1 = self._parameters['kdihedralnohelix_1']
         kdinohel_3 = self._parameters['kdihedralnohelix_3']
+        #
+        kdihel_1 = (kdialhel_1 + kdi310hel_1) / 2
+        kdihel_3 = (kdialhel_3 + kdi310hel_3) / 2
         #
         String.append('DIHEDRAL')
         String.append('! Backbone')
@@ -518,6 +547,12 @@ class KTGo(Mol):
                 dihedral = bb_0.calc_signedDihedral(bb_1, bb_2, bb_3)
                 #
                 if 'alphahelix' == bb_1.structure == bb_2.structure:
+                    k = [kdialhel_1, kdialhel_3]
+                elif '310helix' == bb_1.structure == bb_2.structure:
+                    k = [kdi310hel_1, kdi310hel_3]
+                elif ('alphahelix' == bb_1.structure and '310helix' ==
+                      bb_2.structure) or ('310helix' == bb_1.structure and
+                                        'alphahelix' == bb_2.structure):
                     k = [kdihel_1, kdihel_3]
                 else:
                     k = [kdinohel_1, kdinohel_3]
@@ -602,20 +637,6 @@ class KTGo(Mol):
             tmp = '%-8s%-8s%14.6f%12.6f%s' % (hb_0.prmString, hb_1.prmString,
                                             energy, hb_0.calc_length(hb_1), comment)
             String.append(tmp)
-        # bbsc
-        String.append('! backbone side-chain interactions')
-        bbscEnergySum = 0.
-        for bbsc in self.get_nativeBBSC():
-            bb, sc = bbsc
-            ljDepth = bbscinteraction
-            comment = ' '
-            if bb.domain != sc.domain:
-                comment += '! Interface between domains %d, %d ' % (bb.domain, sc.domain)
-                ljDepth *= domainscale
-            bbscEnergySum += ljDepth
-            tmp = '%-8s%-8s%14.6f%12.6f%s' % (bb.prmString, sc.prmString,
-                                            ljDepth, bb.calc_length(sc), comment)
-            String.append(tmp)
         # scsc
         String.append('! native side-chain interactions')
         scscEnergySum = 0.
@@ -631,8 +652,24 @@ class KTGo(Mol):
             tmp = '%-8s%-8s%14.6f%12.6f%s' % (sc_0.prmString, sc_1.prmString,
                                             ljDepth, sc_0.calc_length(sc_1), comment)
             String.append(tmp)
+        # bbsc
+        String.append('! backbone side-chain interactions')
+        bbscEnergySum = 0.
+        for bbsc in self.get_nativeBBSC():
+            bb, sc = bbsc
+            ljDepth = bbscinteraction
+            comment = ' '
+            if bb.domain != sc.domain:
+                comment += '! Interface between domains %d, %d ' % (bb.domain, sc.domain)
+                ljDepth *= domainscale
+            bbscEnergySum += ljDepth
+            tmp = '%-8s%-8s%14.6f%12.6f%s' % (bb.prmString, sc.prmString,
+                                            ljDepth, bb.calc_length(sc), comment)
+            String.append(tmp)
+        # czech sum
         String.append('! Czech Sum Info:%8.2f,%8.2f,%8.2f' %
                     (hbondEnergySum, bbscEnergySum, scscEnergySum) )
+        #
         return String
 
 ################
