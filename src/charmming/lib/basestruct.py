@@ -58,9 +58,11 @@ class BaseStruct(list):
         """
         # kwargs
         kwargs = lowerKeys(kwargs)
-        self._autoFix = kwargs.pop('autofix', True)
-        self._code = kwargs.pop('code', 'None')
-        self._name = kwargs.pop('name', 'None')
+        self._autoFix = kwargs.get('autofix', True)
+        self._code = kwargs.get('code', 'None')
+        self._name = kwargs.get('name', 'None')
+        #
+        self._dict = {}
         # Gatekeeper
         if iterable is None:
             super(BaseStruct, self).__init__()
@@ -73,7 +75,8 @@ class BaseStruct(list):
                     if not isinstance(key, MetaAtom):
                         raise StructError('Only objects derived from `MetaAtom`\
                                         class may be added to a BaseStruct object')
-            super(BaseStruct, self).__init__(iterable)
+            super(BaseStruct, self).__init__()
+            self.extend(iterable)
 
 ##############
 # Properties #
@@ -162,6 +165,69 @@ class BaseStruct(list):
         del_indicies = [ i for i, atom in enumerate(self) if atom in del_atoms ]
         for index in reversed(del_indicies):
             self.pop(index)
+
+    def find(self, addr=None, **kwargs):
+        """
+        Returns a BaseStruct object containing all "atom-like" objects which
+        match the specified search criteria.
+
+        Searches may be performed using an `addr` value as a string, or using
+        the following kwargs:
+            `chainid`
+            `segtype`
+            `resid`
+            `atomnum`
+            `atomtype`
+
+        >>> self.find('a.pro.3')
+
+        >>> self.find(chainid='a', segtype='pro', resid=3)
+        """
+        if addr is not None:
+            tmp = addr.split('.')
+            chainid = segtype = resid = atomnum = atomtype = None
+            try:
+                chainid = tmp[0]
+                segtype = tmp[1]
+                resid = tmp[2]
+                atomnum = tmp[3]
+                atomtype = tmp[4]
+            except IndexError:
+                pass
+        elif kwargs:
+            chainid = kwargs.get('chainid', None)
+            segtype = kwargs.get('segtype', None)
+            resid = kwargs.get('resid', None)
+            atomnum = kwargs.get('atomnum', None)
+            atomtype = kwargs.get('atomtype', None)
+        else:
+            return BaseStruct([], autofix=False)
+        #
+        try:
+            resid = int(resid)
+        except ValueError:
+            pass
+        except TypeError:
+            pass
+        try:
+            atomnum = int(atomnum)
+        except ValueError:
+            pass
+        except TypeError:
+            pass
+        #
+        iterator = ( atom for atom in self)
+        if chainid:
+            iterator = ( atom for atom in iterator if atom.chainid == chainid )
+        if segtype:
+            iterator = ( atom for atom in iterator if atom.segType == segtype )
+        if resid:
+            iterator = ( atom for atom in iterator if atom.resid == resid )
+        if atomnum:
+            iterator = ( atom for atom in iterator if atom.atomNum == resid )
+        if atomtype:
+            iterator = ( atom for atom in iterator if atom.atomType == atomtype )
+        return BaseStruct(iterator, autofix=False)
 
     def get_inertiaTensor(self, eigen=False):
         """
@@ -261,8 +327,8 @@ class BaseStruct(list):
         # kwargs
         kwargs = lowerKeys(kwargs)
         outFormat = kwargs.get('outformat', 'charmm')
-        end = kwargs.pop('end', None)
-        ter = kwargs.pop('ter', None)
+        end = kwargs.get('end', None)
+        ter = kwargs.get('ter', None)
         #
         filename = expandPath(filename)
         writeMe = []
@@ -292,6 +358,14 @@ class BaseStruct(list):
         writeTo.close()
 
 ###################
-# Private Methods #
+# Special Methods #
 ###################
 
+    def __imul__(self):
+        raise NotImplementedError
+
+    def __mul__(self):
+        raise NotImplementedError
+
+    def __setslice__(self):
+        raise NotImplementedError

@@ -30,15 +30,15 @@ def parse(pdbFilename, **kwargs):
     """
     # kwargs
     kwargs = lowerKeys(kwargs)
-    inFormat = kwargs.pop('informat', 'auto')
-    outFormat = kwargs.pop('outformat', 'charmm')
-    outPath = kwargs.pop('outpath', 'auto')
-    fix_chainid = kwargs.pop('fix_chainid', True)
-    autoFix = kwargs.pop('autofix', True)
-    modelNum = kwargs.pop('modelnum', 'auto')
-    pickleMe = kwargs.pop('pickleme', False)
-    verbose = kwargs.pop('verbose', False)
-    old_resid = kwargs.pop('old_resid', False)
+    inFormat = kwargs.get('informat', 'auto')
+    outFormat = kwargs.get('outformat', 'charmm')
+    outPath = kwargs.get('outpath', 'auto')
+    fix_chainid = kwargs.get('fix_chainid', True)
+    autoFix = kwargs.get('autofix', True)
+    modelNum = kwargs.get('modelnum', 'auto')
+    pickleMe = kwargs.get('pickleme', False)
+    verbose = kwargs.get('verbose', False)
+    old_resid = kwargs.get('old_resid', False)
     # Repackage the PDBFile kwargs, make pdbFile object
     pdbFileArgs = {'informat':inFormat, 'fix_chainid':fix_chainid,
                 'autofix':autoFix, 'verbose':verbose}

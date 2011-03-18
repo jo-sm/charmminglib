@@ -92,10 +92,10 @@ class MetaAtom(object):
         super(MetaAtom, self).__init__()
         # kwargs
         kwargs = lowerKeys(kwargs)
-        commentChar = kwargs.pop('commentchar', '#')
-        inFormat = kwargs.pop('informat', self.__class__._autoInFormat)
-        self._index = kwargs.pop('index', MetaAtom._autoIndex)
-        self._autoFix = kwargs.pop('autofix', True)
+        commentChar = kwargs.get('commentchar', '#')
+        inFormat = kwargs.get('informat', self.__class__._autoInFormat)
+        self._index = kwargs.get('index', MetaAtom._autoIndex)
+        self._autoFix = kwargs.get('autofix', True)
         # Main
         if text is None:
             self._init_null()

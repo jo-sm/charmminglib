@@ -38,7 +38,7 @@ class Seg(BaseStruct):
         representation for each `Seg` instance.
         """
         def fget(self):
-            return '%s.%4s' % (self.chainid, self.segType)
+            return '%s.%s' % (self.chainid, self.segType)
         return locals()
 
     @Property
@@ -97,7 +97,7 @@ class Seg(BaseStruct):
         """
         # kwargs
         kwargs = lowerKeys(kwargs)
-        resType = kwargs.pop('restype', None)
+        resType = kwargs.get('restype', None)
         if resType is None:
             if self.segType == 'pro':
                 newObj = Pro

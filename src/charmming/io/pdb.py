@@ -88,11 +88,11 @@ class PDBFile(object):
         super(PDBFile, self).__init__()
         # kwargs
         kwargs = lowerKeys(kwargs)
-        inFormat = kwargs.pop('informat', 'auto')
-        fix_chainid = kwargs.pop('fix_chainid', True)
-        fix_resid = kwargs.pop('fix_resid', True)
-        self._autoFix = kwargs.pop('autoFix', True)
-        self._verbose = kwargs.pop('verbose', False)
+        inFormat = kwargs.get('informat', 'auto')
+        fix_chainid = kwargs.get('fix_chainid', True)
+        fix_resid = kwargs.get('fix_resid', True)
+        self._autoFix = kwargs.get('autoFix', True)
+        self._verbose = kwargs.get('verbose', False)
         #
         self.warnings = []
         # Filename
@@ -277,7 +277,7 @@ class PDBFile(object):
         def gen():
             for line in self.crd:
                 if line.startswith(('atom', 'hetatm')):
-                    tmp = Atom(text=line, informat=self.inFormat, autofix=False)
+                    tmp = Atom(text=line, informat=self.inFormat, autofix=True)
                 else:
                     continue
                 yield tmp.chainid
@@ -292,7 +292,7 @@ class PDBFile(object):
             chainNum = 0
             for i,line in enumerate(self.crd):
                 if line.startswith(('atom', 'hetatm')):
-                    tmp = Atom(text=line, informat=self.inFormat, autofix=False)
+                    tmp = Atom(text=line, informat=self.inFormat, autofix=True)
                     # Blank chainid
                     if not tmp.chainid:
                         tmp.chainid = alphanum[chainNum]

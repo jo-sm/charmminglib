@@ -87,7 +87,7 @@ class Chain(BaseStruct):
         """
         # kwargs
         kwargs = lowerKeys(kwargs)
-        segTypes = kwargs.pop('segtypes', None)
+        segTypes = kwargs.get('segtypes', None)
         # Default to 'all' segtypes
         if segTypes is None:
             segTypes = list(set(( atom.segType for atom in self )))

@@ -55,7 +55,7 @@ class Mol(BaseStruct):
         """
         # kwargs
         kwargs = lowerKeys(kwargs)
-        chainids = kwargs.pop('chainids', None)
+        chainids = kwargs.get('chainids', None)
         #
         if chainids is None:
             chainids = list(set(( atom.chainid for atom in self )))

@@ -5,8 +5,9 @@ DOCME
 # 02/22/2011
 
 
+from os import remove
 import numpy as np
-from charmming.tools import Property
+from charmming.tools import Property, walk, lowerKeys, mkdir
 from charmming.io.basecharmm import BaseCHARMMFile
 
 
@@ -32,23 +33,27 @@ class BaseAnalysis(BaseCHARMMFile):
     """
     DOCME
     """
-    def __init__(self, arg=None):
-        super(BaseAnalysis, self).__init__(arg)
+    def __init__(self, arg=None, **kwargs):
+        super(BaseAnalysis, self).__init__(arg, **kwargs)
+        # kwargs
+        kwargs = lowerKeys(kwargs)
+        self.correlAtomSelection = kwargs.get('selection', 'all')
         #
         self._correlStart = 0
         self._correlStop = -1
 
 # File/Path locations
     @Property
-    def anlPath():
+    def anlPathname():
         doc =\
         """
         DOCME
         """
         def fget(self):
-            return self._anlPath
+            return self._anlPathname
         def fset(self, value):
-            self._anlPath = self.expandPath(value)
+            self._anlPathname = self.expandPath(value)
+            mkdir(self._anlPathname)
         return locals()
 
 # Correl Properties
@@ -118,10 +123,23 @@ class BaseAnalysis(BaseCHARMMFile):
         """
         DOCME
         """
-        String = super(BaseCHARMMFile, self).get_inputHeader(header)
+        String = self.get_inputHeader(header)
         String.append('bomlev -2')
         String.append('')
         String.append('! dcd :: read')
         String.append('open unit 10 read unform name %s' % self.dcdFilename)
         String.append('')
         return String
+
+    def rm_pickles(self, directory=None):
+        """
+        Recursively removes .pickle files starting at `directory`.  Defaults
+        to `rootPath`.
+        """
+        if directory is None:
+            directory = self.rootPath
+        #
+        iterator = ( path for path in walk(directory) if path.endswith('pickle') )
+        for pickleFile in iterator:
+            print 'Removing %s' % pickleFile
+            remove(pickleFile)

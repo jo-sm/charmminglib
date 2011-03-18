@@ -49,7 +49,7 @@ class Res(BaseStruct):
         representation for each `Res` instance.
         """
         def fget(self):
-            return '%s.%4s.%04d' % (self.chainid, self.segType, self.resid)
+            return '%s.%s.%d' % (self.chainid, self.segType, self.resid)
         return locals()
 
     @Property

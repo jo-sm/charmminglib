@@ -284,11 +284,11 @@ class Atom(BaseAtom):
         # Make kwargs case insensitive
         kwargs = lowerKeys(kwargs)
         # kwargs
-        outFormat = kwargs.pop('outformat', self.__class__._autoInFormat)
-        old_chainid = kwargs.pop('old_chainid', False)
-        old_segType = kwargs.pop('old_segtype', False)
-        old_resid = kwargs.pop('old_resid', False)
-        old_atomNum = kwargs.pop('old_atomnum', False)
+        outFormat = kwargs.get('outformat', self.__class__._autoInFormat)
+        old_chainid = kwargs.get('old_chainid', False)
+        old_segType = kwargs.get('old_segtype', False)
+        old_resid = kwargs.get('old_resid', False)
+        old_atomNum = kwargs.get('old_atomnum', False)
         # Localize variables
         x, y, z = self.cart
         if old_chainid:

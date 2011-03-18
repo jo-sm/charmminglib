@@ -54,15 +54,16 @@ class KTGo(Mol):
         self.warnings = []
         super(KTGo, self).__init__(iterable=None, **kwargs)
         # kwargs
-        self.strideBin = kwargs.pop('stridebin', 'stride')
-        self.contactSet = kwargs.pop('contactset', 'kgs')
+        self.strideBin = kwargs.get('stridebin', 'stride')
+        self.contactSet = kwargs.get('contactset', 'kgs')
         #
         if iterable is None:
             raise TypeError('You must initialize a KTGo instance with an\
                             iterable of `Atom` like objects.')
         else:
             self.set_allAtoms(iterable, **kwargs)
-            self.extend(self.gen_cgStruct())
+            self.set_allHeavyAtoms(iterable, **kwargs)
+            self.extend(self.gen_cgStruct(**kwargs))
             self.reindex_atomNum()
 
 ##############
@@ -133,13 +134,19 @@ class KTGo(Mol):
         matrix = self.rawContactMatrix
         self.contactMatrix = self.nScale * (matrix - self.contactOffset)
 
-    def gen_cgStruct(self):
+    def gen_cgStruct(self, **kwargs):
         """
         """
-        for res in self.allAtoms.iter_res(restype=CGPro):
-            yield res.get_goBB()
+        kwargs = lowerKeys(kwargs)
+        calcmass = kwargs.get('calcmass', None)
+        if calcmass is None:
+            iterator = self.allHeavyAtoms.iter_res(restype=CGPro)
+        else:
+            iterator = self.allAtoms.iter_res(restype=CGPro)
+        for res in iterator:
+            yield res.get_goBB(**kwargs)
             try:
-                yield res.get_goSC()
+                yield res.get_goSC(**kwargs)
             except NoAlphaCarbonError:
                 pass
 
@@ -179,8 +186,8 @@ class KTGo(Mol):
         return tmp
 
     def get_nativeBBSC(self):
-        bb = [ res for res in self.allAtoms.iter_res(restype=CGPro) ]
-        sc = [ res for res in self.allAtoms.iter_res(restype=CGPro)
+        bb = [ res for res in self.allHeavyAtoms.iter_res(restype=CGPro) ]
+        sc = [ res for res in self.allHeavyAtoms.iter_res(restype=CGPro)
             if res.resName != 'gly' ]
         iterator = ( (res_i, res_j) for res_i in bb for res_j in sc
                     if abs(res_j.resid - res_i.resid) > 2 )
@@ -192,16 +199,18 @@ class KTGo(Mol):
                 for atom_i in res_i.iter_bbAtoms():
                     for atom_j in res_j.iter_scAtoms():
                         if self.get_Rij(atom_i, atom_j) < contactRad:
-                            tmp.append( (res_i.get_goBB(), res_j.get_goSC()) )
+                            tmp_bb = self.find(chainid=res_i.chainid, resid=res_i.resid)[0]
+                            tmp_sc = self.find(chainid=res_j.chainid, resid=res_j.resid)[1]
+                            tmp.append( (tmp_bb, tmp_sc) )
                             raise AssertionError
             except AssertionError:
                 pass
         return tmp
 
     def get_nativeSCSC(self):
-        sc1 = [ res for res in self.allAtoms.iter_res(restype=CGPro)
+        sc1 = [ res for res in self.allHeavyAtoms.iter_res(restype=CGPro)
             if res.resName != 'gly' ]
-        sc2 = [ res for res in self.allAtoms.iter_res(restype=CGPro)
+        sc2 = [ res for res in self.allHeavyAtoms.iter_res(restype=CGPro)
             if res.resName != 'gly' ]
         iterator = ( (res_i, res_j) for res_i in sc1 for res_j in sc2
                     if res_j.resid - res_i.resid > 2 )
@@ -212,7 +221,9 @@ class KTGo(Mol):
                 for atom_i in res_i.iter_scAtoms():
                     for atom_j in res_j.iter_scAtoms():
                         if self.get_Rij(atom_i, atom_j) < contactRad:
-                            tmp.append( (res_i.get_goSC(), res_j.get_goSC()) )
+                            tmp_sc1 = self.find(chainid=res_i.chainid, resid=res_i.resid)[1]
+                            tmp_sc2 = self.find(chainid=res_j.chainid, resid=res_j.resid)[1]
+                            tmp.append( (tmp_sc1, tmp_sc2) )
                             raise AssertionError
             except AssertionError:
                 pass
@@ -248,7 +259,7 @@ class KTGo(Mol):
         # tmp file
         tmp = NamedTemporaryFile()
         tmpOut = []
-        for atom in self.allAtoms:
+        for atom in self.allHeavyAtoms:
             tmpOut.append(atom.Print(outformat='pdborg'))
         tmpOut = '\n'.join(tmpOut)
         tmp.file.write(tmpOut)
@@ -270,9 +281,13 @@ class KTGo(Mol):
             atom.structure = self.structureOut[i][25:39].strip().lower()
 
     def set_allAtoms(self, iterable, **kwargs):
+        iterable = ( atom for atom in iterable if atom.segType == 'pro' )
+        self.allAtoms = Mol(iterable, **kwargs)
+
+    def set_allHeavyAtoms(self, iterable, **kwargs):
         iterable = ( atom for atom in iterable if atom.segType == 'pro' and
                     atom.element != 'h' )
-        self.allAtoms = Mol(iterable, **kwargs)
+        self.allHeavyAtoms = Mol(iterable, **kwargs)
         self._Rij = {}
 
     def write_crd(self, filename=None):

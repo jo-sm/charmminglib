@@ -109,7 +109,8 @@ def mkdir(value):
         tmp += '%s%s' % (entry,os.sep)
         try:
             os.mkdir(tmp)
-        except OSError: pass
+        except OSError:
+            pass
 
 
 def out2inp(iterable,lookFor='CHARMM>',CC='!',maxDrought=1000):
@@ -189,7 +190,8 @@ def index(predicate,iterable):
 
 class walk(object):
     """
-    A forward iterator that traverses a directory tree.
+    A forward iterator that traverses a directory tree, and returns strings,
+    one for each file found.
     """
     def __init__(self, directory):
         self.stack = [directory]
@@ -200,7 +202,7 @@ class walk(object):
         while 1:
             try:
                 file = self.files[self.index]
-                self.index = self.index + 1
+                self.index += 1
             except IndexError:
                 # pop next directory from stack
                 self.directory = self.stack.pop()

@@ -87,9 +87,9 @@ class CRDFile(object):
         super(CRDFile, self).__init__()
         # kwargs
         kwargs = lowerKeys(kwargs)
-        inFormat = kwargs.pop('informat', 'auto')
-        self._autoFix = kwargs.pop('autofix', False)
-        self._verbose = kwargs.pop('verbose', False)
+        inFormat = kwargs.get('informat', 'auto')
+        self._autoFix = kwargs.get('autofix', False)
+        self._verbose = kwargs.get('verbose', False)
         #
         self._models = {}
         self.warnings = []

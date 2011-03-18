@@ -6,9 +6,9 @@ DOCME
 
 
 from commands import getstatusoutput
-from os.path import abspath, dirname, expanduser
+from os.path import abspath, dirname, expanduser, exists
 from tempfile import NamedTemporaryFile
-from charmming.tools import Property, expandPath
+from charmming.tools import Property, expandPath, lowerKeys
 
 
 class BaseCHARMMFile(object):
@@ -16,10 +16,14 @@ class BaseCHARMMFile(object):
     DOCME
     """
 
-    charmmBin = 'cg_mscale'
+    defaultBin = 'cg_mscale'
 
-    def __init__(self, arg=None):
+    def __init__(self, arg=None, **kwargs):
         super(BaseCHARMMFile, self).__init__()
+        # kwargs
+        kwargs = lowerKeys(kwargs)
+        self.charmmBin = kwargs.get('charmmbin', self.__class__.defaultBin)
+        # Main
         if arg is not None:
             self.pdbFilename = arg
         #
@@ -28,7 +32,32 @@ class BaseCHARMMFile(object):
         self._psfFilename = None
         self._crdFilename = None
 
-# File/Path locations
+# charmminglib file locations
+    @Property
+    def inpFilename():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            return self._inpFilename
+        def fset(self, value):
+            self._inpFilename = self.expandPath(value)
+        return locals()
+
+    @Property
+    def outFilename():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            return self._outFilename
+        def fset(self, value):
+            self._outFilename = self.expandPath(value)
+        return locals()
+
+# CHARMM File/Path locations
     @Property
     def crdFilename():
         doc =\
@@ -38,7 +67,10 @@ class BaseCHARMMFile(object):
         def fget(self):
             return self._crdFilename
         def fset(self, value):
-            self._crdFilename = self.expandPath(value)
+            value = self.expandPath(value)
+            if not exists(value):
+                raise IOError("No such file or directory: '%s'" % value)
+            self._crdFilename = value
         return locals()
 
     @Property
@@ -51,6 +83,8 @@ class BaseCHARMMFile(object):
             return self._dcdFilename
         def fset(self, value):
             value = self.expandPath(value)
+            if not exists(value):
+                raise IOError("No such file or directory: '%s'" % value)
             self._dcdFilename = value
             self._maxatom, self._nstep, self._timestep = self.query_dcd(value)
         return locals()
@@ -64,7 +98,10 @@ class BaseCHARMMFile(object):
         def fget(self):
             return self._pdbFilename
         def fset(self, value):
-            self._pdbFilename = expandPath(value)
+            value = expandPath(value)
+            if not exists(value):
+                raise IOError("No such file or directory: '%s'" % value)
+            self._pdbFilename = value
         return locals()
 
     @Property
@@ -76,7 +113,10 @@ class BaseCHARMMFile(object):
         def fget(self):
             return self._prmFilename
         def fset(self, value):
-            self._prmFilename = self.expandPath(value)
+            value = self.expandPath(value)
+            if not exists(value):
+                raise IOError("No such file or directory: '%s'" % value)
+            self._prmFilename = value
         return locals()
 
     @Property
@@ -88,7 +128,10 @@ class BaseCHARMMFile(object):
         def fget(self):
             return self._psfFilename
         def fset(self, value):
-            self._psfFilename = self.expandPath(value)
+            value = self.expandPath(value)
+            if not exists(value):
+                raise IOError("No such file or directory: '%s'" % value)
+            self._psfFilename = value
         return locals()
 
     @Property
@@ -110,7 +153,10 @@ class BaseCHARMMFile(object):
         def fget(self):
             return self._rtfFilename
         def fset(self, value):
-            self._rtfFilename = self.expandPath(value)
+            value = self.expandPath(value)
+            if not exists(value):
+                raise IOError("No such file or directory: '%s'" % value)
+            self._rtfFilename = value
         return locals()
 
 # DCD Properties
@@ -152,9 +198,10 @@ class BaseCHARMMFile(object):
         """
         A better version of the default path expander.
         """
-        if '&' in arg:
+        arg = arg.strip()
+        if arg.startswith('&'):
             try:
-                return arg.replace('&', self.rootPath)
+                return abspath(arg.replace('&', self.rootPath))
             except AttributeError:
                 pass
         elif '~' in arg:
@@ -199,8 +246,11 @@ class BaseCHARMMFile(object):
             String.append('')
         return String
 
-    def query_dcd(self, dcdFilename):
-        dcdFilename = self.expandPath(dcdFilename)
+    def query_dcd(self, dcdFilename=None):
+        if dcdFilename is None:
+            dcdFilename = self.dcdFilename
+        else:
+            dcdFilename = self.expandPath(dcdFilename)
         # tmp file
         tmp = NamedTemporaryFile()
         tmpOut = []
@@ -232,7 +282,7 @@ class BaseCHARMMFile(object):
                 nFix = int(line.split()[-1])
             elif line.startswith('the integration time'):
                 ts = float(line.split()[-1])
-        maxatom = int(nDeg / 3 + nFix)
+        maxatom = int(nDeg / 3 + nFix) + 1
         nstep = int(nCrd * freq)
         timestep = int(ts * 1000)
         return (maxatom, nstep, timestep)
