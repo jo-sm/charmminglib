@@ -39,13 +39,18 @@ class SansomBLN(Mol):
         'kBondHelix':2.988,
         'kBondSheet':2.988,
         'kBondCoil':2.988,
+        'kBondInternal':2.988,
         'kAngleHelix':8.37,
         'kAngleSheet':8.37,
         'kAngleCoil':5.98,
+        'mThetaHelix':-270.0,
+        'mThetaSheet':-230.0,
+        'mThetaCoil':-240.0
         }
 
     def __init__(self, iterable=None, **kwargs):
         self.warnings = []
+        self.structByRes = []
         super(SansomBLN, self).__init__(iterable=None, **kwargs)
         # kwargs aren't needed here, as this is a pretty simple model
         # 
@@ -119,10 +124,14 @@ class SansomBLN(Mol):
         else:
             iterator = self.allAtoms.iter_res(restype=CGPro)
         for res in iterator:
-            yield res.get_goBB(**kwargs)
+            yield res.get_blnBB(**kwargs)
             try:
-                yield res.get_goSC(**kwargs)
+                yield res.get_blnSC1(**kwargs)
             except NoAlphaCarbonError:
+                pass
+            try:
+                yield res.get_blnSC2(**kwargs)
+            except:
                 pass
 
     def get_NBFIX(self):
@@ -216,9 +225,6 @@ class SansomBLN(Mol):
         tmp.close()
         self.structureOut = [ line for line in strideOut
                             if line.startswith('ASG') ]
-        self.hbondOut = [ line for line in strideOut
-                        if line.startswith(('ACC', 'DNR')) and int(line[15:20])
-                        < int(line[35:40]) ]
         # parse structure
         iterator = ( atom for atom in self if atom.atomType == 'b' )
         for i, atom in enumerate(iterator):
@@ -389,6 +395,9 @@ class SansomBLN(Mol):
         String.append('* kAngleHelix            = %6.3f' % taco['kAngleHelix'])
         String.append('* kAngleSheet            = %6.3f' % taco['kAngleSheet'])
         String.append('* kAngleCoil             = %6.3f' % taco['kAngleCoil'])
+        String.append('* mThetaHelix            = %6.3f' % taco['mThetaHelix'])
+        String.append('* mThetaSheet            = %6.3f' % taco['mThetaSheet'])
+        String.append('* mThetaCoil             = %6.3f' % taco['mThetaCoil'])
         String.append('*')
         return String
 
@@ -402,28 +411,50 @@ class SansomBLN(Mol):
             try:
                 bb_0 = atom
                 bb_1 = self.bbAtoms[i+1]
+                resid_0 = bb_0.resid
+                resid_1 = bb_1.resid
+                if self.structByRes[resid_0] == 'h' and self.structByRes[resid_1] == 'h':
+                    kbond = self.params.kBondHelix
+                elif self.structByRes[resid_0] == 's' and self.structByRes[resid_1] == 's':
+                    kbond = self.params.kBondSheet
+                else:
+                    kbond = self.params.kBondCoil
+
                 tmp = '%-8s%-8s%14.6f%12.6f' % \
                         (bb_0.prmString, bb_1.prmString, kbond,
                         bb_0.calc_length(bb_1))
                 String.append(tmp)
             except IndexError:
                 pass
+
         # bb(i)/sc(i)
         for i, atom in enumerate(self.bbAtoms):
             try:
                 bb = atom
-                sc = self.scAtoms[i]
-                tmp = '%-8s%-8s%14.6f%12.6f' % \
-                        (bb.prmString, sc.prmString, kbond,
-                        bb.calc_length(sc))
-                String.append(tmp)
+
+                # Tim Miller: in the canonical BLN,
+                # there can be multiple SC atoms
+                # NB: for now bond lengths are hard set to 3.8
+                # following Bond and Sansom
+                for j, scAtom in enumerate(self.scAtoms[i]):
+                    if j == 0:
+                        atom1 = bb
+                        atom2 = self.scAtoms[i][0]
+                    elif j == 1:
+                        atom1 = self.scAtoms[i][0]
+                        atom1 = self.scAtoms[i][1]
+                    else:
+                        raise AssertionError("Sidechain with more than 2 CG centers")
+                    tmp = '%-8s%-8s%14.6f%12.6f' % \
+                            (atom1.prmString, atom2.prmString, kBondInternal,
+                            3.8)
+                    String.append(tmp)
             except AttributeError:
                     pass
         return String
 
     def _prm_angle(self):
         String = []
-        kangle = self._parameters['kangle']
         #
         String.append('ANGLE')
         # bb(i)/bb(i+1)/bb(i+2)
@@ -432,14 +463,29 @@ class SansomBLN(Mol):
                 bb_0 = atom
                 bb_1 = self.bbAtoms[i+1]
                 bb_2 = self.bbAtoms[i+2]
+                resid_0 = bb_0.resid
+                resid_1 = bb_1.resid
+                resid_2 = bb_2.resid
+                if self.structByRes[resid_0] == 'h' and self.structByRes[resid_1] == 'h' and self.structByRes[resid_2] == 'h':
+                    kangle = self.params.kAngleHelix
+                    mtheta = self.params.mThetaHelix
+                elif self.structByRes[resid_0] == 's' and self.structByRes[resid_1] == 's' and self.structByRes[resid_1] == 's':
+                    kangle = self.params.kAngleSheet
+                    mtheta = self.params.mThetaSheet
+                else:
+                    kangle = self.params.kAngleCoil
+                    mtheta = self.params.mThetaCoil
+
                 tmp = '%-8s%-8s%-8s%14.6f%12.6f' % \
                         (bb_0.prmString, bb_1.prmString, bb_2.prmString,
-                        kangle, bb_0.calc_angle(bb_1, bb_2))
+                        kangle, mtheta)
                 String.append(tmp)
             except IndexError:
                 pass
         # sc(i)/bb(i)/bb(i+1)
-        for i, atom in enumerate(self.scAtoms):
+        # bb(i)/sc1(i)/sc2(i)
+        # Tim Miller, fix this and the next one...
+        for i, scAtomList in enumerate(self.scAtoms):
             try:
                 sc = atom
                 bb_0 = self.bbAtoms[i]
@@ -452,7 +498,9 @@ class SansomBLN(Mol):
                 pass
             except AttributeError:
                 pass
+
         # bb(i)/bb(i+1)/sc(i+1)
+        # Tim Miller, fix this too
         for i, atom in enumerate(self.bbAtoms):
             try:
                 bb_0 = atom
@@ -476,9 +524,12 @@ class SansomBLN(Mol):
         String.append('NONBONDED ATOM CDIEL SWITCH VATOM VDISTANCE VSHIFT -')
         String.append('CUTNB 16.0 CTOFNB 12.0 CTONNB 9.0 EPS 15.0 WMIN 1.5 E14FAC 0.7')
         String.append('!atom')
+
+        # The epsilon parameter is hard coded from Bond and Sansom
         for atom in self:
             rMinDiv2 = 4.7
-            tmp = '%-8s%5.1f%10.2e%12.6f' % (atom.prmString, 0, -epsilonnn, rMinDiv2)
+            tmp = '%-8s%5.1f%10.2e%12.6f ! WARNING, this parameter should not be used. It will be overwritten by NBFIX!' \
+                  % (atom.prmString, 0, -1.2, rMinDiv2)
             String.append(tmp)
         return String
 
@@ -489,23 +540,7 @@ class SansomBLN(Mol):
         bbscinteraction = self._parameters['bbscinteraction']
         #
         String.append('NBFIX')
-        # hbonds
-        String.append('! backbone hydrogen bonding')
-        hbondEnergySum = 0.
-        for hbond in self.get_hbond():
-            hb_0, hb_1, energy, mult = hbond
-            comment = ' '
-            if hb_0.domain != hb_1.domain:
-                comment += '! Interface between domains %d, %d ' % \
-                        (hb_0.domain, hb_1.domain)
-                energy *= domainscale
-            if mult != 1:
-                comment += '! H-Bond multiplicty is %d' % mult
-                energy *= mult
-            hbondEnergySum += energy
-            tmp = '%-8s%-8s%14.6f%12.6f%s' % (hb_0.prmString, hb_1.prmString,
-                                            energy, hb_0.calc_length(hb_1), comment)
-            String.append(tmp)
+
         # scsc
         String.append('! native side-chain interactions')
         scscEnergySum = 0.
@@ -535,6 +570,7 @@ class SansomBLN(Mol):
             tmp = '%-8s%-8s%14.6f%12.6f%s' % (bb.prmString, sc.prmString,
                                             ljDepth, bb.calc_length(sc), comment)
             String.append(tmp)
+
         # czech sum
         String.append('! Czech Sum Info:%8.2f,%8.2f,%8.2f' %
                     (hbondEnergySum, bbscEnergySum, scscEnergySum) )
