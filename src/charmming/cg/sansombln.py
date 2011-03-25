@@ -12,7 +12,7 @@ from charmming.const.bio import aaVDW
 from charmming.tools import Property, lowerKeys, modPi
 from charmming.lib.pro import NoAlphaCarbonError
 from charmming.lib.mol import Mol
-from charmming/lib/basestruct import BaseStruct
+from charmming.lib.basestruct import BaseStruct
 from charmming.cg.const import bt_matrix, bt_map, kgs_matrix, kgs_map, \
         mj_matrix, mj_map
 from charmming.cg.cgpro import CGPro
@@ -45,7 +45,7 @@ class SansomBLN(KTGoSolv):
             tmp.segType = 'bln'
             yield tmp
 
-            if res.resName = 'gly':
+            if res.resName == 'gly':
                 # one site residue
                 continue
             elif res.resName in \
@@ -62,7 +62,7 @@ class SansomBLN(KTGoSolv):
                     sc1  = copy.deepcopy(res.find(atomtype=' cb ')[0])
                     sc2l = BaseStruct([a for a in taco if a.atomType.strip() in \
                                       ['cg', 'cd1', 'hd1', 'cd2', 'hd2', 'ce1', \
-                                       'he1','ce2', 'he2', 'cz', 'hz']
+                                       'he1','ce2', 'he2', 'cz', 'hz']])
                     sc1.atomNum = 1
                     sc1.atomType = 'c'
                     sc1.derivedResName = tmp.resName
@@ -154,7 +154,7 @@ class SansomBLN(KTGoSolv):
         taco = self._parameters
         #
         String.append('* This CHARMM .param file describes a Bond-Sansom BLN model of %s' % self.code)
-        String.append('* contactSet             = bln'
+        String.append('* contactSet             = bln')
         String.append('* nscale                 = %6.3f' % taco['nscale'])
         String.append('* domainscale            = %6.3f' % taco['domainscale'])
         String.append('* kBondHelix             = %6.3f' % taco['kBondHelix'])
