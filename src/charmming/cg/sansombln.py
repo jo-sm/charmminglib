@@ -21,10 +21,31 @@ import copy
 
 class SansomBLN(KTGoSolv):
 
+    # Tim Miller: big fat note ... default parameters
+    # here are in kcal/mol. Check with Frank to see if
+    # this is OK.
+    _parameters = {
+        'nscale':1.00,
+        'domainscale':1,
+        'contactrad':4.5,
+        'kBondHelix':2.988,
+        'kBondSheet':2.988,
+        'kBondCoil':2.988,
+        'kBondInternal':2.988,
+        'kAngleHelix':8.37,
+        'kAngleSheet':8.37,
+        'kAngleCoil':5.98,
+        'mThetaHelix':-270.0,
+        'mThetaSheet':-230.0,
+        'mThetaCoil':-240.0
+        }
+
+
     def __init__(self, iterable=None, **kwargs):
         """
         DOCME
         """
+        self.aTypeList = []
         super(SansomBLN, self).__init__(iterable, **kwargs)
 
 ##################
@@ -42,7 +63,7 @@ class SansomBLN(KTGoSolv):
         
         for res in self.allAtoms.iter_res(restype=CGPro):
             tmp = res.get_goBB(**kwargs)
-            tmp.atomType = 'n' # we can change this later for secondary struct
+            tmp.atomType = '   b' # we can change this later for secondary struct
             tmp.resName = 'b' + res.resName
             tmp.segType = 'bln'
             yield tmp
@@ -66,7 +87,7 @@ class SansomBLN(KTGoSolv):
                                       ['cg', 'cd1', 'hd1', 'cd2', 'hd2', 'ce1', \
                                        'he1','ce2', 'he2', 'cz', 'hz']])
                     sc1.atomNum = 1
-                    sc1.atomType = '  c '
+                    sc1.atomType = '   c'
                     sc1.derivedResName = sc1.resName
                     sc1.resName = 'bphe' 
                     sc1.segType = 'bln'
@@ -74,7 +95,7 @@ class SansomBLN(KTGoSolv):
                     sc2 = res.get_alphaCarbon()
                     sc2.atomNum = 2
                     sc2.cart = sc2l.com
-                    sc2.atomType = '  c '
+                    sc2.atomType = '   c'
                     sc2.derivedResName = tmp.resName
                     sc2.resName = 'bphe'
                     sc2.segType = 'bln'
@@ -93,7 +114,7 @@ class SansomBLN(KTGoSolv):
                     sc1 = res.get_alphaCarbon()
                     sc1.cart = sc1l.com
                     sc1.atomNum = 1
-                    sc1.atomType = '   c'
+                    sc1.atomType = '   s'
                     sc1.derivedResName = sc1.resName
                     sc1.resName = 'b'+ res.resName
                     sc1.segType = 'bln'
@@ -102,7 +123,7 @@ class SansomBLN(KTGoSolv):
                     sc2 = res.get_alphaCarbon()
                     sc2.cart = sc2l.com
                     sc2.atomNum = 2   
-                    sc2.atomType = '  qd' 
+                    sc2.atomType = '  s2' 
                     sc2.derivedResName = sc2.resName 
                     sc2.resName = 'b'+ res.resName
                     sc2.segType = 'bln'
@@ -119,7 +140,7 @@ class SansomBLN(KTGoSolv):
                     sc1 = res.get_alphaCarbon()
                     sc1.cart = sc1l.com
                     sc1.atomNum = 1   
-                    sc1.atomType = '   c' 
+                    sc1.atomType = '   s' 
                     sc1.derivedResName = sc1.resName 
                     sc1.resName = 'btyr'
                     sc1.segType = 'bln'
@@ -128,7 +149,7 @@ class SansomBLN(KTGoSolv):
                     sc2 = res.get_alphaCarbon()
                     sc2.cart = sc2l.com
                     sc2.atomNum = 2
-                    sc2.atomType = '  nd'
+                    sc2.atomType = '  s2'
                     sc2.derivedResName = sc2.resName
                     sc2.resName = 'btyr'
                     sc2.segType = 'bln'
@@ -146,7 +167,7 @@ class SansomBLN(KTGoSolv):
                     sc1 = res.get_alphaCarbon()
                     sc1.cart = sc1l.com
                     sc1.atomNum = 1
-                    sc1.atomType = '   c'
+                    sc1.atomType = '   s'
                     sc1.derivedResName = sc1.resName
                     sc1.resName = 'bhsd'
                     sc1.segType = 'bln' 
@@ -155,7 +176,7 @@ class SansomBLN(KTGoSolv):
                     sc2 = res.get_alphaCarbon()
                     sc2.cart = sc2l.com 
                     sc2.atomNum = 2  
-                    sc2.atomType = ' nda'
+                    sc2.atomType = '  s2'
                     sc2.derivedResName = sc2.resName
                     sc2.resName = 'bhsd'
                     sc2.segType = 'bln' 
@@ -172,7 +193,7 @@ class SansomBLN(KTGoSolv):
                     sc1 = res.get_alphaCarbon()
                     sc1.cart = sc1l.com
                     sc1.atomNum = 1
-                    sc1.atomType = '   c'
+                    sc1.atomType = '   b'
                     sc1.derivedResName = sc1.resName
                     sc1.resName = 'bhis'
                     sc1.segType = 'bln'
@@ -181,7 +202,7 @@ class SansomBLN(KTGoSolv):
                     sc2 = res.get_alphaCarbon()
                     sc2.cart = sc2l.com
                     sc2.atomNum = 2    
-                    sc2.atomType = ' nda'
+                    sc2.atomType = '  s2'
                     sc2.derivedResName = sc2.resName
                     sc2.resName = 'bhis'
                     sc2.segType = 'bln'
@@ -193,29 +214,23 @@ class SansomBLN(KTGoSolv):
                 tmp.atomNum = 1
                 tmp.resName = 'b' + res.resName
                 tmp.segType = 'bln'
-                if res.resName in ['ala', 'ile', 'leu', 'pro', 'val']:
-                    tmp.atomType = '   c'
-                elif res.resName in ['cys', 'met']:
-                    tmp.atomType = '  n0'
-                elif res.resName in ['asn', 'gln']:
-                    tmp.atomType = ' nda'
-                elif res.resName in ['ser', 'thr']:
-                    tmp.atomType = '   p'
-                elif res.resName in ['asp', 'glu']:
-                    tmp.atomType = '  qa'
-                else:
-                    raise AssertionError('What kind of residue is this??!')
-
+                tmp.atomType = '   s'
                 yield tmp
 
     def write_rtf(self, filename=None):
         String = []
+        String.append('* Topology file for three-site BLN model')
+        String.extend(['*',''])
+        String.extend(self._rtf_masses())
 
-        # Loop over all of the atom types
-        atypes = ['n', 'nd', 'na', 'nda', 'c', 'p', 'q', 'qd', 'qa', 'qda']
+        # declare that we can bond backbone atoms
+        String.extend(["", 'DECL +B', 'DECL -B', 'DECL #B', ""])
+        String.append('! defaults, note there is no auto-generation')
+        String.append('DEFAULT FIRST NONE LAST NONE')
+        String.append('')
 
-        # Loop over all of the residue types
-
+        String.extend(self._rtf_residues())
+        String.append('END')
         if filename is None:   
             for line in String:   
                 print line.upper()
@@ -272,6 +287,52 @@ class SansomBLN(KTGoSolv):
 # Private Methods #
 ###################
 
+    def _rtf_masses(self):
+        String = []
+
+        # Loop over all of the standard atom types
+        # NB: the Marrink-style BLN model sets all particle masses to 72,
+        # so mass will not be conserved.
+        atypes = ['n', 'nd', 'na', 'nda', 'c', 'p', 'q', 'qd', 'qa', 'qda']
+        for i, atyp in enumerate(atypes):
+            String.append('MASS %-5d%-8s%10.6f' % (i, atyp.upper(), 72.0))
+            self.aTypeList.append(atyp)
+
+        # now handle helix and sheet types
+        cnt = i + 1
+        for sfx in ['h','s']:
+            for atyp in atypes:
+                prmstr = atyp + sfx
+                String.append('MASS %-5d%-8s%10.6f' % (cnt, prmstr.upper(), 72.0))
+                self.aTypeList.append(prmstr)
+                cnt += 1
+
+        return String
+
+    def _rtf_residues(self):
+        String = []
+
+        aares = ['ala','ile','leu','pro','val','phe','cys','met','asn','gln', \
+                 'ser','thr','tyr','hsd','trp','asp','glu','lys','arg']
+
+        # prefixes: b = normal BLN (coil), h = helix, s = sheet
+        prefix = ['b', 'h', 's']
+
+        for p in prefix:
+            for r in aares:
+                String.append('RESI %s' % p.upper() + r.upper())
+ 
+                # backbone atom
+                if p == 'h':
+                   pass
+                elif p == 's':
+                   pass
+                else:
+                   pass
+                String.append('')
+
+        return String
+
     def _prm_header(self):
         String = []
         taco = self._parameters
@@ -296,53 +357,18 @@ class SansomBLN(KTGoSolv):
         String = []
         #
         String.append('BOND')
-        # bb(i)/bb(i+1)
-        for i, atom in enumerate(self.bbAtoms):
-            try:
-                bb_0 = atom
-                bb_1 = self.bbAtoms[i+1]
 
-                if 'alphahelix' == bb_0.structure == bb_1.structure:
-                    kbond = self._parameters.kBondHelix 
-                elif '310helix' == bb_0.structure == bb_1.structure:
-                    kbond = self._parameters.kBondHelix 
-                elif 'betasheet' == bb_0.structure == bb_1.structure:
-                    kbond = self._parameters.kBondSheet
+        for t1 in self.aTypeList:
+            for t2 in self.aTypeList:
+                if t1.endswith('h') and t2.endswith('h'):
+                    kbond = self._parameters['kBondHelix']
+                elif t1.endswith('s') and t2.endswith('s'):
+                    kbond = self._parameters['kBondSheet']
                 else:
-                    kbond = self._parameters.kBondCoil
+                    kbond = self._parameters['kBondCoil']
 
                 tmp = '%-8s%-8s%14.6f%12.6f' % \
-                        (bb_0.prmString, bb_1.prmString, kbond,
-                        3.8)
-                String.append(tmp)
-            except IndexError:
-                pass
-        # bb(i)/sc(i)
-        for i, atom in enumerate(self.bbAtoms):
+                      (t1.upper(), t2.upper(), kbond, 3.8)
+        String.append(tmp)
 
-            bb  = atom
-            sc1 = self.sc1Atoms[i]
-            sc2 = self.sc2Atoms[i]
-
-            if 'alphahelix' == bb_0.structure:
-                kbond = self._parameters.kBondHelix
-            elif '310helix' == bb_0.structure:
-                kbond = self._parameters.kBondHelix
-            elif 'betasheet' == bb_0.structure:
-                kbond = self._parameters.kBondSheet
-            else:
-                kbond = self._parameters.kBondCoil
-
-            if sc1:
-                tmp = '%-8s%-8s%14.6f%12.6f' % \
-                        (bb.prmString, sc1.prmString, kbond,
-                        3.8)
-                String.append(tmp)
-
-            if sc1 and sc2:
-                tmp = '%-8s%-8s%14.6f%12.6f' % \
-                        (sc1.prmString, sc2.prmString, kbond,
-                        3.8)
-                String.append(tmp)
-
-        return Strin
+        return String
