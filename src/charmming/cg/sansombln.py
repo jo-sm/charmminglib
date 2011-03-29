@@ -8,6 +8,7 @@ DOCME
 from commands import getstatusoutput
 from numpy import ndarray
 from tempfile import NamedTemporaryFile
+from charmming.cg.ktgosolv import KTGoSolv
 from charmming.const.bio import aaVDW
 from charmming.tools import Property, lowerKeys, modPi
 from charmming.lib.pro import NoAlphaCarbonError
@@ -20,7 +21,7 @@ import copy
 
 class SansomBLN(KTGoSolv):
 
-    def __init__(self):
+    def __init__(self, iterable=None, **kwargs):
         """
         DOCME
         """
@@ -42,6 +43,7 @@ class SansomBLN(KTGoSolv):
         for res in self.allAtoms.iter_res(restype=CGPro):
             tmp = res.get_goBB(**kwargs)
             tmp.atomType = 'n' # we can change this later for secondary struct
+            tmp.resName = 'b' + res.resName
             tmp.segType = 'bln'
             yield tmp
 
@@ -64,43 +66,164 @@ class SansomBLN(KTGoSolv):
                                       ['cg', 'cd1', 'hd1', 'cd2', 'hd2', 'ce1', \
                                        'he1','ce2', 'he2', 'cz', 'hz']])
                     sc1.atomNum = 1
-                    sc1.atomType = 'c'
-                    sc1.derivedResName = tmp.resName
-                    sc1.resName = '%s%d' % (self.chainid, self.resid)
+                    sc1.atomType = '  c '
+                    sc1.derivedResName = sc1.resName
+                    sc1.resName = 'bphe' 
                     sc1.segType = 'bln'
 
                     sc2 = res.get_alphaCarbon()
                     sc2.atomNum = 2
                     sc2.cart = sc2l.com
-                    sc2.atomType = 'c'
+                    sc2.atomType = '  c '
                     sc2.derivedResName = tmp.resName
-                    sc2.resName = '%s%d' % (self.chainid, self.resid)
+                    sc2.resName = 'bphe'
                     sc2.segType = 'bln'
 
                     yield sc1
                     yield sc2
 
-                if res.resName == 'arg':
-                    sc2
+                elif res.resName == 'arg' or res.resName == 'lys':
+                    # Arginine and Lysine gets a C + Qd, C at the CB, CG, CD COM
+                    # and Qd at the COM of the rest of the SC heavy atoms.
+                    sc1l = BaseStruct([a for a in taco if a.atomType.strip() in \
+                                      ['cb', 'cg', 'cd']])
+                    sc2l = BaseStruct([a for a in taco if a.atomType.strip() in \
+                                      ['ce', 'nz', 'cz', 'nh1', 'nh2']])
+
+                    sc1 = res.get_alphaCarbon()
+                    sc1.cart = sc1l.com
+                    sc1.atomNum = 1
+                    sc1.atomType = '   c'
+                    sc1.derivedResName = sc1.resName
+                    sc1.resName = 'b'+ res.resName
+                    sc1.segType = 'bln'
+                    yield sc1
+
+                    sc2 = res.get_alphaCarbon()
+                    sc2.cart = sc2l.com
+                    sc2.atomNum = 2   
+                    sc2.atomType = '  qd' 
+                    sc2.derivedResName = sc2.resName 
+                    sc2.resName = 'b'+ res.resName
+                    sc2.segType = 'bln'
+                    yield sc2
+
+                elif res.resName == 'tyr':
+                    # tyrosine gets C + Nd, C for CB, CG, and half the ring and Nd
+                    # for the second half of the ring + the hydroxyl group
+                    sc1l = BaseStruct([a for a in taco if a.atomType.strip() in \
+                                      ['cb', 'cg', 'cd1', 'cd2']])
+                    sc2l = BaseStruct([a for a in taco if a.atomType.strip() in \
+                                      ['ce1', 'ce2', 'cz', 'oh']])
+
+                    sc1 = res.get_alphaCarbon()
+                    sc1.cart = sc1l.com
+                    sc1.atomNum = 1   
+                    sc1.atomType = '   c' 
+                    sc1.derivedResName = sc1.resName 
+                    sc1.resName = 'btyr'
+                    sc1.segType = 'bln'
+                    yield sc1
+
+                    sc2 = res.get_alphaCarbon()
+                    sc2.cart = sc2l.com
+                    sc2.atomNum = 2
+                    sc2.atomType = '  nd'
+                    sc2.derivedResName = sc2.resName
+                    sc2.resName = 'btyr'
+                    sc2.segType = 'bln'
+                    yield sc2
+
+                elif res.resName == 'his' or res.resName == 'hsd':
+                    # histadine is C + Nda, note that we only deal with
+                    # neutral histadine here -- charged histadine would
+                    # have a Qda bead.
+                    sc1l = BaseStruct([a for a in taco if a.atomType.strip() in \
+                                      ['cb', 'cg']])
+                    sc2l = BaseStruct([a for a in taco if a.atomType.strip() in \
+                                      ['nd1', 'cd2', 'ce1', 'ne2']])
+
+                    sc1 = res.get_alphaCarbon()
+                    sc1.cart = sc1l.com
+                    sc1.atomNum = 1
+                    sc1.atomType = '   c'
+                    sc1.derivedResName = sc1.resName
+                    sc1.resName = 'bhsd'
+                    sc1.segType = 'bln' 
+                    yield sc1
+
+                    sc2 = res.get_alphaCarbon()
+                    sc2.cart = sc2l.com 
+                    sc2.atomNum = 2  
+                    sc2.atomType = ' nda'
+                    sc2.derivedResName = sc2.resName
+                    sc2.resName = 'bhsd'
+                    sc2.segType = 'bln' 
+                    yield sc2
+
+                elif res.resName == 'trp':
+                    # tryptophan is similar to histadine, but with a C
+                    # bead on its end
+                    sc1l = BaseStruct([a for a in taco if a.atomType.strip() in \
+                                      ['cb', 'cg', 'cd1', 'ne1']])
+                    sc2l = BaseStruct([a for a in taco if a.atomType.strip() in \
+                                      ['cd2', 'ce2', 'cz2', 'ce3', 'cz3', 'ch2']])
+
+                    sc1 = res.get_alphaCarbon()
+                    sc1.cart = sc1l.com
+                    sc1.atomNum = 1
+                    sc1.atomType = '   c'
+                    sc1.derivedResName = sc1.resName
+                    sc1.resName = 'bhis'
+                    sc1.segType = 'bln'
+                    yield sc1
+
+                    sc2 = res.get_alphaCarbon()
+                    sc2.cart = sc2l.com
+                    sc2.atomNum = 2    
+                    sc2.atomType = ' nda'
+                    sc2.derivedResName = sc2.resName
+                    sc2.resName = 'bhis'
+                    sc2.segType = 'bln'
+                    yield sc2
+                    
             else:
                 # two site residue
                 tmp = res.get_goSC(**kwargs)
                 tmp.atomNum = 1
+                tmp.resName = 'b' + res.resName
                 tmp.segType = 'bln'
                 if res.resName in ['ala', 'ile', 'leu', 'pro', 'val']:
-                    tmp.atomType = 'c'
+                    tmp.atomType = '   c'
                 elif res.resName in ['cys', 'met']:
-                    tmp.atomType = 'n0'
+                    tmp.atomType = '  n0'
                 elif res.resName in ['asn', 'gln']:
-                    tmp.atomType = 'nda'
+                    tmp.atomType = ' nda'
                 elif res.resName in ['ser', 'thr']:
-                    tmp.atomType = 'p'
+                    tmp.atomType = '   p'
                 elif res.resName in ['asp', 'glu']:
-                    tmp.atomType = 'qa'
+                    tmp.atomType = '  qa'
                 else:
                     raise AssertionError('What kind of residue is this??!')
 
                 yield tmp
+
+    def write_rtf(self, filename=None):
+        String = []
+
+        # Loop over all of the atom types
+        atypes = ['n', 'nd', 'na', 'nda', 'c', 'p', 'q', 'qd', 'qa', 'qda']
+
+        # Loop over all of the residue types
+
+        if filename is None:   
+            for line in String:   
+                print line.upper()
+        else:
+            String = '\n'.join(String).upper()
+            writeTo = open(filename, 'w')
+            writeTo.write(String)
+            writeTo.close()
 
     def write_prm(self, filename=None):
         # compute some things...

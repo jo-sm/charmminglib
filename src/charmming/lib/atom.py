@@ -66,7 +66,7 @@ class Atom(BaseAtom):
     """
 
     _tagMap = {'nuc':'atom','pro':'atom','good':'atom','bad':'hetatm',
-            'dna':'atom','rna':'atom'}
+            'dna':'atom','rna':'atom','bln':'atom'}
     """
     Map `segType` -> `tag`
 
