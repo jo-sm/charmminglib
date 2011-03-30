@@ -226,7 +226,7 @@ class SansomBLN(KTGoSolv):
         # declare that we can bond backbone atoms
         String.extend(["", 'DECL +B', 'DECL -B', 'DECL #B', ""])
         String.append('! defaults, note there is no auto-generation')
-        String.append('DEFAULT FIRST NONE LAST NONE')
+        String.append('DEFAULT NODIHEDRAL FIRST NONE LAST NONE')
         String.append('')
 
         String.extend(self._rtf_residues())
@@ -262,10 +262,10 @@ class SansomBLN(KTGoSolv):
         String.append('')
         String.extend(self._prm_bond())
         String.append('')
-        #String.extend(self._prm_angle())
-        #String.append('')
-        #String.extend(self._prm_nonbond())
-        #String.append('')
+        String.extend(self._prm_angle())
+        String.append('')
+        String.extend(self._prm_nonbond())
+        String.append('')
         #String.extend(self._prm_nbfix())
         #String.append('')
         String.append('END')
@@ -320,17 +320,78 @@ class SansomBLN(KTGoSolv):
 
         for p in prefix:
             for r in aares:
-                String.append('RESI %s' % p.upper() + r.upper())
+                bondstr = ''
+
+                if r in ['asp', 'glu']:
+                    chrg = -1.0
+                elif r in ['lys','arg']:
+                    chrg = 1.0
+                else:
+                    chrg = 0.0
+                String.append('RESI %s       %6.4f' % (p.upper() + r.upper(),chrg))
  
                 # backbone atom
+                # ToDo: check for backbone hydrogen bonding here...
                 if p == 'h':
-                   pass
+                   bbatom = 'nh'
                 elif p == 's':
-                   pass
+                   bbatom = 'ns'
                 else:
-                   pass
-                String.append('')
+                   bbatom = 'n'
+                String.append('Group')
+                String.append('Atom  B %-4s 0.00' % bbatom)
 
+                # sidechain 1
+                if r != 'gly':
+                    String.append('Group')
+                    if r in ['ala','ile','leu','pro','val','phe','tyr','hsd','lys','arg']:
+                        chrg = 0.0
+                        type = 'c'
+                    elif r in ['cys', 'met']:
+                        chrg = 0.0
+                        type = 'n0'
+                    elif r in ['asn', 'gln']:
+                        chrg = 0.0
+                        type = 'nda'
+                    elif r in ['ser', 'thr']:
+                        chrg = 0.0
+                        type = 'p'
+                    elif r == 'trp':
+                        chrg = 0.0
+                        type = 'nd'
+                    elif r in ['asp', 'glu']:
+                        chrg = -1.0
+                        type = 'qa'
+                    bondstr += 'B S'
+                    String.append('Atom  S %-4s %4.2f' % (type,chrg))
+
+                # sidechain 2
+                hassc2 = False
+                if r in ['lys','arg']:
+                    hassc2 = True
+                    chrg = 1.0
+                    type = 'qd'
+                elif r == 'tyr':
+                    hassc2 = True
+                    chrg = 0.0
+                    type = 'nd'
+                elif r == 'hsd':
+                    hassc2 = True
+                    chrg = 0.0
+                    type = 'nda'
+                elif r == 'phe':
+                    hassc2 = True
+                    chrg = 0.0
+                    type = 'c'
+                if hassc2:
+                    bondstr += ' S S2'
+                    String.append('Group')
+                    String.append('Atom S2 %-4s %4.2f' % (type,chrg))
+
+                # bonds etc.
+                String.append('Bond %s' % bondstr)
+                String.append('')
+               
         return String
 
     def _prm_header(self):
@@ -369,6 +430,42 @@ class SansomBLN(KTGoSolv):
 
                 tmp = '%-8s%-8s%14.6f%12.6f' % \
                       (t1.upper(), t2.upper(), kbond, 3.8)
-        String.append(tmp)
+                String.append(tmp)
 
         return String
+
+    def _prm_angle(self):
+        String = ['THETA']
+
+        for t1 in self.aTypeList:
+            t1h = t1.endswith('h')
+            t1s = t1.endswith('s')
+            for t2 in self.aTypeList:
+                t2h = t2.endswith('h')
+                t2s = t2.endswith('s')
+                for t3 in self.aTypeList:
+                    t3h = t3.endswith('h')
+                    t3s = t3.endswith('s')
+
+                    if t1h and t2h and t3h:
+                        kangle = self._parameters['kAngleHelix']
+                        mtheta = self._parameters['mThetaHelix']
+                    elif t1s and t2s and t3s:
+                        kangle = self._parameters['kAngleSheet']
+                        mtheta = self._parameters['mThetaSheet']
+                    else:
+                        kangle = self._parameters['kAngleCoil']
+                        mtheta = self._parameters['mThetaCoil']
+
+                    tmp = '%-8s%-8s%-8s%14.6f%12.6f' % \
+                          (t1.upper(),t2.upper(),t3.upper(), kangle, mtheta)
+                    String.append(tmp)
+                    
+        return String
+
+    def _prm_nonbond(self):
+        String = ['NBOND']
+        return String
+
+    def _prm_nbfix(self):
+        pass
