@@ -15,7 +15,7 @@ from charmming.lib.pro import NoAlphaCarbonError
 from charmming.lib.mol import Mol
 from charmming.lib.basestruct import BaseStruct
 from charmming.cg.const import bt_matrix, bt_map, kgs_matrix, kgs_map, \
-        mj_matrix, mj_map
+        mj_matrix, mj_map, bln_matrix, blnSolv_map
 from charmming.cg.cgpro import CGPro
 import copy
 
@@ -266,8 +266,8 @@ class SansomBLN(KTGoSolv):
         String.append('')
         String.extend(self._prm_nonbond())
         String.append('')
-        #String.extend(self._prm_nbfix())
-        #String.append('')
+        String.extend(self._prm_nbfix())
+        String.append('')
         String.append('END')
         #
         # BTM: why do we do this??!
@@ -464,8 +464,29 @@ class SansomBLN(KTGoSolv):
         return String
 
     def _prm_nonbond(self):
-        String = ['NBOND']
+        String = ['NBOND NBXMOD 4 ATOM CDIEL SHIFT VATOM VDISTANCE VSHIFT -']
+        String.append(' CUTNB 16 CTOFNB 12 EPS 1.0 WMIN 1.5 E14FAC 0.7')
+        for t in self.aTypeList:
+            String.append('%-4s    0.0    1.2 4.700 ! Don\'t believe this parameter, it will be overwritten by NBFIX below' % t)
         return String
 
     def _prm_nbfix(self):
-        pass
+        String = ['NBFIX']
+        for t1 in self.aTypeList:
+            for t2 in self.aTypeList:
+
+                # strip off helix and sheet designations, as they matter not here
+                if t1.endswith('h') or t1.endswith('s'):
+                    typ1 = t1[:-1]
+                else:
+                    typ1 = t1
+                if t2.endswith('h') or t2.endswith('s'):
+                    typ2 = t2[:-1]
+                else:
+                    typ2 = t2
+
+                iidx = blnSolv_map[typ1]
+                jidx = blnSolv_map[typ2]
+                String.append('%-8s%-8s%14.6f%12.6f' % (typ1, typ2, bln_matrix[iidx][jidx]/1.69, 5.2755))
+
+        return String
