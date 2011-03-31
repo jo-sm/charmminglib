@@ -60,6 +60,11 @@ class SansomBLN(KTGoSolv):
         # works, so I am going to leave it out
         # for now.
         kwargs = lowerKeys(kwargs)
+
+        # run_stride will populate two arrays, self.structureOut and self.hbondOut
+        # we need to use these to assign the backbone hydrogen bond types and the
+        # helix, sheet, or coild types of the backbones and sidechains
+        self.run_stride()
         
         for res in self.allAtoms.iter_res(restype=CGPro):
             tmp = res.get_goBB(**kwargs)
@@ -487,6 +492,6 @@ class SansomBLN(KTGoSolv):
 
                 iidx = blnSolv_map[typ1]
                 jidx = blnSolv_map[typ2]
-                String.append('%-8s%-8s%14.6f%12.6f' % (typ1, typ2, bln_matrix[iidx][jidx]/1.69, 5.2755))
+                String.append('%-8s%-8s%14.6f%12.6f' % (t1, t2, bln_matrix[iidx][jidx]/1.69, 5.2755))
 
         return String
