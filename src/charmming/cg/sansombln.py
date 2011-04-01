@@ -40,6 +40,29 @@ class SansomBLN(KTGoSolv):
         'mThetaCoil':-240.0
         }
 
+    _shortname = {
+        'arg': 'r',
+        'his': 'h',
+        'hsd': 'h',
+        'lys': 'k',
+        'asp': 'd',
+        'glu': 'e',
+        'ser': 's',
+        'thr': 't',
+        'asn': 'n',
+        'gln': 'q',
+        'cys': 'c',
+        'gly': 'g',
+        'pro': 'p',
+        'ala': 'a',
+        'ile': 'i',
+        'leu': 'l',
+        'met': 'm',
+        'phe': 'f',
+        'trp': 'w',
+        'tyr': 'y',
+        'val': 'v'
+    }
 
     def __init__(self, iterable=None, **kwargs):
         """
@@ -47,6 +70,33 @@ class SansomBLN(KTGoSolv):
         """
         self.aTypeList = []
         super(SansomBLN, self).__init__(iterable, **kwargs)
+
+        # run_stride will populate two arrays, self.structureOut and self.hbondOut
+        # and atom.structure we need to use these to assign the backbone hydrogen bond types and the
+        # helix, sheet, or coild types of the backbones and sidechains. We have to run this
+        # AFTER gen_CGstruct (which will be called by the superclass constructor) because we need
+        # the backbone and sidechain lists intact...
+        self.run_stride()
+
+        # take care of assigning Helix and Sheet types
+        for line in self.structureOut:
+            resnum = int(line[10:15])
+            struct = line[24]
+
+            print "Got resid %d struct %s" % (resnum,struct)
+            if struct == 'H' or struct == 'G':
+                # helix -- Bond and Sansom explicitly state that they only
+                # include alpha-helices (H), but I am including 310-helices
+                # (G) as well. We need to check this, though...
+                for atom in self:
+                    if atom.resid == resnum:
+                        atom.resName = 'h' + atom.resName[1:]
+                
+            elif struct == 'E':
+                # beta sheet
+                for atom in self:
+                    if atom.resid == resnum:
+                        atom.resName = 's' + atom.resName[1:]
 
 ##################
 # Public Methods #
@@ -61,16 +111,13 @@ class SansomBLN(KTGoSolv):
         # for now.
         kwargs = lowerKeys(kwargs)
 
-        # run_stride will populate two arrays, self.structureOut and self.hbondOut
-        # we need to use these to assign the backbone hydrogen bond types and the
-        # helix, sheet, or coild types of the backbones and sidechains
-        self.run_stride()
-        
         for res in self.allAtoms.iter_res(restype=CGPro):
             tmp = res.get_goBB(**kwargs)
             tmp.atomType = '   b' # we can change this later for secondary struct
-            tmp.resName = 'b' + res.resName
+            tmp.derivedResName = res.resName
+            tmp.resName = 'b' + self._shortname[res.resName]
             tmp.segType = 'bln'
+            print "DEBUG: assign %s -> %s" % (tmp.derivedResName,tmp.resName)
             yield tmp
 
             if res.resName == 'gly':
@@ -94,7 +141,7 @@ class SansomBLN(KTGoSolv):
                     sc1.atomNum = 1
                     sc1.atomType = '   c'
                     sc1.derivedResName = sc1.resName
-                    sc1.resName = 'bphe' 
+                    sc1.resName = 'bf' 
                     sc1.segType = 'bln'
 
                     sc2 = res.get_alphaCarbon()
@@ -102,7 +149,7 @@ class SansomBLN(KTGoSolv):
                     sc2.cart = sc2l.com
                     sc2.atomType = '   c'
                     sc2.derivedResName = tmp.resName
-                    sc2.resName = 'bphe'
+                    sc2.resName = 'bf'
                     sc2.segType = 'bln'
 
                     yield sc1
@@ -121,7 +168,7 @@ class SansomBLN(KTGoSolv):
                     sc1.atomNum = 1
                     sc1.atomType = '   s'
                     sc1.derivedResName = sc1.resName
-                    sc1.resName = 'b'+ res.resName
+                    sc1.resName = 'b'+ self._shortname[res.resName]
                     sc1.segType = 'bln'
                     yield sc1
 
@@ -130,7 +177,7 @@ class SansomBLN(KTGoSolv):
                     sc2.atomNum = 2   
                     sc2.atomType = '  s2' 
                     sc2.derivedResName = sc2.resName 
-                    sc2.resName = 'b'+ res.resName
+                    sc2.resName = 'b'+ self._shortname[res.resName]
                     sc2.segType = 'bln'
                     yield sc2
 
@@ -147,7 +194,7 @@ class SansomBLN(KTGoSolv):
                     sc1.atomNum = 1   
                     sc1.atomType = '   s' 
                     sc1.derivedResName = sc1.resName 
-                    sc1.resName = 'btyr'
+                    sc1.resName = 'by'
                     sc1.segType = 'bln'
                     yield sc1
 
@@ -156,7 +203,7 @@ class SansomBLN(KTGoSolv):
                     sc2.atomNum = 2
                     sc2.atomType = '  s2'
                     sc2.derivedResName = sc2.resName
-                    sc2.resName = 'btyr'
+                    sc2.resName = 'by'
                     sc2.segType = 'bln'
                     yield sc2
 
@@ -174,7 +221,7 @@ class SansomBLN(KTGoSolv):
                     sc1.atomNum = 1
                     sc1.atomType = '   s'
                     sc1.derivedResName = sc1.resName
-                    sc1.resName = 'bhsd'
+                    sc1.resName = 'bh'
                     sc1.segType = 'bln' 
                     yield sc1
 
@@ -183,7 +230,7 @@ class SansomBLN(KTGoSolv):
                     sc2.atomNum = 2  
                     sc2.atomType = '  s2'
                     sc2.derivedResName = sc2.resName
-                    sc2.resName = 'bhsd'
+                    sc2.resName = 'bh'
                     sc2.segType = 'bln' 
                     yield sc2
 
@@ -200,7 +247,7 @@ class SansomBLN(KTGoSolv):
                     sc1.atomNum = 1
                     sc1.atomType = '   b'
                     sc1.derivedResName = sc1.resName
-                    sc1.resName = 'bhis'
+                    sc1.resName = 'bw'
                     sc1.segType = 'bln'
                     yield sc1
 
@@ -209,7 +256,7 @@ class SansomBLN(KTGoSolv):
                     sc2.atomNum = 2    
                     sc2.atomType = '  s2'
                     sc2.derivedResName = sc2.resName
-                    sc2.resName = 'bhis'
+                    sc2.resName = 'bw'
                     sc2.segType = 'bln'
                     yield sc2
                     
@@ -217,11 +264,12 @@ class SansomBLN(KTGoSolv):
                 # two site residue
                 tmp = res.get_goSC(**kwargs)
                 tmp.atomNum = 1
-                tmp.resName = 'b' + res.resName
+                tmp.resName = 'b' + self._shortname[res.resName]
                 tmp.segType = 'bln'
                 tmp.atomType = '   s'
                 yield tmp
 
+     
     def write_rtf(self, filename=None):
         String = []
         String.append('* Topology file for three-site BLN model')
@@ -300,11 +348,11 @@ class SansomBLN(KTGoSolv):
         # so mass will not be conserved.
         atypes = ['n', 'nd', 'na', 'nda', 'c', 'p', 'q', 'qd', 'qa', 'qda']
         for i, atyp in enumerate(atypes):
-            String.append('MASS %-5d%-8s%10.6f' % (i, atyp.upper(), 72.0))
+            String.append('MASS %-5d%-8s%10.6f' % (i+1, atyp.upper(), 72.0))
             self.aTypeList.append(atyp)
 
         # now handle helix and sheet types
-        cnt = i + 1
+        cnt = i + 2
         for sfx in ['h','s']:
             for atyp in atypes:
                 prmstr = atyp + sfx
@@ -317,85 +365,102 @@ class SansomBLN(KTGoSolv):
     def _rtf_residues(self):
         String = []
 
-        aares = ['ala','ile','leu','pro','val','phe','cys','met','asn','gln', \
-                 'ser','thr','tyr','hsd','trp','asp','glu','lys','arg']
-
         # prefixes: b = normal BLN (coil), h = helix, s = sheet
         prefix = ['b', 'h', 's']
+        donacc = ['0', 'd', 'a', 'b']
 
         for p in prefix:
-            for r in aares:
-                bondstr = ''
+            for r in self._shortname.values():
+                for h in donacc:
+                    bondstr = ''
 
-                if r in ['asp', 'glu']:
-                    chrg = -1.0
-                elif r in ['lys','arg']:
-                    chrg = 1.0
-                else:
-                    chrg = 0.0
-                String.append('RESI %s       %6.4f' % (p.upper() + r.upper(),chrg))
+                    if r in ['asp', 'glu']:
+                        chrg = -1.0
+                    elif r in ['lys','arg']:
+                        chrg = 1.0
+                    else:
+                        chrg = 0.0
+                    if h != '0':
+                        String.append('RESI %s       %6.4f' % (p.upper() + r.upper() + h.upper(),chrg))
+                    else:
+                        String.append('RESI %s       %6.4f' % (p.upper() + r.upper(),chrg))
  
-                # backbone atom
-                # ToDo: check for backbone hydrogen bonding here...
-                if p == 'h':
-                   bbatom = 'nh'
-                elif p == 's':
-                   bbatom = 'ns'
-                else:
-                   bbatom = 'n'
-                String.append('Group')
-                String.append('Atom  B %-4s 0.00' % bbatom)
+                    # backbone atom
+                    # ToDo: check for backbone hydrogen bonding here...
+                    if h == '0':
+                        bbatom = 'n'
+                    elif h == 'd':
+                        bbatom = 'nd'
+                    elif h == 'a':
+                        bbatom = 'na'
+                    elif h == 'b':
+                        bbatom = 'nda'
 
-                # sidechain 1
-                if r != 'gly':
+                    if p == 'h':
+                        bbatom += 'h'
+                    elif p == 's':
+                        bbatom += 's'
+
                     String.append('Group')
-                    if r in ['ala','ile','leu','pro','val','phe','tyr','hsd','lys','arg']:
-                        chrg = 0.0
-                        type = 'c'
-                    elif r in ['cys', 'met']:
-                        chrg = 0.0
-                        type = 'n0'
-                    elif r in ['asn', 'gln']:
-                        chrg = 0.0
-                        type = 'nda'
-                    elif r in ['ser', 'thr']:
-                        chrg = 0.0
-                        type = 'p'
-                    elif r == 'trp':
+                    String.append('Atom  B %-4s 0.00' % bbatom)
+
+                    # sidechain 1
+                    if r != 'g':
+                        String.append('Group')
+                        if r in ['a','i','l','p','v','f','y','h','k','r']:
+                            chrg = 0.0
+                            type = 'c'
+                        elif r in ['c', 'm']:
+                            chrg = 0.0
+                            type = 'n0'
+                        elif r in ['n', 'q']:
+                           chrg = 0.0
+                           type = 'nda'
+                        elif r in ['s', 't']:
+                           chrg = 0.0
+                           type = 'p'
+                        elif r == 'w':
+                           chrg = 0.0
+                           type = 'nd'
+                        elif r in ['d', 'e']:
+                           chrg = -1.0
+                           type = 'qa'
+                        else:
+                           raise AssertionError("WTF")
+                        bondstr += 'B S'
+                        String.append('Atom  S %-4s %4.2f' % (type,chrg))
+
+                    # sidechain 2
+                    hassc2 = False
+                    if r in ['r','k']:
+                        hassc2 = True
+                        chrg = 1.0
+                        type = 'qd'
+                    elif r == 'y':
+                        hassc2 = True
                         chrg = 0.0
                         type = 'nd'
-                    elif r in ['asp', 'glu']:
-                        chrg = -1.0
-                        type = 'qa'
-                    bondstr += 'B S'
-                    String.append('Atom  S %-4s %4.2f' % (type,chrg))
+                    elif r == 'h':
+                        hassc2 = True
+                        chrg = 0.0
+                        type = 'nda'
+                    elif r == 'f':
+                        hassc2 = True
+                        chrg = 0.0
+                        type = 'c'
+                    elif r == 'w':
+                        hassc2 = True
+                        chrg = 0.0
+                        type = 'c'
 
-                # sidechain 2
-                hassc2 = False
-                if r in ['lys','arg']:
-                    hassc2 = True
-                    chrg = 1.0
-                    type = 'qd'
-                elif r == 'tyr':
-                    hassc2 = True
-                    chrg = 0.0
-                    type = 'nd'
-                elif r == 'hsd':
-                    hassc2 = True
-                    chrg = 0.0
-                    type = 'nda'
-                elif r == 'phe':
-                    hassc2 = True
-                    chrg = 0.0
-                    type = 'c'
-                if hassc2:
-                    bondstr += ' S S2'
-                    String.append('Group')
-                    String.append('Atom S2 %-4s %4.2f' % (type,chrg))
+                    if hassc2:
+                        bondstr += ' S S2'
+                        String.append('Group')
+                        String.append('Atom S2 %-4s %4.2f' % (type,chrg))
 
-                # bonds etc.
-                String.append('Bond %s' % bondstr)
-                String.append('')
+                    # bonds etc.
+                    String.append('Bond %s' % bondstr)
+                    String.append('')
                
         return String
 
