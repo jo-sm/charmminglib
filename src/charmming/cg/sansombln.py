@@ -182,7 +182,7 @@ class SansomBLN(KTGoSolv):
                                       ['cg', 'cd1', 'hd1', 'cd2', 'hd2', 'ce1', \
                                        'he1','ce2', 'he2', 'cz', 'hz']])
                     sc1.atomNum = 1
-                    sc1.atomType = '   c'
+                    sc1.atomType = '   s'
                     sc1.derivedResName = sc1.resName
                     sc1.resName = 'bf' 
                     sc1.segType = 'bln'
@@ -190,7 +190,7 @@ class SansomBLN(KTGoSolv):
                     sc2 = res.get_alphaCarbon()
                     sc2.atomNum = 2
                     sc2.cart = sc2l.com
-                    sc2.atomType = '   c'
+                    sc2.atomType = '  s2'
                     sc2.derivedResName = tmp.resName
                     sc2.resName = 'bf'
                     sc2.segType = 'bln'
