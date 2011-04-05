@@ -321,8 +321,9 @@ class SansomBLN(KTGoSolv):
 
         # declare that we can bond backbone atoms
         String.extend(["", 'DECL +B', 'DECL -B', 'DECL #B', ""])
-        String.append('! defaults, note there is no auto-generation')
-        String.append('DEFAULT NODIHEDRAL FIRST NONE LAST NONE')
+        String.append('! defaults, note there are no dihedrals in this model')
+        String.append('DEFAULT FIRST NONE LAST NONE')
+        String.append('AUTO ANGLES')
         String.append('')
 
         String.extend(self._rtf_residues())
@@ -417,9 +418,9 @@ class SansomBLN(KTGoSolv):
                 for h in donacc:
                     bondstr = ''
 
-                    if r in ['asp', 'glu']:
+                    if r in ['d', 'e']:
                         chrg = -1.0
-                    elif r in ['lys','arg']:
+                    elif r in ['k','r']:
                         chrg = 1.0
                     else:
                         chrg = 0.0
@@ -532,8 +533,8 @@ class SansomBLN(KTGoSolv):
         #
         String.append('BOND')
 
-        for t1 in self.aTypeList:
-            for t2 in self.aTypeList:
+        for i, t1 in enumerate(self.aTypeList):
+            for t2 in self.aTypeList[i:]:
                 if t1.endswith('h') and t2.endswith('h'):
                     kbond = self._parameters['kBondHelix']
                 elif t1.endswith('s') and t2.endswith('s'):
