@@ -37,7 +37,8 @@ class SansomBLN(KTGoSolv):
         'kAngleCoil':5.98,
         'mThetaHelix':-270.0,
         'mThetaSheet':-230.0,
-        'mThetaCoil':-240.0
+        'mThetaCoil':-240.0,
+        'hbondFC':2.390
         }
 
     _shortname = {
@@ -77,6 +78,48 @@ class SansomBLN(KTGoSolv):
         # AFTER gen_CGstruct (which will be called by the superclass constructor) because we need
         # the backbone and sidechain lists intact...
         self.run_stride()
+
+        # take care of assigning backbone hydrogen bonding, possibly write a stream file with harmonic
+        # restraints to hold secondary structural elements
+        if kwargs.has_key('hbondstream'):
+            hbfp = open(kwargs['hbondstream'], 'w')
+            hbfp.write('* hydrogen bond restraints\n')
+            hbfp.write('*\n\n')
+
+        dnrlist = set()
+        acclist = set()
+
+        for line in self.hbondOut:
+            if line.startswith('DNR'):
+                # deal solely with acceptors for now since
+                # this is the way Frank's code works
+                continue
+
+            # I am going to assume that the hydrogen bonds from STRIDE are correct, however
+            # the mechanism of Bond & Sansom has slight differences (mostly because they
+            # assume we can find the hydrogen coordinates). It might not be a bad idea to
+            # investigate this.
+            # NB, res2 and res1 are inverted because the acceptor is listed first, then the
+            # donor.
+            res2 = int(line[10:15])
+            res1 = int(line[30:35])
+            dist = float(line[42:45])
+
+            dnrlist.add(res1)
+            acclist.add(res2)
+            if kwargs.has_key('hbondstream'):
+                # fixme, figure out how to get the correct segment ID
+                hbfp.write('resd kval %10.6f %s %d B %s %d B\n' % (self._parameters['hbondFC'],'a-bln',res1,'a-bln',res2))
+        if kwargs.has_key('hbondstream'):
+            hbfp.close()
+
+        for atom in self:
+            if atom.resid in dnrlist and atom.resid in acclist:
+                atom.resName += 'b'
+            elif atom.resid in dnrlist:
+                atom.resName += 'd'
+            elif atom.resid in acclist:
+                atom.resName += 'a'
 
         # take care of assigning Helix and Sheet types
         for line in self.structureOut:
@@ -273,7 +316,7 @@ class SansomBLN(KTGoSolv):
     def write_rtf(self, filename=None):
         String = []
         String.append('* Topology file for three-site BLN model')
-        String.extend(['*',''])
+        String.extend(['*','31  1',''])
         String.extend(self._rtf_masses())
 
         # declare that we can bond backbone atoms
@@ -412,7 +455,7 @@ class SansomBLN(KTGoSolv):
                             type = 'c'
                         elif r in ['c', 'm']:
                             chrg = 0.0
-                            type = 'n0'
+                            type = 'n'
                         elif r in ['n', 'q']:
                            chrg = 0.0
                            type = 'nda'
