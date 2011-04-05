@@ -414,7 +414,7 @@ class SansomBLN(KTGoSolv):
         donacc = ['0', 'd', 'a', 'b']
 
         for p in prefix:
-            for r in self._shortname.values():
+            for r in set(self._shortname.values()):
                 for h in donacc:
                     bondstr = ''
 
@@ -550,6 +550,12 @@ class SansomBLN(KTGoSolv):
 
     def _prm_angle(self):
         String = ['THETA']
+ 
+        # OK, this is an ugly hack, but it's late and
+        # I'm having trouble thinking of an elegant
+        # algorithm to remove combinations that only
+        # differ in order
+        doneatms = []
 
         for t1 in self.aTypeList:
             t1h = t1.endswith('h')
@@ -558,6 +564,9 @@ class SansomBLN(KTGoSolv):
                 t2h = t2.endswith('h')
                 t2s = t2.endswith('s')
                 for t3 in self.aTypeList:
+                    if t3 in doneatms:
+                        continue
+
                     t3h = t3.endswith('h')
                     t3s = t3.endswith('s')
 
@@ -574,6 +583,8 @@ class SansomBLN(KTGoSolv):
                     tmp = '%-8s%-8s%-8s%14.6f%12.6f' % \
                           (t1.upper(),t2.upper(),t3.upper(), kangle, mtheta)
                     String.append(tmp)
+
+            doneatms.append(t1)
                     
         return String
 
