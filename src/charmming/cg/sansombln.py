@@ -502,6 +502,8 @@ class SansomBLN(KTGoSolv):
                         String.append('Group')
                         String.append('Atom S2 %-4s %4.2f' % (type,chrg))
 
+                    bondstr += ' B +B'
+
                     # bonds etc.
                     String.append('Bond %s' % bondstr)
                     String.append('')
