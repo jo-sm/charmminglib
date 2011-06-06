@@ -131,7 +131,7 @@ class Atom(BaseAtom):
             self.bFactor = self._text[61:66]
             self.resIndex = self.resid
             self.segType = 'auto'
-            self.element = 'auto'
+            self.element = 'auto'   # this line must come after `self.segType`
         elif inFormat in ['crd', 'cor', 'card', 'short', 'shortcard']:
             self.atomNum = self._text[0:5]
             self.resid = self._text[5:10]
@@ -143,7 +143,7 @@ class Atom(BaseAtom):
             self.bFactor = 1.
             self.resIndex = self.resid
             self.segType = 'auto'
-            self.element = 'auto'
+            self.element = 'auto'   # this line must come after `self.segType`
         # TODO: verify these against the format statements in CHARMM
         elif inFormat in ['xcrd', 'xcor', 'xcard', 'long', 'longcard']:
             self.atomNum = self._text[0:10]
@@ -156,11 +156,17 @@ class Atom(BaseAtom):
             self.bFactor = 1.
             self.resIndex = self.resid
             self.segType = 'auto'
-            self.element = 'auto'
+            self.element = 'auto'   # this line must come after `self.segType`
         elif inFormat == 'amber':
             raise NotImplementedError
         else:
             raise AtomError('parse: unknown `inFormat`: %s' % inFormat)
+        #
+        try:
+            if self.element == 'x':
+                self.element = self.derive_element()
+        except AttributeError:
+            pass
         # Save initial properties
         self._chainid0 = self.chainid
         self._segType0 = self.segType

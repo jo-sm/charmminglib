@@ -390,6 +390,6 @@ class BaseAtom(MetaAtom):
             chainid > segType > resid > atomNum
         """
         sortChainid = dict(((char,i) for i,char in enumerate(alphanum)))
-        return sortChainid[self.chainid] * 10000000000 + \
-                self.__class__._sortSegType[self.segType] * 1000000000 + \
-                self.resid * 100000 + self.atomNum
+        return sortChainid[self.chainid] * 1e10 + \
+                self.__class__._sortSegType[self.segType] * 1e9 + \
+                self.resid * 1e5 + self.atomNum

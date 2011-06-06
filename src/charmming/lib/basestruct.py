@@ -5,6 +5,7 @@ DOCME
 # 10/26/2010
 
 
+from IPython.external.pretty import pretty
 from itertools import tee
 from numpy import array, fromiter, float, dot, sin, cos
 from numpy.linalg import eig, norm
@@ -227,6 +228,17 @@ class BaseStruct(list):
             iterator = ( atom for atom in iterator if atom.atomNum == resid )
         if atomtype:
             iterator = ( atom for atom in iterator if atom.atomType == atomtype )
+        return BaseStruct(iterator, autofix=False)
+
+    def find_byDistance(self, selection, distance):
+        """
+        """
+        def proximal(atom, selection, distance):
+            for atom_i in selection:
+                if atom.calc_length(atom_i) <= distance:
+                    return True
+            return False
+        iterator = ( atom for atom in self if proximal(atom, selection, distance) )
         return BaseStruct(iterator, autofix=False)
 
     def get_inertiaTensor(self, eigen=False):
