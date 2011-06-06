@@ -225,7 +225,7 @@ class BaseStruct(list):
         if resid:
             iterator = ( atom for atom in iterator if atom.resid == resid )
         if atomnum:
-            iterator = ( atom for atom in iterator if atom.atomNum == resid )
+            iterator = ( atom for atom in iterator if atom.atomNum == atomnum )
         if atomtype:
             iterator = ( atom for atom in iterator if atom.atomType == atomtype )
         return BaseStruct(iterator, autofix=False)
@@ -381,3 +381,16 @@ class BaseStruct(list):
 
     def __setslice__(self):
         raise NotImplementedError
+
+    def __sub__(self, other, **kwargs):
+        if not isinstance(other, BaseStruct):
+            raise TypeError("unsupported operand type for '%s' and '%s'" %
+                            (type(self), type(other)))
+        iterator = ( atom for atom in self if atom not in other )
+        return BaseStruct(iterator, **kwargs)
+
+    def __add__(self, other):
+        if not isinstance(other, BaseStruct):
+            raise TypeError("unsupported operand type for '%s' and '%s'" %
+                            (type(self), type(other)))
+        return super(BaseStruct, self).__add__(other.__sub__(self))
