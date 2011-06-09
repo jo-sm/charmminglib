@@ -1,7 +1,13 @@
-.. _io:
 
-``io`` - File Writing Modules
-=============================
+:mod:`io` --- File Handling
+===========================
 
 .. automodule:: charmming.io
-  :members:
+
+**Contents:**
+
+.. toctree::
+  :maxdepth: 2
+  :glob:
+  
+  io/*

@@ -1,3 +1,16 @@
+"""
+A collection of useful unit conversions for chemistry and physics.
+
+:Attributes:
+    | ``RAD2DEG``
+    | ``DEG2RAD``
+    | ``BOLTZMANN`` - In SI units.
+    | ``AVOGADRO``
+    | ``JOULE2CAL`` - In SI units.
+    | ``CAL2JOULE`` - In SI units.
+"""
+
+
 from math import pi
 
 

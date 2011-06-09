@@ -14,6 +14,7 @@ TODO:
 
 import optparse
 import os
+from itertools import groupby
 from math import pi
 from charmming.const.units import RAD2DEG
 
@@ -54,7 +55,8 @@ def cleanStrings(iterable,CC=None):
     """
     if CC is not None:
         iterable = ( line.split(CC)[0] for line in iterable )
-    iterable = ( line.strip() for line in iterable if line )
+    iterable = ( line.strip() for line in iterable )
+    iterable = ( line for line in iterable if line )
     iterable = ( line.lower() for line in iterable )
     return iterable
 
@@ -272,3 +274,9 @@ def modPi(arg, units='deg'):
             arg -= 2 * PI
     return arg
 
+def grouper(iterable, n):
+    def key(x, s=n, a=[-1]):
+        r = a[0] = a[0] + 1
+        return r // s
+    for k, g in groupby(iterable, key):
+        yield list(g)

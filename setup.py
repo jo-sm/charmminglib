@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 """
-DOCME
+Installation script for standalone usage of charmminglib.
+
+:Author: fcp
+:Date: 10/28/2010
 """
-# fcp
-# 10/28/2010
 
 
 from distutils.core import setup

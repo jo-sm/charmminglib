@@ -1,7 +1,6 @@
-.. _tools:
 
-``tools`` - Miscelaneous Utility Classes & Functions
-====================================================
+:mod:`tools` --- Utility Classes & Functions
+============================================
 
 .. automodule:: charmming.tools
   :members:

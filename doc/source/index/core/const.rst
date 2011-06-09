@@ -1,7 +1,6 @@
-.. _const:
 
-``const`` - Constants Modules
-=============================
+:mod:`const` --- Constants
+==========================
 
 .. automodule:: charmming.const
 

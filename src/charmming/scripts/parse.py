@@ -1,9 +1,43 @@
 #!/usr/bin/env python
 """
-DOCME
+The standalone command line version of the CHARMMing input parser.
+
+:Author: fcp
+:Date: 10/26/2010
+
+:Usage:
+    ``parse.py --help`` will give you a help message explaining the various
+    options.  "Required options" are marked as such, and defaults
+    appear in [brackets].
+
+
+:Options:
+    | ``--version``   show program's version number and exit
+    | ``-h, --help``  show this help message and exit
+    | ``-I PATH, --input=PATH``
+        *Required* PATH of input .pdb file
+    | ``-O DIR``, ``--output=DIR``
+        DIR where output .pdb files are written [$inputPath]
+    | ``-F FORM``, ``--informat=FORM``
+        specify the .pdb formatting to expect [auto]
+    | ``--outformat=FORM``
+        specify the .pdb formatting to output [charmm]
+    | ``-M NUM``, ``--model=NUM``
+        Specify the model NUM to produce output files from [auto]
+    | ``--no_fix_chainid``
+        Disable chainid auto fixing
+    | ``--no_fix_atom``
+        In lieu of quiet auto fixing of atoms and structs, angry
+        exceptions are raised.
+    | ``-P``, ``--pickle``
+        Write `output.chk` files, which are just python pickles of
+        PDBFile objects.  Useful for restarting scripts, debugging, etc.
+    | ``-V``, ``--verbose``
+        Write extra debugging information
+    | ``--old_resid``
+        Write .pdb files using the canonical `resid` values instead
+        of the reindexed CHARMM values.
 """
-# fcp
-# 10/26/2010
 
 
 from cPickle import dump
@@ -13,18 +47,21 @@ from charmming.tools import expandPath, mkdir, lowerKeys
 
 def parse(pdbFilename, **kwargs):
     """
-    Default options are always listed first.
+    Parse a *.pdb* plain text file into its constituent chains and segments, and
+    print one CHARMM formatted *.pdb* file per chain/segment combination.
 
-    kwargs:
-        `informat`      ['auto','pdborg','charmm']  'auto' -> detects input formatting
-        `outformat`     ['charmm','pdborg','auto']  'auto' -> same as input formatting
-        `outpath`       ['auto',user_specified_path]  'auto' -> same as pdbFilename path
-        `fix_chainid`   [True,False]
-        `autofix`       [True,False]
-        `modelnum`      ['auto',0,1,2,...]  'auto' -> uses the first model found
-        `pickleme`      [False,True]    pickles the PDBFile object for later use
-        `verbose`       [False,True]
-        `old_resid`     [False,True]
+    *kwarg defaults are listed first*
+
+    **kwargs:**
+        | ``informat``      ['auto', 'pdborg', 'charmm'] # 'auto' -> detects input formatting
+        | ``outformat``     ['charmm', 'pdborg', 'auto'] # 'auto' -> same as input formatting
+        | ``outpath``       ['auto', user_specified_path] # 'auto' -> same as pdbFilename path
+        | ``fix_chainid``   [True, False]
+        | ``autofix``       [True, False]
+        | ``modelnum``      ['auto', 0, 1, 2, ...] # 'auto' -> uses the first model found
+        | ``pickleme``      [False, True] # pickles the PDBFile object for later use
+        | ``verbose``       [False, True]
+        | ``old_resid``     [False, True]
 
     >>> parse('~/charmming/1yjp/1yjp.pdb',outpath='~',pickleme=True)
     """

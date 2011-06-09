@@ -10,6 +10,7 @@ from numpy import ndarray
 from tempfile import NamedTemporaryFile
 from charmming.const.bio import aaVDW
 from charmming.tools import Property, lowerKeys, modPi
+from charmming.lib.bond import Bond
 from charmming.lib.pro import NoAlphaCarbonError
 from charmming.lib.mol import Mol
 from charmming.cg.const import bt_matrix, bt_map, kgs_matrix, kgs_map, \
@@ -112,6 +113,18 @@ class KTGo(Mol):
         return locals()
 
     @Property
+    def fnn():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            return self._parameters['fnn']
+        def fset(self, value):
+            self._parameters['fnn'] = value
+        return locals()
+
+    @Property
     def nScale():
         doc =\
         """
@@ -150,40 +163,93 @@ class KTGo(Mol):
             except NoAlphaCarbonError:
                 pass
 
+    #def get_hbond(self):
+    #    # multiplicity
+    #    hbondMult = {}
+    #    iterator = ( (int(line[15:20]), int(line[35:40])) for line in self.hbondOut )
+    #    for pair in iterator:
+    #        if pair in hbondMult:
+    #            hbondMult[pair] += 1
+    #        else:
+    #            hbondMult[pair] = 1
+    #    # ugly hack to map from res index -> cgatom index
+    #    keys = xrange(self[-1].resid)
+    #    values = ( i for i, cg in enumerate(self) if cg.atomType == 'b' )
+    #    bb2cg = dict(zip(keys, values))
+    #    # hbond list
+    #    energyAlhel = self._parameters['hbondenergyalphahelix']
+    #    energy310hel = self._parameters['hbondenergy310helix']
+    #    energyHel = (energyAlhel + energy310hel) / 2
+    #    energyNohel = self._parameters['hbondenergynohelix']
+    #    tmp = []
+    #    for i, j in sorted(hbondMult.keys()):
+    #        bb_i = self[bb2cg[i]]
+    #        bb_j = self[bb2cg[j]]
+    #        if 'alphahelix' == bb_i.structure == bb_j.structure:
+    #            energy = energyAlhel
+    #        elif '310helix' == bb_i.structure == bb_j.structure:
+    #            energy = energy310hel
+    #        elif ('alphahelix' == bb_i.structure and '310helix' ==
+    #            bb_j.structure) or ('310helix' == bb_i.structure and
+    #                                'alphahelix' == bb_j.structure):
+    #            energy = energyHel
+    #        else:
+    #            energy = energyNohel
+    #        tmp.append( (bb_i, bb_j, energy, hbondMult[(i, j)]) )
+    #    return tmp
+
     def get_hbond(self):
-        # multiplicity
-        hbondMult = {}
-        iterator = ( (int(line[15:20]), int(line[35:40])) for line in self.hbondOut )
-        for pair in iterator:
-            if pair in hbondMult:
-                hbondMult[pair] += 1
+        iterator = ( (int(line[10:15]), int(line[30:35])) for line in self.hbondOut )
+        tmp = {}
+        for i, j in iterator:
+            cg_i = self.find(resid=i, atomtype='b')[0]
+            cg_j = self.find(resid=j, atomtype='b')[0]
+            bond = Bond(cg_i, cg_j)
+            if bond.key in tmp.iterkeys():
+                tmp[bond.key].order += 1
             else:
-                hbondMult[pair] = 1
-        # ugly hack to map from res index -> cgatom index
-        keys = xrange(self[-1].resid)
-        values = ( i for i, cg in enumerate(self) if cg.atomType == 'b' )
-        bb2cg = dict(zip(keys, values))
-        # hbond list
+                bond.order = 1
+                tmp[bond.key] = bond
+        # energy
         energyAlhel = self._parameters['hbondenergyalphahelix']
         energy310hel = self._parameters['hbondenergy310helix']
         energyHel = (energyAlhel + energy310hel) / 2
         energyNohel = self._parameters['hbondenergynohelix']
-        tmp = []
-        for i, j in sorted(hbondMult.keys()):
-            bb_i = self[bb2cg[i]]
-            bb_j = self[bb2cg[j]]
-            if 'alphahelix' == bb_i.structure == bb_j.structure:
-                energy = energyAlhel
-            elif '310helix' == bb_i.structure == bb_j.structure:
-                energy = energy310hel
-            elif ('alphahelix' == bb_i.structure and '310helix' ==
-                bb_j.structure) or ('310helix' == bb_i.structure and
-                                    'alphahelix' == bb_j.structure):
-                energy = energyHel
+        for bond in tmp.itervalues():
+            if 'alphahelix' == bond.i.structure == bond.j.structure:
+                bond.energy = energyAlhel
+            elif '310helix' == bond.i.structure == bond.j.structure:
+                bond.energy = energy310hel
+            elif ('alphahelix' == bond.i.structure and '310helix' ==
+                bond.j.structure) or ('310helix' == bond.i.structure and
+                                    'alphahelix' == bond.j.structure):
+                bond.energy = energyHel
             else:
-                energy = energyNohel
-            tmp.append( (bb_i, bb_j, energy, hbondMult[(i, j)]) )
-        return tmp
+                bond.energy = energyNohel
+        return sorted(tmp.values())
+
+    #def get_nativeBBSC(self):
+    #    bb = [ res for res in self.allHeavyAtoms.iter_res(restype=CGPro) ]
+    #    sc = [ res for res in self.allHeavyAtoms.iter_res(restype=CGPro)
+    #        if res.resName != 'gly' ]
+    #    iterator = ( (res_i, res_j) for res_i in bb for res_j in sc
+    #                if abs(res_j.resid - res_i.resid) > 2 )
+    #    #
+    #    tmp = []
+    #    contactRad = self._parameters['contactrad']
+    #    get_Rij = self.get_Rij
+    #    for res_i, res_j in iterator:
+    #        try:
+    #            for atom_i in res_i.iter_bbAtoms():
+    #                for atom_j in res_j.iter_scAtoms():
+    #                    if get_Rij(atom_i, atom_j) < contactRad:
+    #                        tmp_bb = self.find(chainid=res_i.chainid, resid=res_i.resid)[0]
+    #                        tmp_sc = self.find(chainid=res_j.chainid, resid=res_j.resid)[1]
+    #                        tmp.append( (tmp_bb, tmp_sc) )
+    #                        raise AssertionError
+    #        except AssertionError:
+    #            pass
+    #    return tmp
 
     def get_nativeBBSC(self):
         bb = [ res for res in self.allHeavyAtoms.iter_res(restype=CGPro) ]
@@ -194,18 +260,42 @@ class KTGo(Mol):
         #
         tmp = []
         contactRad = self._parameters['contactrad']
+        get_Rij = self.get_Rij
         for res_i, res_j in iterator:
             try:
                 for atom_i in res_i.iter_bbAtoms():
                     for atom_j in res_j.iter_scAtoms():
-                        if self.get_Rij(atom_i, atom_j) < contactRad:
+                        if get_Rij(atom_i, atom_j) < contactRad:
                             tmp_bb = self.find(chainid=res_i.chainid, resid=res_i.resid)[0]
                             tmp_sc = self.find(chainid=res_j.chainid, resid=res_j.resid)[1]
-                            tmp.append( (tmp_bb, tmp_sc) )
+                            tmp.append( Bond(tmp_bb, tmp_sc) )
                             raise AssertionError
             except AssertionError:
                 pass
-        return tmp
+        return sorted(tmp)
+
+    #def get_nativeSCSC(self):
+    #    sc1 = [ res for res in self.allHeavyAtoms.iter_res(restype=CGPro)
+    #        if res.resName != 'gly' ]
+    #    sc2 = [ res for res in self.allHeavyAtoms.iter_res(restype=CGPro)
+    #        if res.resName != 'gly' ]
+    #    iterator = ( (res_i, res_j) for res_i in sc1 for res_j in sc2
+    #                if res_j.resid - res_i.resid > 2 )
+    #    tmp = []
+    #    contactRad = self._parameters['contactrad']
+    #    get_Rij = self.get_Rij
+    #    for res_i, res_j in iterator:
+    #        try:
+    #            for atom_i in res_i.iter_scAtoms():
+    #                for atom_j in res_j.iter_scAtoms():
+    #                    if get_Rij(atom_i, atom_j) < contactRad:
+    #                        tmp_sc1 = self.find(chainid=res_i.chainid, resid=res_i.resid)[1]
+    #                        tmp_sc2 = self.find(chainid=res_j.chainid, resid=res_j.resid)[1]
+    #                        tmp.append( (tmp_sc1, tmp_sc2) )
+    #                        raise AssertionError
+    #        except AssertionError:
+    #            pass
+    #    return tmp
 
     def get_nativeSCSC(self):
         sc1 = [ res for res in self.allHeavyAtoms.iter_res(restype=CGPro)
@@ -216,18 +306,19 @@ class KTGo(Mol):
                     if res_j.resid - res_i.resid > 2 )
         tmp = []
         contactRad = self._parameters['contactrad']
+        get_Rij = self.get_Rij
         for res_i, res_j in iterator:
             try:
                 for atom_i in res_i.iter_scAtoms():
                     for atom_j in res_j.iter_scAtoms():
-                        if self.get_Rij(atom_i, atom_j) < contactRad:
+                        if get_Rij(atom_i, atom_j) < contactRad:
                             tmp_sc1 = self.find(chainid=res_i.chainid, resid=res_i.resid)[1]
                             tmp_sc2 = self.find(chainid=res_j.chainid, resid=res_j.resid)[1]
-                            tmp.append( (tmp_sc1, tmp_sc2) )
+                            tmp.append( Bond(tmp_sc1, tmp_sc2) )
                             raise AssertionError
             except AssertionError:
                 pass
-        return tmp
+        return sorted(tmp)
 
     def get_parm(self, resName_i, resName_j):
         """
@@ -611,7 +702,6 @@ class KTGo(Mol):
 
     def _prm_nonbond(self):
         String = []
-        fnn = self._parameters['fnn']
         epsilonnn = self._parameters['epsilonnn']
         #
         String.append('NONBONDED NBXMOD 4 ATOM CDIEL SHIFT VATOM VDISTANCE VSWITCH -')
@@ -621,7 +711,7 @@ class KTGo(Mol):
             if atom.atomType == 'b':
                 rMinDiv2 = 20
             elif atom.atomType == 's':
-                rMinDiv2 = 10 * aaVDW[atom.derivedResName] * 2**(1/6.) * fnn
+                rMinDiv2 = 10 * aaVDW[atom.derivedResName] * 2**(1/6.) * self.fnn
             else:
                 raise AssertionError('How did I get here?')
             tmp = '%-8s%5.1f%10.2e%12.6f' % (atom.prmString, 0, -epsilonnn, rMinDiv2)
@@ -638,48 +728,47 @@ class KTGo(Mol):
         # hbonds
         String.append('! backbone hydrogen bonding')
         hbondEnergySum = 0.
-        for hbond in self.get_hbond():
-            hb_0, hb_1, energy, mult = hbond
+        for hb in self.get_hbond():
+            energy = hb.energy
             comment = ' '
-            if hb_0.domain != hb_1.domain:
+            if hb.i.domain != hb.j.domain:
                 comment += '! Interface between domains %d, %d ' % \
-                        (hb_0.domain, hb_1.domain)
+                        (hb.i.domain, hb.j.domain)
                 energy *= domainscale
-            if mult != 1:
-                comment += '! H-Bond multiplicty is %d' % mult
-                energy *= mult
+            if hb.order != 1:
+                comment += '! H-Bond multiplicty is %d' % hb.order
+                energy *= hb.order
             hbondEnergySum += energy
-            tmp = '%-8s%-8s%14.6f%12.6f%s' % (hb_0.prmString, hb_1.prmString,
-                                            energy, hb_0.calc_length(hb_1), comment)
+            tmp = '%-8s%-8s%14.6f%12.6f%s' % (hb.i.prmString, hb.j.prmString,
+                                            energy, hb.length, comment)
             String.append(tmp)
         # scsc
         String.append('! native side-chain interactions')
         scscEnergySum = 0.
-        for scsc in self.get_nativeSCSC():
-            sc_0, sc_1 = scsc
-            ljDepth = self.get_parm(sc_0.derivedResName, sc_1.derivedResName)
+        for nat in self.get_nativeSCSC():
+            ljDepth = self.get_parm(nat.i.derivedResName, nat.j.derivedResName)
             comment = ' '
-            if sc_0.domain != sc_1.domain:
+            if nat.i.domain != nat.j.domain:
                 comment += '! Interface between domains %d, %d ' % \
-                        (sc_0.domain, sc_1.domain)
+                        (nat.i.domain, nat.j.domain)
                 ljDepth *= domainscale/nscale
             scscEnergySum += ljDepth
-            tmp = '%-8s%-8s%14.6f%12.6f%s' % (sc_0.prmString, sc_1.prmString,
-                                            ljDepth, sc_0.calc_length(sc_1), comment)
+            tmp = '%-8s%-8s%14.6f%12.6f%s' % (nat.i.prmString, nat.j.prmString,
+                                            ljDepth, nat.length, comment)
             String.append(tmp)
         # bbsc
         String.append('! backbone side-chain interactions')
         bbscEnergySum = 0.
-        for bbsc in self.get_nativeBBSC():
-            bb, sc = bbsc
+        for nat in self.get_nativeBBSC():
             ljDepth = bbscinteraction
             comment = ' '
-            if bb.domain != sc.domain:
-                comment += '! Interface between domains %d, %d ' % (bb.domain, sc.domain)
+            if nat.i.domain != nat.j.domain:
+                comment += '! Interface between domains %d, %d ' % \
+                        (nat.i.domain, nat.j.domain)
                 ljDepth *= domainscale
             bbscEnergySum += ljDepth
-            tmp = '%-8s%-8s%14.6f%12.6f%s' % (bb.prmString, sc.prmString,
-                                            ljDepth, bb.calc_length(sc), comment)
+            tmp = '%-8s%-8s%14.6f%12.6f%s' % (nat.i.prmString, nat.j.prmString,
+                                            ljDepth, nat.length, comment)
             String.append(tmp)
         # czech sum
         String.append('! Czech Sum Info:%8.2f,%8.2f,%8.2f' %

@@ -1,18 +1,17 @@
 """
-DOCME
+:Author: fcp
+:Date: 10/26/2010
 """
-# fcp
-# 10/26/2010
 
 
 import re
 import os
 import itertools
-from charmming.const.etc import alphanum
+from charmming.const import alphanum
 from charmming.tools import Property, expandPath, cleanStrings, paragraphs,\
         lowerKeys
 from charmming.lib.atom import Atom
-from charmming.lib.mol import Mol
+from charmming.lib.mol import Mol, MolError
 
 
 def get_formatting(input):
@@ -35,33 +34,61 @@ def get_formatting(input):
     return 'unknown'
 
 
+def get_simpleMol(filename, **kwargs):
+    """
+    A function for creating single ``Mol`` objects from a .pdb text file.
+    Useful if you do not need the additional features provided by a
+    ``PDBFile`` object.  If the input .pdb text file contains more than one
+    model, a ``MolError`` will be raised due to ambiguity.
+
+    **kwargs:**
+        *See* ``PDBFile`` *for valid kwargs.*
+    """
+    tmp = PDBFile(filename, **kwargs)
+    if len(tmp) > 1:
+        raise MolError("This function is designed to be used on .pdb text \
+                    files containing one model.")
+    for taco in tmp.iter_models():
+        return taco
+
+
 class PDBFile(object):
     """
-    Class Attributes
-        `_autoInFormat`
-        `_reCode`
-    Public Attributes
-        `warnings`
-    Properties
-        `code`
-        `crd`
-        `filename`
-        `footer`
-        `header`
-        `inFormat`
-        `path`
-    Public Methods
-        `get_warnings`  TODO :: Sophisticated warning handling
-        `iter_all`
-        `iter_models`
-        `keys`
-    Private Methods
-        _get_formatting
-        _partitions
-        _fix_chainids
-        _fix_resids     TODO
-        _build_models
-    Special Methods
+    The ``PDBFile`` object serves as a container of ``Mol`` objects which are
+    logically united and derive from the same plain text .pdb file.
+
+
+    Calling the constructor on a plain text .pdb file instantizes one ``PDBFile``
+    object and *n* ``Mol`` objects, one for each *model* present in the .pdb file.
+    Furthermore, the meta-data contained in the .pdb file is parsed and stored in
+    a dictionary for later use.  The ``Mol`` objects created at instantisation
+    may be accessed by the ``PDBFile`` object in either a dictionary-like way or
+    a list-like way.  Files which contain only one model will store the ``Mol``
+    object as *model 0*.
+
+    For example, to access *model 4* from the 1o1o.pdb file one could write:
+
+    >>> taco = PDBFile('1o1o.pdb')[4]
+
+    or...
+
+    >>> taco = PDBFile('1o1o.pdb')['model4']
+    
+    Furthermore, this object may also be used to couple other ``Mol`` objects to
+    each other.  Such as a structure that has been patched, or a minimized
+    structure.  The syntax for doing this will be dictionary-like and is TBD.
+
+
+    **kwargs:**
+        | ``informat``      ['auto','pdborg','charmm']
+        | ``fix_chainid``   [True,False]    # Attempts to fix mangled chainid
+        | **TODO** ``fix_resid``     [True,False]    # Attempts to fix mangled resid
+        | ``autofix``       [True,False]    # Flag for atom._autoFix
+        | ``verbose``       [False,True]
+
+    :TODO:
+        | ``get_warnings`` :: Sophisticated warning handling
+        | ``fix_resids`` :: Automagic resid mangling repairs
     """
 
     _autoInFormat = 'pdborg'
@@ -77,14 +104,6 @@ class PDBFile(object):
     """
 
     def __init__(self, filename, **kwargs):
-        """
-        kwargs:
-            `informat`      ['auto','pdborg','charmm']
-            `fix_chainid`   [True,False]    # Attempts to fix mangled chainid
-            `fix_resid`     [True,False]    # Attempts to fix mangled resid
-            `autofix`       [True,False]    # Flag for atom._autoFix
-            `verbose`       [False,True]
-        """
         super(PDBFile, self).__init__()
         # kwargs
         kwargs = lowerKeys(kwargs)
@@ -130,7 +149,7 @@ class PDBFile(object):
     def code():
         doc =\
         """
-        The PDB acquisition code of the `PDBFile`.
+        A ``property`` for the PDB accession code of the ``PDBFile``.
         """
         def fget(self):
             tmp = [ line for line in self.header if line.startswith('header') ]
@@ -148,8 +167,8 @@ class PDBFile(object):
     def crd():
         doc =\
         """
-        The atomic coordinate data from the .pdb file, in its
-        unadulterated text form.
+        A ``property`` for the atomic coordinate data from the .pdb
+        file, in its unadulterated text form.
         """
         def fget(self):
             return self._crd
@@ -159,8 +178,8 @@ class PDBFile(object):
     def filename():
         doc =\
         """
-        The name of the .pdb file from which this `PDBFile` instance
-        was created.
+        A ``property`` for the name of the .pdb file from which this
+        ``PDBFile`` instance was created.
         """
         def fget(self):
             return self._filename
@@ -172,8 +191,9 @@ class PDBFile(object):
     def footer():
         doc =\
         """
-        The metadata in the .pdb file that follows the atomic coordinate
-        data.  This property gives access to its unadulterated text form.
+        A ``property`` for the metadata in the .pdb file that follows
+        the atomic coordinate data.  This property gives access to its
+        unadulterated text form.
         """
         def fget(self):
             return self._footer
@@ -183,8 +203,8 @@ class PDBFile(object):
     def header():
         doc =\
         """
-        The metadata in the .pdb file that precedes the atomic
-        coordinate data.  This property gives access to its
+        A ``property`` for the metadata in the .pdb file that precedes
+        the atomic coordinate data.  This property gives access to its
         unadulterated text form.
         """
         def fget(self):
@@ -195,7 +215,8 @@ class PDBFile(object):
     def inFormat():
         doc =\
         """
-        The formatting of the input data: "pdborg" or "charmm".
+        A ``property`` for the formatting of the input .pdb text file
+        data, either *"pdborg"* or *"charmm"*.
         """
         def fget(self):
             return self._inFormat
@@ -205,8 +226,8 @@ class PDBFile(object):
     def path():
         doc =\
         """
-        The path of the .pdb file from which this `PDBFile` instance
-        was created.
+        A ``property`` for the dirname where the ``PDBFile`` instance's
+        parent .pdb text file resides.
         """
         def fget(self):
             return os.path.dirname(self.filename)
@@ -218,31 +239,55 @@ class PDBFile(object):
 
     def get_warnings(self):
         """
-        Return a list of warnings generated by the PDBFile object
-        itself, and all of the Mol objects it contains.
+        Return a list of warnings generated by the ``PDBFile`` object
+        itself, and all of the ``Mol`` objects it contains.
         """
         result = self.warnings[:]
         for mol in self.iter_all():
             result.extend(mol.warnings)
         return result
 
+    def get_metaData(self):
+        """
+        Returns a :class:`dict` containing metadata parsed from the
+        ``PDBFile`` object's ``_header`` and ``_footer``.  Each key
+        corresponds to a section in the header, delimited by the first
+        string in each line.
+        """
+        tmp = {}
+        for line in self._header:
+            key = line.split()[0]
+            value = line.split(key)[1].lstrip()
+            if key not in tmp.keys():
+                tmp[key] = [value]
+            else:
+                tmp[key].append(value)
+        for line in self._footer:
+            key = line.split()[0]
+            value = line.split(key)[1].lstrip()
+            if key not in tmp.keys():
+                tmp[key] = [value]
+            else:
+                tmp[key].append(value)
+        return tmp
+
     def iter_all(self):
         """
-        Iterate over all of the PDBFile's Mol objects, regardless of
-        their origin.
+        Iterate over all of the ``Mol`` objects contained in the
+        current ``PDBFile`` instance, regardless of origin.
         """
         return itertools.chain(self.iter_models())
 
     def iter_models(self):
         """
-        Iterate over the PDBFile's models. Models are Mol objects
-        derived directly from the original pdb file.
+        Iterate over the ``Mol`` objects derived from the .pdb file's
+        *models*.
         """
         return ( self['model%d' % i] for i in sorted(self._models.keys()) )
 
     def keys(self):
         """
-        Lists the keys to access all of the Mol objects the PDBFile
+        Lists the keys to access all of the ``Mol`` objects the ``PDBFile``
         object contains.
         """
         models = [ 'model%d' % i for i in sorted(self._models.keys()) ]
@@ -326,11 +371,11 @@ class PDBFile(object):
         """
         Partition the file into _header/_crd/_footer sections.
         """
-        filePointer = open(self.filename)
+        iterator = ( line for line in cleanStrings(open(self.filename) ))
         # Populate header
         self._header = []
         tmp = None
-        for line in cleanStrings(filePointer):
+        for line in iterator:
             if line.startswith(('atom', 'hetatm', 'model')):
                 tmp = line
                 break
@@ -342,7 +387,7 @@ class PDBFile(object):
         else:
             self._crd = [tmp]
         tmp = None
-        for line in cleanStrings(filePointer):
+        for line in iterator:
             if not line.startswith(('atom', 'anisou', 'hetatm', 'model', 'ter',
                                     'endmdl')):
                 tmp = line
@@ -354,9 +399,8 @@ class PDBFile(object):
             self._footer = []
         else:
             self._footer = [tmp]
-        for line in cleanStrings(filePointer):
+        for line in iterator:
             self._footer.append(line)
-        filePointer.close()
 
 ###################
 # Special Methods #

@@ -5,11 +5,22 @@ DOCME
 # 10/26/2010
 
 
-from charmming.const.etc import alphanum
+from charmming.const import alphanum
 from charmming.tools import Property, lowerKeys
 from charmming.lib.basestruct import BaseStruct
 from charmming.lib.chain import Chain
 from charmming.lib.atom import Atom
+
+
+class MolError(Exception):
+    """
+    The exception to raise when errors occur involving the ``Mol``
+    class.
+    """
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
 
 
 class Mol(BaseStruct):

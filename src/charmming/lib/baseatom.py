@@ -5,7 +5,7 @@ DOCME
 # 10/22/2010
 
 
-from charmming.const.etc import alphanum
+from charmming.const import alphanum
 from charmming.lib.metaatom import AtomError, MetaAtom
 from charmming.tools import Property
 

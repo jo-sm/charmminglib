@@ -22,7 +22,7 @@ def load_correlOutput(filename):
                 dummy = int(line.split()[0])
                 value = line.split()[1]
                 if value.lower() == 'nan':
-                    raise ValueError('load_correlOutput: Parsed NaN in %s' % filename)
+                    raise AssertionError('load_correlOutput: Parsed NaN in %s' % filename)
                 yield float(value)
             except ValueError:
                 pass

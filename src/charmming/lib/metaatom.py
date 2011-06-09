@@ -1,8 +1,7 @@
 """
-DOCME
+:Author: fcp
+:Date: 10/22/2010
 """
-# fcp
-# 10/22/2010
 
 
 from numpy import subtract, dot, cross, arccos, array, cos, sin
@@ -13,7 +12,7 @@ from charmming.tools import Property, lowerKeys
 
 class AtomError(Exception):
     """
-    The exception to raise when errors occur involving BaseAtom, or
+    The exception to raise when errors occur involving ``MetaAtom``, or
     derived classes.
     """
     def __init__(self, value):
@@ -24,41 +23,60 @@ class AtomError(Exception):
 
 class MetaAtom(object):
     """
-    This isn't actually a metaclass per se, instead it is a framework
-    from which all "atom-like" classes should be derived.  Common
-    elements are predefined, other elements are left stubbed out, to be
-    defined by subsequent subclasses.
+    A class which, by itself, doesn't actually do anything!
 
-    Methods, attributes and properties which are present here, but are
-    left undefined have a "STUB" listing next to them.
+    This isn't actually a metaclass, instead it is a general framework
+    for building ``atom``-like classes.  Accordingly, it should probably
+    renamed `PseudoClass`, or something fancy like that.  Common
+    elements are defined herein.  Others, which must be defined, yet
+    which are disimilar, are left stubbed out, to be defined by subsequent
+    subclassing.  Appropriately, this is denoted with a **STUB**.
 
-    Class Attributes
-        `_autoIndex`
-        `_autoInFormat`     STUB
-        `_properties`
-    Private Attributes
-        `_autoFix`
-        `_hash`
-        `_index`
-        `_text`
-    Parse Definition
-        `parse`             STUB
-    Properties
-        `addr`              STUB
-        `addr0`
-        `mass`
-        `cart`
-    Public Methods
-        `Print`             STUB
-        `calc_length`
-        `calc_angle`
-        `calc_dihedral`
-        `calc_signedDihedral`
-        `transmute`         TODO
-    Private Methods
-        `_init_null`
-        `_sort`             STUB
-        `_set_hash`
+    Because this class is explicitly designed for hacking and tweaking,
+    and because the abstraction is a bit egregious, the documentation will
+    attempt be more thorough than other sections, and will discuss features
+    that might not be of interest to many developers.
+
+
+    **Class Attributes:**
+        | ``_autoIndex``
+        | ``_autoInFormat``     **STUB**
+        | ``_properties``
+
+    **Private Attributes:**
+        | ``_autoFix``
+        | ``_hash``
+        | ``_index``
+        | ``_text``
+
+    **Parse Definition:**
+        | ``parse``             **STUB**
+
+    **Properties:**
+        | ``addr``              **STUB**
+        | ``addr0``
+        | ``mass``
+        | ``cart``
+
+    **Public Methods:**
+        | ``Print``             **STUB**
+
+    **Private Methods:**
+        | ``_init_null``
+        | ``_sort``             **STUB**
+        | ``_set_hash``
+
+    **kwargs:**
+        | ``commentchar`` :: Defaults to '#'
+        | ``informat`` :: Defaults to ``self.__class__._autoInFormat``
+            which may set as a ``MetaAtom`` subclass class variable.
+        | ``index`` :: A potentially useful way of differentiating
+            ``Atom``-like objects during initialization.  For example,
+            when generating error and debugging messages of *atoms*
+            that fail to initialize properly.  This value defaults to
+            ``MetaAtom._autoIndex``, which itself is just a counter of
+            ``MetaAtom`` objects.
+        | ``atomfix`` :: Defaults to ``True``
     """
 
     _autoIndex = 0
@@ -72,7 +90,7 @@ class MetaAtom(object):
     A string that defines the default input formatting for all class
     instances.
 
-    STUB
+    **STUB**
     """
 
     _properties = {
@@ -86,9 +104,6 @@ class MetaAtom(object):
     """
 
     def __init__(self, text=None, **kwargs):
-        """
-        DOCME
-        """
         super(MetaAtom, self).__init__()
         # kwargs
         kwargs = lowerKeys(kwargs)
@@ -128,10 +143,10 @@ class MetaAtom(object):
 
     def parse(self, inFormat):
         """
-        A method that parses the `_text` attribute into instance
+        A method that parses the ``_text`` attribute into instance
         variables.
 
-        STUB
+        **STUB**
         """
         raise NotImplementedError
 
@@ -143,10 +158,10 @@ class MetaAtom(object):
     def addr():
         doc =\
         """
-        The `addr` property provides a human readable unique string
-        representation for each `MetaAtom` instance.
+        A ``property`` that provides a human readable string
+        representation unique to each ``MetaAtom`` instance.
 
-        STUB
+        **STUB**
         """
         def fget(self):
             raise NotImplementedError
@@ -156,11 +171,12 @@ class MetaAtom(object):
     def addr0():
         doc =\
         """
-        The `addr0` property gives the value of `addr` at instantization.
+        A ``property`` that gives the value of ``addr`` at
+        instantization.
 
-        This is a handy attribute to have for debugging, as `BaseAtom`
-        instances are mutable, and thus their `addr` property can change
-        over time, however `addr0` should not.
+        This is a handy attribute to have for debugging, as ``MetaAtom``
+        instances are mutable, so ``addr`` can change over time,
+        however ``addr0`` should not.
         """
         def fget(self):
             try:
@@ -173,8 +189,8 @@ class MetaAtom(object):
     def cart():
         doc =\
         """
-        The `cart` property is a `numpy.array` which contains the
-        instances' cartesian data.
+        A ``property`` that returns a :class:`numpy.array` which contains the
+        instances' cartesian data in ``array([x, y, z])`` format.
 
         This entry is given in units of Angstrom, and it should be
         within the range (-10000,10000) due to limitations of CHARMM.
@@ -203,8 +219,8 @@ class MetaAtom(object):
     def mass():
         doc =\
         """
-        The `mass` property is a float representing the mass in units
-        of AMU.
+        A ``property`` that returns a float representing the atomic
+        mass in units of AMU.
         """
         def fget(self):
             return self._mass
@@ -226,17 +242,18 @@ class MetaAtom(object):
     def Print(self, **kwargs):
         """
         The method responsible for formatting the instance variables
-        into strings of text to be written to external files.
+        into strings of text to be written to external files or read
+        in the interactive terminal.
 
-        At a bare minimum, the kwarg `outformat` should be defined.
+        At a bare minimum, the kwarg ``outformat`` should be defined.
 
-        STUB
+        **STUB**
         """
         raise NotImplementedError
 
     def calc_length(self, other):
         """
-        Returns the cartesian distance between two `BaseAtom` objects.
+        Returns the cartesian distance between two ``MetaAtom`` objects.
         """
         # Localize data
         i = self.cart
@@ -244,12 +261,12 @@ class MetaAtom(object):
         # Do work
         return norm(subtract(i, j))
 
-    def calc_angle(self, other1, other2, units='deg'):
+    def calc_angle(self, other1, other2, units='rad'):
         """
-        Returns the cartesian angle between three `BaseAtom` objects.
+        Returns the valence angle between three ``MetaAtom`` objects.
 
         By default the angle is output in radians, however with the
-        `units="deg"` keyword, it will return degrees.
+        ``units="deg"`` keyword, it will return degrees.
         """
         # Localize data
         i = self.cart
@@ -267,12 +284,12 @@ class MetaAtom(object):
         else:
             return result
 
-    def calc_dihedral(self, other1, other2, other3, units='deg'):
+    def calc_dihedral(self, other1, other2, other3, units='rad'):
         """
-        Returns the dihedral angle between four `BaseAtom` objects.
+        Returns the dihedral angle between four ``MetaAtom`` objects.
 
         By default the angle is output in radians, however with the
-        `units="deg"` keyword, it will return degrees.
+        ``units="deg"`` keyword, it will return degrees.
         """
         # Localize data
         i = self.cart
@@ -294,13 +311,13 @@ class MetaAtom(object):
         else:
             return result
 
-    def calc_signedDihedral(self, other1, other2, other3, units='deg'):
+    def calc_signedDihedral(self, other1, other2, other3, units='rad'):
         """
         Returns the phase corrected dihedral angle between four
-        `BaseAtom` objects.
+        ``MetaAtom`` objects.
 
         By default the angle is output in radians, however with the
-        `units="deg"` keyword, it will return degrees.
+        ``units="deg"`` keyword, it will return degrees.
         """
         # Localize data
         i = self.cart
@@ -324,7 +341,14 @@ class MetaAtom(object):
         else:
             return result
 
-    def rotate(self, axis, angle, units='deg'):
+    def rotate(self, axis, angle, units='rad'):
+        """
+        Rotate a ``MetaAtom`` through an `axis` specified by a
+        cartesian vector and an `angle`.
+
+        By default the angle is intput in radians, however with the
+        ``units="deg"`` keyword, it will accept degrees.
+        """
         # axis
         assert len(axis) == 3
         axis = array(axis)

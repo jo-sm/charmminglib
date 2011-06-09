@@ -1,11 +1,10 @@
 """
-DOCME
+:Author: fcp
+:Date: 02/22/2011
 """
-# fcp
-# 02/22/2011
 
 
-from charmming.const.etc import alphanum2num
+from charmming.const import alphanum2num
 from charmming.tools import Property, lowerKeys
 
 
@@ -25,8 +24,6 @@ class BasePRM(object):
     _altFormatting = ''
 
     def __init__(self, arg=None):
-        """
-        """
         super(BasePRM, self).__init__()
         #
         if isinstance(arg, str):

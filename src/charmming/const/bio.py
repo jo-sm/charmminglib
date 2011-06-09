@@ -1,4 +1,30 @@
+"""
+A collection of useful biological and chemical constants.
 
+:Attributes:
+    | ``aaAlphabet`` - A :class:`dict` from the 3-letter residue
+        abbreviation to the 1-letter residue abbreviation.
+    | ``aaMass`` - A :class:`dict` from the 3-letter residue abbreviation
+        to its mass in AMU.
+    | ``aaVDV`` - A :class:`dict` from the 3-letter residue abbreviation to
+        the residue's van der Waals radius in Angstroms.
+    | ``atomMass`` - A :class:`dict` from the element's abbreviation to its
+        mass in AMU.
+    | ``backBone`` - A :class:`set` of strings representing the
+        atomType of atoms present in a protein back bone.
+    | ``charmm2pdbAtomNames`` - A :class:`dict` from CHARMM element abbreviations
+        to standard element abbreviations.
+    | ``dna`` - A :class:`set` of strings representing the resName of
+        residues present in DNA.
+    | ``good`` - A :class:`set` of strings represenitng the atomType of
+        hetero atoms recognized internally by CHARMM.
+    | ``nuc`` - A :class:`set` of strings representing the resName of
+        residues present in generic nucleic acids.
+    | ``pro`` - A :class:`set` of the 3-letter residue abbreviations
+        for residues present in proteins.
+    | ``rna`` - A :class:`set` of strings representing the resName of
+        residues present in RNA.
+"""
 
 # Atom.resName
 aaAlphabet = {

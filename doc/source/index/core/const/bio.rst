@@ -1,7 +1,6 @@
-.. _bio:
 
-``const.bio``
-=============
+:mod:`const.bio` --- Biological Constants
+=========================================
 
 .. automodule:: charmming.const.bio
   :members:

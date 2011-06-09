@@ -1,8 +1,7 @@
 """
-DOCME
+:Author: fcp
+:Date: 02/22/2011
 """
-# fcp
-# 02/22/2011
 
 
 from commands import getstatusoutput
@@ -13,19 +12,35 @@ from charmming.tools import Property, expandPath, lowerKeys
 
 class BaseCHARMMFile(object):
     """
-    DOCME
+    A base class for writing CHARMM .inp text files within charmminglib.
+
+
+    This class provides functionality and book keeping for data common
+    to nearly all CHARMM jobs, such as tracking .rtf, .prm, .psf and
+    .crd file locations, writing .inp file headers and querying .dcd files.
+
+    **Class Attributes:**
+        | ``defaultBin``
+
+    **kwargs:**
+        | ``charmmbin`` :: Path to binary used to execute CHARMM,
+            defaults to value in ``defaultBin``
     """
 
     defaultBin = 'cg_mscale'
+    """
+    If not explicitly specified as a kwarg, this is path used by the class
+    to run CHARMM jobs through the shell.
+    """
 
-    def __init__(self, arg=None, **kwargs):
+    def __init__(self, pdbFilename=None, **kwargs):
         super(BaseCHARMMFile, self).__init__()
         # kwargs
         kwargs = lowerKeys(kwargs)
         self.charmmBin = kwargs.get('charmmbin', self.__class__.defaultBin)
         # Main
-        if arg is not None:
-            self.pdbFilename = arg
+        if pdbFilename is not None:
+            self.pdbFilename = pdbFilename
         #
         self._rtfFilename = None
         self._prmFilename = None
@@ -37,7 +52,7 @@ class BaseCHARMMFile(object):
     def inpFilename():
         doc =\
         """
-        DOCME
+        A ``property`` for the name of the CHARMM .inp file to be written.
         """
         def fget(self):
             return self._inpFilename
@@ -49,7 +64,7 @@ class BaseCHARMMFile(object):
     def outFilename():
         doc =\
         """
-        DOCME
+        A ``property`` for the name of the CHARMM .out file to be written.
         """
         def fget(self):
             return self._outFilename
@@ -62,7 +77,7 @@ class BaseCHARMMFile(object):
     def crdFilename():
         doc =\
         """
-        DOCME
+        A ``property`` for the name of the CHARMM .crd file to be read from.
         """
         def fget(self):
             return self._crdFilename
@@ -77,7 +92,7 @@ class BaseCHARMMFile(object):
     def dcdFilename():
         doc =\
         """
-        DOCME
+        A ``property`` for the name of the CHARMM .dcd file to be read from.
         """
         def fget(self):
             return self._dcdFilename
@@ -93,7 +108,7 @@ class BaseCHARMMFile(object):
     def pdbFilename():
         doc =\
         """
-        DOCME
+        A ``property`` for the name of the CHARMM .pdb file to be read from.
         """
         def fget(self):
             return self._pdbFilename
@@ -108,7 +123,7 @@ class BaseCHARMMFile(object):
     def prmFilename():
         doc =\
         """
-        DOCME
+        A ``property`` for the name of the CHARMM .prm file to be read from.
         """
         def fget(self):
             return self._prmFilename
@@ -123,7 +138,7 @@ class BaseCHARMMFile(object):
     def psfFilename():
         doc =\
         """
-        DOCME
+        A ``property`` for the name of the CHARMM .psf file to be read from.
         """
         def fget(self):
             return self._psfFilename
@@ -138,7 +153,9 @@ class BaseCHARMMFile(object):
     def rootPath():
         doc =\
         """
-        DOCME
+        A read-only ``property`` for the directory where ``self.pdbFilename``
+        resides.  This allows for easy hierarchical organization in
+        conjunction with the ``self.expandPath`` method.
         """
         def fget(self):
             return dirname(self.pdbFilename)
@@ -148,7 +165,7 @@ class BaseCHARMMFile(object):
     def rtfFilename():
         doc =\
         """
-        DOCME
+        A ``property`` for the name of the CHARMM .rtf file to be read from.
         """
         def fget(self):
             return self._rtfFilename
@@ -164,7 +181,9 @@ class BaseCHARMMFile(object):
     def maxatom():
         doc =\
         """
-        DOCME
+        If a valid .dcd file and valid charmmBin are specified, this
+        ``property`` will return the number of atoms present in the
+        trajectory.
         """
         def fget(self):
             return self._maxatom
@@ -174,7 +193,9 @@ class BaseCHARMMFile(object):
     def nstep():
         doc =\
         """
-        DOCME
+        If a valid .dcd file and valid charmmBin are specified, this
+        ``property`` will return the number of frames present in the
+        trajectory.
         """
         def fget(self):
             return self._nstep
@@ -184,7 +205,8 @@ class BaseCHARMMFile(object):
     def timestep():
         doc =\
         """
-        DOCME
+        If a valid .dcd file and valid charmmBin are specified, this
+        ``property`` will return the timestep used in the trajectory.
         """
         def fget(self):
             return self._timestep
@@ -196,7 +218,9 @@ class BaseCHARMMFile(object):
 
     def expandPath(self, arg):
         """
-        A better version of the default path expander.
+        A better version of the default path expander.  In addition to
+        expanding ``~`` to the current user's home directory, it will
+        also expand ``&`` to the current ``rootPath``.
         """
         arg = arg.strip()
         if arg.startswith('&'):
@@ -211,7 +235,12 @@ class BaseCHARMMFile(object):
 
     def get_inputHeader(self, header=[]):
         """
-        DOCME
+        Returns a list of strings which correspond to the typical
+        "open unit, read unit" lines for .rtf, .prm, .psf and .crd
+        files.
+
+        ``header`` is an optional list which is prepended to the list
+        returned by this method.
         """
         String = []
         for line in header:
@@ -223,7 +252,7 @@ class BaseCHARMMFile(object):
         if self.rtfFilename:
             String.append('! rtf')
             String.append('  open unit 1 read card name %s' % self.rtfFilename)
-            String.append(' read rtf card unit 1')
+            String.append('  read rtf card unit 1')
             String.append('  close unit 1')
             String.append('')
         if self.prmFilename:
@@ -247,6 +276,12 @@ class BaseCHARMMFile(object):
         return String
 
     def query_dcd(self, dcdFilename=None):
+        """
+        Queries a .dcd file using the specified ``charmmBin`` and
+        returns a 3-tuple of integers corresponding to the number of
+        atoms, the number of steps, and the timestep in fs of the
+        specified .dcd file.  Defaults to ``self.dcdFilename``.
+        """
         if dcdFilename is None:
             dcdFilename = self.dcdFilename
         else:

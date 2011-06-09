@@ -1,8 +1,7 @@
 """
-DOCME
+:Author: fcp
+:Date: 10/22/2010
 """
-# fcp
-# 10/22/2010
 
 
 from charmming.const.bio import atomMass, backbone, charmm2pdbAtomNames, good, \

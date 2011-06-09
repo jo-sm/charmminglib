@@ -1,17 +1,14 @@
 #!/usr/bin/env python
 """
-Python implementation by Frank C. Pickard IV
-Bernard R. Brooks Group
-NIH,NHLBI,LCB
+A command line CHARMM output file parser.
 
-Originally implemented by Rick Venable in csh
-Rich Pastor Group
-NIH,NHLBI,LCB
+| Originally implemented by Rick Venable in `csh`
+| Rich Pastor Group
+| LCB, NHLBI, NIH
 
-v 0.
+:Author: fcp
+:Date: 08/05/2010
 """
-# fcp
-# 08/05/2010
 
 
 import sys

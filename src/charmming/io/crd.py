@@ -1,14 +1,13 @@
 """
-DOCME
+:Author: Tim Miller
+:Date: 12/29/2010
 """
-# Tim Miller
-# 12/29/2010
 
 
 import re
 import os
 import itertools
-from charmming.const.etc import alphanum, alpha
+from charmming.const import alphanum, alpha
 from charmming.tools import Property, expandPath, paragraphs, lowerKeys
 from charmming.lib.atom import Atom
 from charmming.lib.mol import Mol
@@ -47,28 +46,22 @@ def get_formatting(input):
 
 class CRDFile(object):
     """
-    Class Attributes
-        `_autoInFormat`
-    Public Attributes
-        `warnings`
-    Properties
-        `code`
-        `crd`
-        `filename`
-        `footer`
-        `header`
-        `inFormat`
-        `path`
-    Public Methods
-        `get_warnings`  TODO :: Sophisticated warning handling
-        `iter_all`
-        `iter_models`
-        `keys`
-    Private Methods
-        _get_formatting
-        _partitions
-        _build_models
-    Special Methods
+    **kwargs:**
+        | ``informat``      ['auto','shortcard','longcard']
+        | ``autofix``       [False,True]    # Flag for atom._autoFix
+        | ``verbose``       [False,True]
+
+
+    :TODO:
+        | ``get_warnings`` :: Sophisticated warning handling
+
+
+    **Comment:**
+        fcp :: I think we should refactor this class into either a
+        function which returns a ``Mol`` object, or a class which is
+        ``Mol``-like, instead of something ``PDBFile``-like.  As .crd
+        files tend to be "thin" whereas PDBFiles can contain metadata
+        in addition to multiple models.
     """
 
     _autoInFormat = 'shortcard'
@@ -78,12 +71,6 @@ class CRDFile(object):
     """
 
     def __init__(self, filename, **kwargs):
-        """
-        kwargs:
-            `informat`      ['auto','shortcard','longcard']
-            `autofix`       [False,True]    # Flag for atom._autoFix
-            `verbose`       [False,True]
-        """
         super(CRDFile, self).__init__()
         # kwargs
         kwargs = lowerKeys(kwargs)

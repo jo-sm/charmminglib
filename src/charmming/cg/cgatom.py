@@ -5,7 +5,7 @@ DOCME
 # 10/27/2010
 
 
-from charmming.const.etc import alpha2num
+from charmming.const import alphanum2num
 from charmming.tools import Property, lowerKeys
 from charmming.lib.metaatom import AtomError
 from charmming.lib.baseatom import BaseAtom
@@ -142,7 +142,7 @@ class CGAtom(BaseAtom):
         def fset(self, value):
             value = str(value).strip().lower()
             if value == 'auto':
-                self._domain = alpha2num[self.chainid]
+                self._domain = alphanum2num[self.chainid]
             else:
                 self._domain = value
         return locals()

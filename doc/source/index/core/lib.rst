@@ -1,7 +1,13 @@
-.. _lib:
 
-``lib`` - Library Modules
-=========================
+:mod:`lib` --- Library Modules
+==============================
 
 .. automodule:: charmming.lib
-  :members:
+
+**Contents:**
+
+.. toctree::
+  :maxdepth: 2
+  :glob:
+  
+  lib/*

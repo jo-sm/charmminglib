@@ -1,8 +1,7 @@
 """
-DOCME
+:Author: fcp
+:Date: 02/22/2011
 """
-# fcp
-# 02/22/2011
 
 
 from charmming.tools import paragraphs
@@ -13,7 +12,7 @@ from charmming.io.basecharmm import BaseCHARMMFile
 
 class PRMFile(BaseCHARMMFile):
     """
-    DOCME
+    **STUB**
     """
 
     _sections = ['atom','bond','angl','thet','dihe','phi','impr','imph','cmap',
@@ -30,12 +29,12 @@ class PRMFile(BaseCHARMMFile):
         }
 
     def __init__(self, arg=None, **kwargs):
-        """
-        DOCME
-        """
         super(PRMFile, self).__init__(arg, **kwargs)
 
-    def parse(self):
+    def _parse(self):
+        """
+        Reads the .prm text file, and parses the data into their relevant sections.
+        """
         self.sectionCmd = {}
         self.sectionPrm = {}
         #
@@ -67,7 +66,9 @@ class PRMFile(BaseCHARMMFile):
         rename('nonb', 'nbon')
 
     def objectify(self):
-    # convert text to PRM objects
+        """
+        convert text to PRM objects
+        """
         self.sectionObj = {}
         for key, Value in self._prmClass.iteritems():
             try:

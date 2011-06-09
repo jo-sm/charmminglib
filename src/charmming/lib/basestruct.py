@@ -5,7 +5,6 @@ DOCME
 # 10/26/2010
 
 
-from IPython.external.pretty import pretty
 from itertools import tee
 from numpy import array, fromiter, float, dot, sin, cos
 from numpy.linalg import eig, norm
@@ -382,12 +381,18 @@ class BaseStruct(list):
     def __setslice__(self):
         raise NotImplementedError
 
+    def __isub__(self):
+        raise NotImplementedError
+
     def __sub__(self, other, **kwargs):
         if not isinstance(other, BaseStruct):
             raise TypeError("unsupported operand type for '%s' and '%s'" %
                             (type(self), type(other)))
         iterator = ( atom for atom in self if atom not in other )
         return BaseStruct(iterator, **kwargs)
+
+    def __iadd__(self):
+        raise NotImplementedError
 
     def __add__(self, other):
         if not isinstance(other, BaseStruct):
