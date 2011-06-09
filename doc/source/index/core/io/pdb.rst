@@ -1,6 +1,6 @@
 
-:mod:`io.pdb` --- PDB File Processing
-=====================================
+:mod:`io.pdb` --- *.pdb* File Processing
+========================================
 
 .. automodule:: charmming.io.pdb
   :members:

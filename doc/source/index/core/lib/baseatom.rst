@@ -1,6 +1,6 @@
 
-:mod:`lib.baseatom` --- Generic MM Atomic Object
-================================================
+:mod:`lib.baseatom` --- Generic MM Atom
+=======================================
 
 .. automodule:: charmming.lib.baseatom
   :show-inheritance:

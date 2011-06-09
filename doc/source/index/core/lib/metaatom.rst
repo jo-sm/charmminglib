@@ -1,6 +1,6 @@
 
-:mod:`lib.metaatom` --- Generic Atomic Object
-=============================================
+:mod:`lib.metaatom` --- Generic Atom
+====================================
 
 .. automodule:: charmming.lib.metaatom
   :members:

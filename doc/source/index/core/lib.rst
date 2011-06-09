@@ -8,6 +8,7 @@
 
 .. toctree::
   :maxdepth: 2
-  :glob:
   
-  lib/*
+  lib/atoms
+  lib/containers
+  lib/others

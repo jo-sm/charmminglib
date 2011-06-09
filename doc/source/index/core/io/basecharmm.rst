@@ -1,6 +1,6 @@
 
-:mod:`io.basecharmm` --- Base Class for INP File Generation
-===========================================================
+:mod:`io.basecharmm` --- CHARMM *.inp* File Generation
+======================================================
 
 .. automodule:: charmming.io.basecharmm
   :members:

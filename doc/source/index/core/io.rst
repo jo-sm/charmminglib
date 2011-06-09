@@ -6,8 +6,21 @@
 
 **Contents:**
 
-.. toctree::
-  :maxdepth: 2
-  :glob:
+  **General Modules:**
+
+  .. toctree::
+    :maxdepth: 2
   
-  io/*
+    io/pdb
+
+  
+  **CHARMM Modules:**
+
+  .. toctree::
+    :maxdepth: 2
+    
+    io/basecharmm
+    io/crd
+    io/prm
+    io/psf
+    io/rtf

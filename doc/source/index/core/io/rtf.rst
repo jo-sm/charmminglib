@@ -1,6 +1,6 @@
 
-:mod:`io.rtf` --- RTF File Processing
-=====================================
+:mod:`io.rtf` --- *.rtf* File Processing
+========================================
 
 .. automodule:: charmming.io.rtf
   :members:

@@ -1,6 +1,6 @@
 
-:mod:`lib.atom` --- Standard CHARMM Atomic Object
-=================================================
+:mod:`lib.atom` --- Standard CHARMM Atom
+========================================
 
 .. automodule:: charmming.lib.atom
   :show-inheritance:

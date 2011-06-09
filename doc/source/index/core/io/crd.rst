@@ -1,6 +1,6 @@
 
-:mod:`io.crd` --- CRD File Processing
-=====================================
+:mod:`io.crd` --- *.crd* File Processing
+========================================
 
 .. automodule:: charmming.io.crd
   :members:

@@ -1,6 +1,6 @@
 
-:mod:`io.psf` --- PSF File Processing
-=====================================
+:mod:`io.psf` --- *.psf* File Processing
+========================================
 
 .. automodule:: charmming.io.psf
   :members:
