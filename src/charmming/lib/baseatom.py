@@ -1,8 +1,7 @@
 """
-DOCME
+:Author: fcp
+:Date: 10/22/2010
 """
-# fcp
-# 10/22/2010
 
 
 from charmming.const import alphanum
@@ -12,37 +11,54 @@ from charmming.tools import Property
 
 class BaseAtom(MetaAtom):
     """
+    :Note:  This class is derived from :mod:`charmming.lib.metaatom`,
+        please familiarize yourself with that documentation before
+        proceeding with this article.
+
+
     This is the base class for all "CHARMM-like" atoms.  It includes
     property definitions and methods useful for classical mechanics
-    based molecular models.
+    based molecular models.  However, like :mod:`charmming.lib.metaatom`,
+    :mod:`baseatom` is still abstract, and thus not useful without
+    deriving and defining the methods marked **STUB** herein.
 
-    Class Attributes
-        `_autoInFormat`         STUB
-        `_segTypeSortScore`     STUB
-        `_tagMap`               STUB
-    Parse Definition
-        `parse`                 STUB
-    Properties
-        `addr`
-        `atomNum`
-        `atomNum0`
-        `atomType`
-        `bFactor`
-        `chainid`
-        `chainid0`
-        `resid`
-        `resid0`
-        `resIndex`
-        `resName`
-        `segid`
-        `segType`
-        `segType0`
-        `tag`
-        `weight`
-    Public Methods
-        `Print`                 STUB
-    Private Methods
-        `_sort`
+    All **Core Data** defined by parent classes is also implicitly
+    included.
+
+    **Core Data:**
+        | ``atomNum``
+        | ``atomType``
+        | ``bFactor``
+        | ``chainid``
+        | ``resid``
+        | ``resIndex``
+        | ``resName``
+        | ``segType``
+        | ``weight``
+
+    As some **STUBS** are defined in this class, and others are added,
+    the following list explicitly states all **STUBS** that must be
+    defined by child classes.
+
+    **STUBS:**
+        | ``_autoInFormat``
+        | ``_sortSegType``
+        | ``_tagMap``
+        | ``parse``
+        | ``Print``
+
+    This private method has been documented as a **Special Method** because
+    it defines the scoring system used by the rich comparison operators.
+
+    The weighting for this scoring functions is:
+        ``chainid`` > ``segType`` > ``resid`` > ``atomNum``
+
+    Where ``chainid`` is sorted from `a` to `9`, ``segType`` is sorted
+    according to the :class:`dict` defined by ``self.__class__._sortSegType``
+    and ``resid`` and ``atomNum`` are straightforward.
+
+    **Special Methods:**
+        | ``_sort``
     """
 
 
@@ -69,26 +85,23 @@ class BaseAtom(MetaAtom):
 
     _sortSegType = None
     """
-    This is a dictionary which defines the recognized `segTypes` (keys)
-    for the `_sort` scoring method, and their weighting (values).
+    This is a dictionary which defines the recognized ``segTypes`` (keys)
+    for the ``_sort`` scoring method, and their weighting (values).
 
-    STUB
+    **STUB**
     """
 
     _tagMap = None
     """
-    Map `segType` -> `tag`
+    Map ``segType`` -> ``tag``
 
     This is a dictionary which defines the recognized `segTypes` (keys)
     for the `tag` property.
 
-    STUB
+    **STUB**
     """
 
     def __init__(self, text=None, **kwargs):
-        """
-        DOCME
-        """
         super(BaseAtom, self).__init__(text, **kwargs)
 
 ##############
@@ -99,10 +112,10 @@ class BaseAtom(MetaAtom):
     def addr():
         doc =\
         """
-        The `addr` property provides a human readable unique string
+        The ``addr`` property provides a human readable unique string
         representation for each `BaseAtom` instance.
 
-        The default is: "`chainid`.`segType`.`resid`.`atomNum`"
+        The default is: "``chainid.segType.resid.atomNum``"
         """
         def fget(self):
             return '%s.%s.%d.%d' % (self.chainid, self.segType, self.resid,
@@ -113,7 +126,8 @@ class BaseAtom(MetaAtom):
     def atomNum():
         doc =\
         """
-        DOCME
+        An atomic index which spans all atoms in a single model or
+        :class:`Mol` object.
         """
         def fget(self):
             return self._atomNum
@@ -138,7 +152,7 @@ class BaseAtom(MetaAtom):
     def atomNum0():
         doc =\
         """
-        The value of the `atomNum` property at instantization, read only.
+        The value of the ``atomNum`` property at instantization, read only.
         """
         def fget(self):
             return self._atomNum0
@@ -148,7 +162,15 @@ class BaseAtom(MetaAtom):
     def atomType():
         doc =\
         """
-        DOCME
+        The four character string which defines the atomic element,
+        and neighboring chemical environment.  Typically the first
+        two characters define the element, and the final two define
+        the chemical environment.  However many sources do not adhere
+        to this rule
+
+        **Note:** ``atomType`` should always be 4 characters long,
+        and whitespace should never be stripped.
+        Remember kids, ``' CA ' != 'CA  '``.
         """
         def fget(self):
             return self._atomType
@@ -167,7 +189,8 @@ class BaseAtom(MetaAtom):
     def bFactor():
         doc =\
         """
-        DOCME
+        A float in the range [0,100].  It is a proxy for the quality of the
+        structural model.  Lower values are better.
         """
         def fget(self):
             return self._bFactor
@@ -199,7 +222,8 @@ class BaseAtom(MetaAtom):
     def chainid():
         doc =\
         """
-        DOCME
+        A single character string indicating the domain of the structure
+        where the atom is located.  It is in the range of [`'a'`,`9`].
         """
         def fget(self):
             return self._chainid
@@ -228,7 +252,10 @@ class BaseAtom(MetaAtom):
     def resid():
         doc =\
         """
-        DOCME
+        An integer in the range of [-1000,10000].  It denotes the residue
+        by number, and to facilitate CHARMM jobs, it is typically reindexed
+        to start at one for each segment.  To retrieve the cannonical
+        resid refer to ``resid0``.
         """
         def fget(self):
             return self._resid
@@ -253,7 +280,7 @@ class BaseAtom(MetaAtom):
     def resid0():
         doc =\
         """
-        The value of the `resid` property at instantization, read only.
+        The value of the ``resid`` property at instantization, read only.
         """
         def fget(self):
             return self._resid0
@@ -263,7 +290,10 @@ class BaseAtom(MetaAtom):
     def resIndex():
         doc =\
         """
-        DOCME
+        An integer in the range of [-1000,10000].  It denotes the residue
+        by number and is indexed from 1.  Unlike the ``resid`` it indexes
+        the residues present in the entire molecule, not just in the
+        current segment.
         """
         def fget(self):
             return self._resIndex
@@ -288,7 +318,11 @@ class BaseAtom(MetaAtom):
     def resName():
         doc =\
         """
-        DOCME
+        A 4 character string denoting the name of the residue.  As per
+        the PDB specification the first character is reserved for multi-
+        model sections of PDB files, and the last 3 characters are used
+        for the actual residue name itself.  This convention is loosely
+        adhered to.
         """
         def fget(self):
             return self._resName
@@ -307,7 +341,8 @@ class BaseAtom(MetaAtom):
     def segid():
         doc =\
         """
-        DOCME
+        A unique string generated from the segment's parent chainid and
+        the segment's type.  Read only.
         """
         def fget(self):
             return '%s-%s' % (self.chainid, self.segType)
@@ -317,7 +352,9 @@ class BaseAtom(MetaAtom):
     def segType():
         doc =\
         """
-        DOCME
+        A string which defines the biochemical nature of the current
+        segment.  Valid ``segTypes`` should be registered as keys in
+        ``self.__class__._sortSegType``.
         """
         def fget(self):
             return self._segType
@@ -339,7 +376,9 @@ class BaseAtom(MetaAtom):
     def tag():
         doc =\
         """
-        DOCME
+        The first field which appears in a PDB line, usually 'ATOM' or
+        'HETATM'.  A mapping between ``segType`` and ``tag`` should be
+        defined by a dictionary ``self.__class__._tagMap``.  Read only.
         """
         def fget(self):
             return self.__class__._tagMap[self.segType]
@@ -349,7 +388,11 @@ class BaseAtom(MetaAtom):
     def weight():
         doc =\
         """
-        DOCME
+        In multi-model sections of .pdb files the ``weight`` property
+        defines the experimental confidence of the atomic coordinates.
+        When stripping out multi-model sections of a .pdb, the ``weight``
+        property is used to determine the most likely atomic coordinates
+        and removes the others.
         """
         def fget(self):
             return self._weight
@@ -387,7 +430,7 @@ class BaseAtom(MetaAtom):
         comparisons and containerClass.sort() methods.
 
         The weighting for this scoring functions is as follows:
-            chainid > segType > resid > atomNum
+            ``chainid`` > ``segType`` > ``resid`` > ``atomNum``
         """
         sortChainid = dict(((char,i) for i,char in enumerate(alphanum)))
         return sortChainid[self.chainid] * 1e10 + \

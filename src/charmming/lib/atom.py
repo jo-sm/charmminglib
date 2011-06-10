@@ -13,33 +13,30 @@ from charmming.lib.baseatom import BaseAtom
 
 class Atom(BaseAtom):
     """
+    :Note:  This class is derived from :mod:`charmming.lib.baseatom`,
+        please familiarize yourself with that documentation before
+        proceeding with this article.
+
+
     The standard CHARMMing implementation of the all-atom resolution
     atom-like object.
 
-    A longer
-    multi-line
-    description.
+    All **Core Data** defined by parent classes is also implicitly
+    included.
 
-    Class Attributes
-        `_autoInFormat`
-        `_sortSegType`
-        `_tagMap`
-    Parse Definition
-        `parse`
-    Properties
-        `element`
-        `segType`
-    Public Methods
-        `derive_element`
-        `is_backbone`
-        `is_good`
-        `is_pro`
-        `is_nuc`
-        `Print`
-    Private Methods
-        `_compliance_resName`
-        `_compliance_atomType`
-        `_init_null`
+    **Core Data:**
+        | ``element``
+
+    Both of these private methods are used exclusively by
+    :mod:`charmming.scripts.parse`.
+
+    **Private Methods:**
+        | ``_compliance_resName``
+        | ``_compliance_atomType``
+
+    :TODO:
+        | # Conform *longcard* formatting conventions, and debug.
+        | # Input and output *AMBER* style atomic data.
     """
 
     _autoInFormat = 'pdborg'
@@ -74,9 +71,6 @@ class Atom(BaseAtom):
     """
 
     def __init__(self, text=None, **kwargs):
-        """
-        DOCME
-        """
         super(Atom, self).__init__(text, **kwargs)
 
 ####################
@@ -85,27 +79,30 @@ class Atom(BaseAtom):
 
     def parse(self, inFormat):
         """
-        Parses _text into the following instance variables:
-            `atomNum`
-            `atomType`
-            `resName`
-            `chainid`
-            `resid`
-            `cart`
-            `weight`
-            `bFactor`
-            `element`
-            `resIndex`
+        Parses ``self._text`` into the following instance variables:
+            | ``atomNum``
+            | ``atomType``
+            | ``resName``
+            | ``chainid``
+            | ``resid``
+            | ``cart``
+            | ``weight``
+            | ``bFactor``
+            | ``element``
+            | ``resIndex``
 
-        Initial values for: `chainid`, `segType`, `resid` and `atomNum`
-        are saved as well as `chainid0`, etc.
+        Initial values for addressing are stored in:
+            | ``chainid0``
+            | ``segType0``
+            | ``resid0``
+            | ``atomNum0``
 
-        Recognized `inFormat` values are:
-            `"pdborg"`
-            `"charmm"`
-            `"shortcard"`
-            `"longcard"`
-            `"amber"`   TODO
+        Recognized *inFormat* values are:
+            | ``"pdborg"``
+            | ``"charmm"``
+            | ``"shortcard"``
+            | ``"longcard"``
+            | ``"amber"``   **TODO**
         """
         if inFormat == 'pdborg':
             self.atomNum = self._text[6:11]
@@ -180,7 +177,9 @@ class Atom(BaseAtom):
     def element():
         doc =\
         """
-        DOCME
+        A string representing the standard IUPAC chemical element
+        of the Atom.  Note that some CHARMM element names need to
+        be converted, ie *SOD* -> *NA*
         """
         def fget(self):
             return self._element
@@ -210,7 +209,9 @@ class Atom(BaseAtom):
     def segType():
         doc =\
         """
-        DOCME
+        A string which defines the biochemical nature of the current
+        segment.  Valid ``segTypes`` for the :class:`Atom` are:
+        *"pro" "nuc" "rna" "dna" "good" "bad"*.
         """
         def fget(self):
             return self._segType
@@ -235,7 +236,11 @@ class Atom(BaseAtom):
 
     def derive_element(self):
         """
-        DOCME
+        Automagically derive the ``element`` property using ``atomType``.
+
+        This method is invoked if the ``element`` property is set to
+        *`auto`*, or if element type can not be otherwise be determined
+        by :meth:`parse` and ``_autoFix`` is set to `True`.
         """
         if self.segType in ['pro', 'nuc', 'rna', 'dna']:
             return self._atomType.strip()[0]
@@ -247,42 +252,42 @@ class Atom(BaseAtom):
     def is_backbone(self):
         """
         Determines if the atom is part of the backbone structure using
-        the `atomType` property.  Returns a bool.
+        the ``atomType`` property.  Returns a :class:`bool`.
         """
         return self.atomType in backbone
 
     def is_good(self):
         """
         Determines if the atom is a "good" hetero atom using the
-        `resName` property.  Returns a bool.
+        ``resName`` property.  Returns a :class:`bool`.
         """
         return self.resName in good
 
     def is_pro(self):
         """
         Determines if the atom is part of a protein structure using the
-        `resName` property.  Returns a bool.
+        ``resName`` property.  Returns a :class:`bool`.
         """
         return self.resName[-3:] in pro
 
     def is_nuc(self):
         """
         Determines if the atom is part of a nucleic acid structure
-        using the `resName` property.  Returns a bool.
+        using the ``resName`` property.  Returns a :class:`bool`.
         """
         return self.resName[-3:] in nuc
 
     def Print(self, **kwargs):
         """
-        Returns a string representation of the Atom object. Formatting
-        defaults to the `_autoInFormat` formatting.
+        Returns a string representation of the :class:`Atom`. Formatting
+        defaults to `self.__class__._autoInFormat`.
 
-        kwargs:
-            `outformat`     ["pdborg","charmm","debug","xdebug","crd","xcrd"]
-            `old_chainid`   [False,True]
-            `old_segtype`   [False,True]
-            `old_resid`     [False,True]
-            `old_atomnum`   [False,True]
+        **kwargs:**
+            | ``outformat``     ["pdborg","charmm","debug","xdebug","crd","xcrd"]
+            | ``old_chainid``   [False,True]
+            | ``old_segtype``   [False,True]
+            | ``old_resid``     [False,True]
+            | ``old_atomnum``   [False,True]
 
         >>> thisAtom.Print(outformat="pdborg",old_resid=True)
         """
@@ -351,7 +356,7 @@ class Atom(BaseAtom):
 
     def _compliance_resName(self):
         """
-        Re-label `resName` string to be CHARMM compliant.
+        Re-label ``resName`` string to be CHARMM compliant.
         """
         if self.resName in ['hoh','tip3']:
            self.resName = 'tip3'
@@ -382,7 +387,7 @@ class Atom(BaseAtom):
 
     def _compliance_atomType(self):
         """
-        Re-label `atomType` string to be CHARMM compliant.
+        Re-label ``atomType`` string to be CHARMM compliant.
         """
         if self.resName in ['hoh','tip3']:
            self.atomType = ' oh2'

@@ -26,7 +26,7 @@ class MetaAtom(object):
     A class which, by itself, doesn't actually do anything!
 
     This isn't actually a metaclass, instead it is a general framework
-    for building ``atom``-like classes.  Accordingly, it should probably
+    for building ``Atom``-like classes.  Accordingly, it should probably
     renamed `PseudoClass`, or something fancy like that.  Common
     elements are defined herein.  Others, which must be defined, yet
     which are disimilar, are left stubbed out, to be defined by subsequent
@@ -37,34 +37,68 @@ class MetaAtom(object):
     attempt be more thorough than other sections, and will discuss features
     that might not be of interest to many developers.
 
+    *Core Data* is information which must be defined by the object at
+    instanization.  *Core Data* is defined by the :class:`dict`
+    ``self.__class__._properties``, where the keys are the type of data, ie
+    ``mass`` and ``cart`` and the values, are the default values.  This
+    model allows us to instantize ``MetaAtoms`` three different ways:
 
-    **Class Attributes:**
-        | ``_autoIndex``
-        | ``_autoInFormat``     **STUB**
-        | ``_properties``
+    # without an argument in the constructor (`text`=``None``)
 
-    **Private Attributes:**
-        | ``_autoFix``
-        | ``_hash``
-        | ``_index``
-        | ``_text``
+        >>> taco = MetaAtom()
+        
+        When an `Atom` is instantized without an argument, the default values
+        from ``self.__class__._properties`` are set in the newly created object.
 
-    **Parse Definition:**
-        | ``parse``             **STUB**
+    # with a string argument to the constructor
 
-    **Properties:**
-        | ``addr``              **STUB**
-        | ``addr0``
+        >>> taco = MetaAtom('someString')
+        
+        When a string is used, the data is extracted directly from the string
+        as prescribed by the ``parse`` method.
+
+    # with another `Atom` as the argument
+
+        >>> paco = BaseAtom('someString)
+        >>> taco = MetaAtom(paco)
+
+        When another `Atom` is used, values from the other `Atom` are used for
+        every key which is present in both classes' ``_properties`` dict (paco
+        & taco in the above example), and keys which are defined in the new
+        instance, but not the old instance, take their values from the new
+        instances' ``_properties`` values. (taco - paco in the example)
+
+    **Core Data:**
         | ``mass``
         | ``cart``
 
-    **Public Methods:**
-        | ``Print``             **STUB**
+    Items marked as **STUB** are only defined with a call signature and will
+    raise a :exc:`NotImplementedError`.  They **must** actually be implemented
+    by descendants of this class.
 
-    **Private Methods:**
-        | ``_init_null``
-        | ``_sort``             **STUB**
-        | ``_set_hash``
+    **STUBS:**
+        | ``_autoInFormat``
+        | ``parse``
+        | ``addr``          :: `Property`
+        | ``Print``
+        | ``_sort``
+
+    Special methods are methods which alter how external python modules,
+    classes and functions may interact with your code in a very general way.
+    Rich comparison methods for example (ie, :meth:`__eq__` and :meth:`__gt__`)
+    not only effect the binary operators ``==`` and ``>`` but effect the seemingly
+    unrelated :func:`sorted` (among others).
+
+    **Special Methods:**
+        | :meth:`__repr__`
+        | :meth:`__str__`
+        | :meth:`__hash__`
+        | :meth:`__eq__`
+        | :meth:`__ne__`
+        | :meth:`__lt__`
+        | :meth:`__le__`
+        | :meth:`__gt__`
+        | :meth:`__ge__`
 
     **kwargs:**
         | ``commentchar`` :: Defaults to '#'
@@ -72,7 +106,7 @@ class MetaAtom(object):
             which may set as a ``MetaAtom`` subclass class variable.
         | ``index`` :: A potentially useful way of differentiating
             ``Atom``-like objects during initialization.  For example,
-            when generating error and debugging messages of *atoms*
+            when generating error and debugging messages of *Atoms*
             that fail to initialize properly.  This value defaults to
             ``MetaAtom._autoIndex``, which itself is just a counter of
             ``MetaAtom`` objects.
@@ -95,7 +129,7 @@ class MetaAtom(object):
 
     _properties = {
         'cart': array((0., 0., 0.)),
-        'mass': 0
+        'mass': 0.
     }
     """
     A dictionary which tells the class which properties (keys) it is
@@ -219,8 +253,7 @@ class MetaAtom(object):
     def mass():
         doc =\
         """
-        A ``property`` that returns a float representing the atomic
-        mass in units of AMU.
+        A ``property`` that returns a float representing the mass in AMU.
         """
         def fget(self):
             return self._mass
@@ -371,8 +404,13 @@ class MetaAtom(object):
             ])
         self.cart = dot(self.cart, R)
 
-    def translate(self, i, j, k):
-        pass
+    def translate(self, transVector):
+        """
+        Translate a ``MetaAtom`` by a cartesian vector `transVector`.
+        """
+        assert len(transVector) == 3
+        transVector = array(transVector)
+        self.cart += transVector
 
 ###################
 # Private Methods #
@@ -381,8 +419,8 @@ class MetaAtom(object):
     def _init_null(self):
         """
         If the constructor is called without a `text` argument, this
-        function defines the initial variable values of the Atom like
-        object.
+        function initializes variable values of the ``Atom``-like
+        object based on the values described in ``self.__class__.properties``.
         """
         for key, value in self.__class__._properties.iteritems():
             setattr(self, key, value)
@@ -392,14 +430,18 @@ class MetaAtom(object):
         A scoring method that determines sorting order, for rich
         comparisons and containerClass.sort() methods.
 
-        STUB
+        **STUB**
         """
         raise NotImplementedError
 
     def _set_hash(self):
         """
-        Method for setting the instance's `_hash` value, which is in
-        turn used with the built-in `hash` function.
+        Method for setting the instance's ``_hash`` value, which is in
+        turn used with the built-in :meth:`hash` function.
+
+        **Note:**
+            This method might be removed, as :meth:`hash` was only
+            intended to be used on immutable objects.
         """
         self._hash = sum(map(hash,self.cart))
         for key, value in self.__class__._properties.iteritems():

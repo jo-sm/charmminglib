@@ -1,15 +1,13 @@
 """
-This module contains a 'random' assortment of useful utility functions
+This module contains a Smorgasbord of useful utility functions
 and classes.  If a utility function is closely associated with a single
 particular module, it should be located in said module; otherwise, it
 should be put here for general use.
 
-TODO:
-    The optparse module is depricated starting with python 2.6, and so
-    we should probably move to the newer argparse.
+:depricated:
+    The :mod:`optparse` module is depricated starting with python 2.6,
+    so we should probably move to the newer :mod:`argparse`.
 """
-# fcp
-# 10/22/2010
 
 
 import optparse
@@ -22,7 +20,7 @@ from charmming.const.units import RAD2DEG
 def paragraphs(iterable,splitter):
     """
     Cut a text stream up into 'paragraphs,' where partitions are
-    determined by a list named splitter.
+    determined by a :mod:`list` named `splitter`.
     """
     assert isinstance(splitter, (tuple, list))
     splitter = tuple(splitter)
@@ -40,7 +38,8 @@ def paragraphs(iterable,splitter):
 
 def expandPath(String):
     """
-    A better version of the default path expander.
+    A combined version of :func:`os.path.expanduser` and
+    :func:`os.path.abspath` for better path normalization.
     """
     if '~' in String:
         return os.path.expanduser(String)
@@ -50,8 +49,9 @@ def expandPath(String):
 
 def cleanStrings(iterable,CC=None):
     """
-    Takes an iterable of strings, strips out comments, blank lines,
-    forces lower case and left justifies.
+    Takes an iterable of strings, and strips out blank lines,
+    forces lower case and left justifies.  Optionally, it may also
+    strip out comments if `CC` is specified.
     """
     if CC is not None:
         iterable = ( line.split(CC)[0] for line in iterable )
@@ -83,8 +83,8 @@ def flatten(l,ltypes=(list,tuple)):
 
 def Property(func):
     """
-    Decorator function for property. Prevents namespace pollution in
-    classes.
+    Decorator function for :func:`property`, preventing namespace
+    pollution in classes.
 
     >>> @Property
     >>> def foo():
@@ -98,10 +98,11 @@ def Property(func):
     return property(**func())
 
 
-def mkdir(value):
+def mkdir(path):
     """
-    Recursively make a directory at specified path. The following
-    example will first try to make '~', then '~/python', etc.
+    Recursively attempt to make a directory at `path`. The following
+    example will first try to make '~', then '~/python', etc. until the
+    full path is created.
 
     >>> mkdir('~/python/projects/taco/sauce')
     """
@@ -120,7 +121,7 @@ def out2inp(iterable,lookFor='CHARMM>',CC='!',maxDrought=1000):
     Parse through a CHARMM .out file, and reconstruct the corresponding
     .inp file.
 
-    WARNING -- This can be potentially (and quietly) very bad if you
+    **WARNING** -- This can be potentially (and quietly) very bad if you
     use it on .out files that have been concatenated!
     """
     n = 0
@@ -140,7 +141,7 @@ def out2inp(iterable,lookFor='CHARMM>',CC='!',maxDrought=1000):
 
 def logicalLines(iterable,continueChar='-'):
     """
-    Convert an iterable of physical lines with `continuationChar` into
+    Convert an iterable of physical lines with `continueChar` into
     an iterator of logical lines.
     """
     iterable = ( line.strip() for line in iterable )
@@ -220,8 +221,8 @@ class walk(object):
 
 class OptionWithDefault(optparse.Option):
     """
-    Exension of optparse to include 'required options.'  Based on code found at
-    http://code.activestate.com/recipes/573441/
+    Exension of :mod:`optparse` to allow required options.  Based on
+    code found at: http://code.activestate.com/recipes/573441/
     """
     ATTRS = optparse.Option.ATTRS + ['required']
 
@@ -233,8 +234,8 @@ class OptionWithDefault(optparse.Option):
 
 class OptionParser(optparse.OptionParser):
     """
-    Exension of optparse to include 'required options.'  Based on code found at
-    http://code.activestate.com/recipes/573441/
+    Exension of :mod:`optparse` to allow required options.  Based on
+    code found at: http://code.activestate.com/recipes/573441/
 
     >>> parser = OptionParser( ... )
     >>> parser.add_option('-I','--input',required=True,metavar='PATH',
@@ -253,8 +254,7 @@ class OptionParser(optparse.OptionParser):
 
 def lowerKeys(dictionary):
     """
-    Modifies a dictionary by applying `string.lower` to each of its keys.
-
+    Modifies a dictionary by applying :meth:`str.lower` to each of its keys.
     This is helpful for making kwargs case insensitive.
     """
     return dict(((key.lower(), value) for key, value in dictionary.iteritems()))
@@ -275,6 +275,14 @@ def modPi(arg, units='deg'):
     return arg
 
 def grouper(iterable, n):
+    """
+    A :class:`generator` which breaks the `iterable` up into :class:`list`
+    objects of length `n`.  If the iterable is not evenly divisible by `n`
+    the final list returned will be the remainder of the iterator.
+
+    >>> list(charmming.tools.grouper(range(14),3))
+    [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13]]
+    """
     def key(x, s=n, a=[-1]):
         r = a[0] = a[0] + 1
         return r // s

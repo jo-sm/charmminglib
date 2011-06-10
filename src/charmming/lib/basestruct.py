@@ -1,8 +1,7 @@
 """
-DOCME
+:Author: fcp
+:Date: 10/26/2010
 """
-# fcp
-# 10/26/2010
 
 
 from itertools import tee
@@ -15,7 +14,7 @@ from charmming.lib.metaatom import MetaAtom
 
 class StructError(Exception):
     """
-    Exception to raise when errors occur involving the BaseStruct class.
+    Exception to raise when errors occur involving the :class:`BaseStruct` class.
     """
     def __init__(self,value):
         self.value = value
@@ -28,34 +27,77 @@ class BaseStruct(list):
     This is the base class for all classes that are containers for
     "atom-like" objects.
 
-    The current implementation uses `list` as a base class, this is not
+    The current implementation uses :class:`list` as a base class, this is not
     finalized, other candidates to derive from include:
-        `np.array`
-        `OrderedSet`
-        `OrderedDict`
-        `blist`
 
-    Private Attributes
-        `_autoFix`
-    Properties
-        `addr`              STUB
-        `code`
-        `com`
-        `mass`
-        `name`
-    Public Methods
-        `del_atoms`
-        `rotate`            TODO
-        `translate`         TODO
-        `write`
+        | :class:`numpy.array`
+        | :class:`OrderedSet`
+        | :class:`OrderedDict`
+        | :class:`blist`
+
+    The tradeoffs between the various classes are many and varied, but they
+    basically boil down to performance versus flexibility.  A list based
+    solution gives quite a bit of flexibility, the one potential drawbackc
+    is accessing data members without using an *index*.  The :meth:`find`
+    method attempts to address this short-coming.
+
+    The most fundamental purpose of all :class:`BaseStruct`-like objects
+    is to provide a clean interface for creating iterators over arbitrary
+    :class:`Atom`-like objects.  The :class:`BaseStruct` class itself provides
+    methods for atom selection :meth:`find`, :meth:`findByDistance`,
+    :meth:`__add__` and :meth:`__sub__`.
+
+    :class:`BaseStruct` objects may be manipulated using most of the
+    standard :class:`list` based methods.  However note that the
+    :meth:`__add__` method has been changed, and the :meth:`__mul__` and
+    :meth:`__setslice__` has been explicitly removed.  Other methods such
+    as :meth:`list.sort` may behave differently than expected, please see
+    :mod:`charmming.lib.baseatom` for relevant documentation.  To assist
+    in atom deletion, the cumberson :meth:`BaseStruct.del_atoms` has been
+    added.
+
+    Coordinate manipulations are also possible using :class:`BaseStruct`
+    methods.  One can perform arbitrary translations and rotations on a
+    given atom selection, or simply choose to use canonical molecule
+    fixed axies using the :meth:`orient` method.
+
+    Finally, molecular data can be written using the aptly named :meth:`write`
+    method.  Any output format which is supplied to the :meth:`Print` method
+    for the container's :class:`Atom`-like objects is valid.
+
+    Unlike in the :class:`MetaAtom` class, this **STUB** will not preclude the
+    general use of this class, it will just (obviously) preclude the use
+    of this method until it is defined by a child class.
+
+    **STUBS:**
+        | ``addr``
+
+    Default values for *kwargs* are listed first.
+
+    **kwargs:**
+        | ``autofix``       [True,False]
+        | ``code`` :: pdbcode
+        | ``name``
+
+    **Special Methods:**
+
+        | *Removed:*
+
+            | ``__imul__``
+            | ``__mul__``
+            | ``__setslice__``
+            | ``__isub__``
+            | ``__iadd__``
+
+        | *Changed:*
+
+            | ``__sub__``
+            | ``__add__``
+
+    :TODO:
+        | ``rotateByEuler``
     """
     def __init__(self, iterable=None, **kwargs):
-        """
-        kwargs:
-            `autofix`       [True,False]
-            `code`          string          # pdbcode
-            `name`          string
-        """
         # kwargs
         kwargs = lowerKeys(kwargs)
         self._autoFix = kwargs.get('autofix', True)
@@ -87,9 +129,9 @@ class BaseStruct(list):
         doc =\
         """
         The `addr` property provides a human readable unique string
-        representation for each `BaseStruct` instance.
+        representation for each :class:`BaseStruct` instance.
 
-        STUB
+        **STUB**
         """
         def fget(self):
             raise NotImplementedError
@@ -99,8 +141,8 @@ class BaseStruct(list):
     def code():
         doc =\
         """
-        A string representing the Protein Data Bank code from which
-        this `BaseStruct` object was derived.
+        A property for the string representing the Protein Data Bank
+        code from which this ``BaseStruct`` object was derived.
         """
         def fget(self):
             return self._code
@@ -112,7 +154,7 @@ class BaseStruct(list):
     def com():
         doc =\
         """
-        The center of mass in Angstrom.
+        The center of mass of the collection of atoms, in Angstroms.
         """
         def fget(self):
             result = array([ atom.mass * atom.cart for atom in self ])
@@ -124,7 +166,7 @@ class BaseStruct(list):
     def mass():
         doc =\
         """
-        The total mass, in AMU.
+        The total mass of the collection of atoms, in AMU.
         """
         def fget(self):
             return sum( ( atom.mass for atom in self ) )
@@ -134,7 +176,7 @@ class BaseStruct(list):
     def name():
         doc =\
         """
-        DOCME
+        An arbitrary string label for the :class:`BaseStruct`.
         """
         def fget(self):
             return self._name
@@ -147,15 +189,24 @@ class BaseStruct(list):
 ##################
 
     def center(self):
+        """
+        A method to translate the collection of atoms, such that their
+        new collective center of mass is at the origin.
+        """
         self.translate(-1*self.com)
 
     def del_atoms(self, iterable):
         """
-        Deletes, in place, one or more `Atoms` as specified by `iterable`.
-        The `Atoms` themselves should go in the iterable which indicates
-        the atoms to delete.
+        Deletes, in place, one or more :class:`Atom`-like objects as
+        specified by `iterable`.  `Iterable` should iterate over the
+        atom-like objects to be deleted.
 
-        >>> BaseStruct.del_atoms(BaseStruct[3:6])
+        For example...
+
+        >>> taco = BaseStruct(some_iterable_of_atoms)
+        >>> taco.del_atoms(taco[3:6])
+
+        will remove the 4th, 5th and 6th atoms from `taco`.
         """
         for key in iterable:
             if not isinstance(key, MetaAtom):
@@ -168,20 +219,33 @@ class BaseStruct(list):
 
     def find(self, addr=None, **kwargs):
         """
-        Returns a BaseStruct object containing all "atom-like" objects which
-        match the specified search criteria.
+        Returns a :class:`BaseStruct` object containing all "atom-like"
+        objects which match the specified search criteria.
 
-        Searches may be performed using an `addr` value as a string, or using
-        the following kwargs:
-            `chainid`
-            `segtype`
-            `resid`
-            `atomnum`
-            `atomtype`
+        **Note:**
+            This method will always return a :class:`BaseStruct` object
+            even if it is called by a child class.  If you want to then use
+            methods from the child class on this selection, you need to
+            then reinstantize that child class using this result as an
+            iterator.  Sub-optimal for sure.
+
+        **kwargs:**
+            | ``chainid``
+            | ``segtype``
+            | ``resid``
+            | ``atomnum``
+            | ``atomtype``
+
+        For a shorthand, one may also use an ``addr`` string.  However
+        this method is less precise as you can't, for example, specify
+        only a ``chainid`` and a ``atomnum``.
+
+        Both examples result in the same output.
+
+        >>> self.find(chainid='a', segtype='pro', resid=3)
 
         >>> self.find('a.pro.3')
 
-        >>> self.find(chainid='a', segtype='pro', resid=3)
         """
         if addr is not None:
             tmp = addr.split('.')
@@ -231,6 +295,20 @@ class BaseStruct(list):
 
     def find_byDistance(self, selection, distance):
         """
+        Returns a :class:`BaseStruct` which is a subset of the
+        :class:`BaseStruct` instance upon which this method is called.
+
+        By specifying a `selection` (a :class:`BaseStruct`) and a
+        `distance` (a :class:`float`), any atoms in `self` within
+        `distance` of `selection` are returned in a new :class:`BaseStruct`.
+
+        >>> taco.find_byDistance(taco[0:1],2)
+        [Atom(      A.PRO.1.1 ::  N    LEU      10.451   -1.168   -1.716),
+         Atom(      A.PRO.1.2 ::  CA   LEU       9.226   -0.710   -1.004),
+         Atom(      A.PRO.1.9 ::  H    LEU      11.269   -1.350   -1.211)]
+
+        This returns all atoms in `taco` that are within 2 Angstroms of
+        the first two atoms in `taco`.
         """
         def proximal(atom, selection, distance):
             for atom_i in selection:
@@ -242,6 +320,21 @@ class BaseStruct(list):
 
     def get_inertiaTensor(self, eigen=False):
         """
+        Returns a 3 by 3 :class:`numpy.array` corresponding to the
+        inertia tensor of the atom selection.  Alternatively, if
+        `eigen` is set to ``True``, :meth:`numpy.linalg.eig` is called
+        upon the inertia tensor, and a tuple containing the eigen values
+        and eigen vectors are returned directly.
+
+        >>> taco.get_inertiaTensor(eigen=True)
+        (array([ 250566.8631789 ,  429622.74865092,  377518.3392818 ]),
+         array([[-0.99381953,  0.08612146, -0.07004171],
+                [ 0.0908166 ,  0.26793577, -0.9591469 ],
+                [ 0.06383645,  0.95957987,  0.27410106]]))
+
+        This returns the eigen values are the first element in the tuple,
+        and the eigen vectors, as column vectors are the second element
+        in the tuple.
         """
         xx, yy, zz, xy, xz, yz = (0., 0., 0., 0., 0., 0.)
         for atom in self:
@@ -267,13 +360,18 @@ class BaseStruct(list):
 
     def orient(self):
         """
+        This method centers the atom selection about the origin, and
+        rotates it such that the priciples axies of rotation (A, B, C)
+        are now coincident with (z, y, x).
         """
         self.center()
         self.rotateByMatrix(self.get_inertiaTensor(eigen=True)[1].transpose())
 
     def rotate(self, rotVector, angle, units='deg'):
         """
-        TODO
+        Rotate an atom selection about an axis defined by a cartesian
+        vector `rotVector` and about an `angle`.  By default, angle
+        is specified in degrees, you may also use radians.
         """
         # axis
         assert len(rotVector) == 3
@@ -298,8 +396,16 @@ class BaseStruct(list):
         #
         self.rotateByMatrix(R)
 
+    def rotateByEuler(self, alpha, beta, gamma):
+        """
+        Rotate an atom selection using Euler angles `alpha`, `beta` and
+        `gamma`.
+
+        **TODO**
+        """
     def rotateByMatrix(self, rotMatrix):
         """
+        Rotate an atom selection by an arbitrary rotation matrix.
         """
         # create coordinate matrix
         iterator = ( crd for atom in self for crd in atom.cart )
@@ -313,25 +419,26 @@ class BaseStruct(list):
 
     def translate(self, transVector):
         """
-        TODO
+        Translate an atom selection by an arbitrary translation vector.
         """
+        assert len(transVector) == 3
         transVector = array(transVector)
         for atom in self:
             atom.cart += transVector
 
     def write(self, filename, **kwargs):
         """
-        Writes a file containing the molecular information contained in the
-        `BaseStruct` object.
+        Writes a file containing the molecular information contained in
+        :class:`BaseStruct` object.
 
-        kwargs:
-            `outformat`     ["charmm","pdborg","debug","xdebug","crd","xcrd"]
-            `old_chainid`   [False,True]
-            `old_segType`   [False,True]
-            `old_resid`     [False,True]
-            `old_atomNum`   [False,True]
-            `ter`           [False,True]
-            `end`           True if `outformat` in ["pdborg","charmm"]
+        **kwargs:**
+            | ``outformat``     ["charmm","pdborg","debug","xdebug","crd","xcrd"]
+            | ``old_chainid``   [False,True]
+            | ``old_segType``   [False,True]
+            | ``old_resid``     [False,True]
+            | ``old_atomNum``   [False,True]
+            | ``ter``           [False,True]
+            | ``end``           True if `outformat` in ["pdborg","charmm"]
 
         >>> thisSeg.write('~/1yjp.pdb',outformat='charmm',old_resid=True)
         """
