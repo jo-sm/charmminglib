@@ -421,7 +421,7 @@ class KTGo(Mol):
         String.append('')
         String.extend(self._rtf_residue())
         String.append('')
-        String.append('END')
+        String.append('END\n')
         #
         if filename is None:
             for line in String:
@@ -459,7 +459,7 @@ class KTGo(Mol):
         String.append('')
         String.extend(self._prm_nbfix())
         String.append('')
-        String.append('END')
+        String.append('END\n')
         #
         del self.bbAtoms
         del self.scAtoms

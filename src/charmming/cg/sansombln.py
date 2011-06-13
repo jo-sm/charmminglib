@@ -327,7 +327,7 @@ class SansomBLN(KTGoSolv):
         String.append('')
 
         String.extend(self._rtf_residues())
-        String.append('END')
+        String.append('END\n')
         if filename is None:   
             for line in String:   
                 print line.upper()
@@ -365,7 +365,7 @@ class SansomBLN(KTGoSolv):
         String.append('')
         String.extend(self._prm_nbfix())
         String.append('')
-        String.append('END')
+        String.append('END\n')
         #
         # BTM: why do we do this??!
         #del self.bbAtoms

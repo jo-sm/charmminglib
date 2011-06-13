@@ -468,7 +468,7 @@ class BaseStruct(list):
         if ter:
             writeMe.append('TER')
         if end:
-            writeMe.append('END')
+            writeMe.append('END\n')
         # Write file
         writeMe = '\n'.join(writeMe)
         writeTo = open(filename,'w')
