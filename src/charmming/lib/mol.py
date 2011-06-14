@@ -1,8 +1,7 @@
 """
-DOCME
+:Author: fcp
+:Date: 10/26/2010
 """
-# fcp
-# 10/26/2010
 
 
 from charmming.const import alphanum
@@ -14,7 +13,7 @@ from charmming.lib.atom import Atom
 
 class MolError(Exception):
     """
-    The exception to raise when errors occur involving the ``Mol``
+    The exception to raise when errors occur involving the :class:`Mol`
     class.
     """
     def __init__(self, value):
@@ -25,23 +24,14 @@ class MolError(Exception):
 
 class Mol(BaseStruct):
     """
-    Public Attributes
-        `warnings`
-    Public Methods
-        `iter_chain`
-        `iter_res`
-        `iter_seg`
-        `parse`
-        `reindex_atomNum`
-        `reindex_resid`
-        `reindex_resIndex`
-        `write`             TODO
-        `write_charmming`
-    Private Methods
-        `_compliance_charmmTerminalOxygen`
-        `_compliance_charmmNames`
-        `_diff_nuc`
-        `_fix_multi_models`
+        **Private Methods:**
+            | ``_compliance_charmmTerminalOxygen``
+            | ``_compliance_charmmNames``
+            | ``_diff_nuc``
+            | ``_fix_multi_models``
+
+        :TODO:
+            | ``write``
     """
     def __init__(self, iterable=None, **kwargs):
         super(Mol, self).__init__(iterable, **kwargs)
@@ -53,10 +43,10 @@ class Mol(BaseStruct):
 
     def iter_chain(self, **kwargs):
         """
-        A generator that returns one `Chain` per iteration.
+        A generator that returns one :class:`Chain` per iteration.
 
-        kwargs:
-            `chainids`
+        **kwargs:**
+            | ``chainids``
 
         The kwarg `chainids` can be used to specify which chains are
         iterated over, and in which order.  By default, all chains are
@@ -80,11 +70,11 @@ class Mol(BaseStruct):
 
     def iter_res(self, **kwargs):
         """
-        A generator that returns one `Res` per iteration.
+        A generator that returns one :class:`Res` per iteration.
 
-        kwargs:
-            `chainids`
-            `segtypes`
+        **kwargs:**
+            | ``chainids``
+            | ``segtypes``
 
         The kwargs `chainids` and `segtypes` can be used to specify
         which residues are iterated over, and in which order.  By
@@ -100,11 +90,11 @@ class Mol(BaseStruct):
 
     def iter_seg(self, **kwargs):
         """
-        A generator that returns one `Seg` per iteration.
+        A generator that returns one :class:`Seg` per iteration.
 
-        kwargs:
-            `chainids`
-            `segtypes`
+        **kwargs:**
+            | ``chainids``
+            | ``segtypes``
 
         The kwargs `chainids` and `segtypes` can be used to specify
         which segments are iterated over, and in which order.  By
@@ -139,7 +129,7 @@ class Mol(BaseStruct):
 
     def reindex_atomNum(self, start=1):
         """
-        Reindex the `Atom.atomNum` value of each atom in the `Mol`
+        Reindex the ``Atom.atomNum`` value of each atom in the :class:`Mol`
         object, starting from `start`.
         """
         for seg in self.iter_seg():
@@ -150,7 +140,7 @@ class Mol(BaseStruct):
 
     def reindex_resid(self, start=1):
         """
-        Reindex the `Atom.resid` value of each atom in the `Mol` object,
+        Reindex the ``Atom.resid`` value of each atom in the :class:`Mol` object,
         starting from `start`.
         """
         for seg in self.iter_seg():
@@ -161,8 +151,8 @@ class Mol(BaseStruct):
 
     def reindex_resIndex(self, start=1):
         """
-        Creates a master residue index on a per `Mol` basis. The index
-        ordering will be by `chainids` > `segTypes` > `resid`, followed
+        Creates a master residue index on a per :class:`Mol` basis. The index
+        ordering will be by ``chainids`` > ``segTypes`` > ``resid``, followed
         by alpha ordering.
         """
         i = start
@@ -279,15 +269,17 @@ class Mol(BaseStruct):
 
     def _fix_multiModels(self):
         """
-        Searches for multi-model sections, and 'fixes' them. Renames
+        Searches for multi-model sections, and "fixes" them. Renames
         residues, and deletes atoms.
 
         For example:
-        15  CE AMET A   1      16.764  26.891  42.696  0.73 60.01           C
-        16  CE BMET A   1      18.983  29.323  38.169  0.27 60.30           C
+
+        ``15  CE AMET A   1      16.764  26.891  42.696  0.73 60.01           C``
+        ``16  CE BMET A   1      18.983  29.323  38.169  0.27 60.30           C``
 
         Becomes:
-        15  CE  MET A   1      16.764  26.891  42.696  0.73 60.01           C
+
+        ``15  CE  MET A   1      16.764  26.891  42.696  0.73 60.01           C``
         """
         delete_these = []
         residues = ( res for res in self.iter_res() if len(res.resName) == 4 )

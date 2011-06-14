@@ -6,7 +6,6 @@
 
 import re
 import os
-import itertools
 from charmming.const import alphanum
 from charmming.tools import Property, expandPath, cleanStrings, paragraphs,\
         lowerKeys
@@ -138,7 +137,7 @@ class PDBFile(object):
                 print '%s: Fixing `resid`s' % self.code
             #self._fix_resids()
         # Processing
-        self._models = {}
+        self._mols = {}
         self._build_models()
 
 ##############
@@ -274,24 +273,36 @@ class PDBFile(object):
     def iter_all(self):
         """
         Iterate over all of the ``Mol`` objects contained in the
-        current ``PDBFile`` instance, regardless of origin.
+        current ``PDBFile`` instance, regardless of origin.  *Models*
+        are iterated upon before non-models.
         """
-        return itertools.chain(self.iter_models())
+        return ( self[key] for key in self.keys() )
 
     def iter_models(self):
         """
         Iterate over the ``Mol`` objects derived from the .pdb file's
         *models*.
         """
-        return ( self['model%d' % i] for i in sorted(self._models.keys()) )
+        models = [ key for key in sorted(self._mols.keys()) if key.startswith('model') ]
+        return ( self[key] for key in models )
+
+    def iter_notModels(self):
+        """
+        Iterate over the ``Mol`` objects **not** derived from the .pdb file's
+        *models*.
+        """
+        notModels = [ key for key in sorted(self._mols.keys()) if not key.startswith('model') ]
+        return ( self[key] for key in notModels )
+
 
     def keys(self):
         """
         Lists the keys to access all of the ``Mol`` objects the ``PDBFile``
         object contains.
         """
-        models = [ 'model%d' % i for i in sorted(self._models.keys()) ]
-        return models
+        models = [ key for key in sorted(self._mols.keys()) if key.startswith('model') ]
+        notModels = [ key for key in sorted(self._mols.keys()) if not key.startswith('model') ]
+        return models + notModels
 
 ###################
 # Private Methods #
@@ -299,8 +310,8 @@ class PDBFile(object):
 
     def _build_models(self):
         """
-        Parse the crd section, and load the coordinates into `Mol`
-        objects, one `Mol` object per model section in the .pdb file.
+        Parse the crd section, and load the coordinates into :class:`Mol`
+        objects, one :class:`Mol` object per model section in the .pdb file.
         """
         models = paragraphs(self.crd, splitter=['model'])
         for model in models:
@@ -311,7 +322,7 @@ class PDBFile(object):
             iterator = ( Atom(text=line, informat=self.inFormat, index=i,
                         autofix=self._autoFix) for i, line in enumerate(model)
                         if line.startswith(('atom', 'hetatm')) )
-            self._models[modelNum] = Mol(iterable=iterator, name='model%d' %
+            self._mols['model%02d' % modelNum] = Mol(iterable=iterator, name='model%d' %
                                         modelNum, code=self.code, autofix=True)
 
     def _fix_chainids(self):
@@ -407,26 +418,23 @@ class PDBFile(object):
 ###################
 
     def __getitem__(self, key):
-        if key in self.keys():
+        if type(key) == int:
             try:
-                if key.startswith('model'):
-                    return self._models[int(key.split('model')[1])]
-                else:
-                    raise IndexError
-            except IndexError:
-                raise KeyError('Unknown Key: %s' % key)
+                return self._mols['model%02d' % key]
+            except KeyError:
+                raise KeyError('model%02d' % key)
         else:
-            try:
-                dummy = int(key)
-                try:
-                    return self._models[key]
-                except IndexError:
-                    raise KeyError('Unknown Key: %s' % key)
-            except ValueError:
-                raise KeyError('Unknown Key: %s' % key)
+            return self._mols[key]
+
+    def __setitem__(self, key, value):
+        if type(key) == int:
+            raise KeyError('Integer keys are protected.')
+        if key.startswith('model'):
+            raise KeyError('Keys begining with "model" are protected.')
+        self._mols[key] = value
 
     def __len__(self):
-        return len(self._models)
+        return len(self._mols)
 
     def __contains__(self, key):
         return key in self.keys()

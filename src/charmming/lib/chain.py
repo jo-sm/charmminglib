@@ -1,8 +1,7 @@
 """
-DOCME
+:Auto: fcp
+:Date: 10/26/2010
 """
-# fcp
-# 10/26/2010
 
 
 from charmming.tools import Property, lowerKeys
@@ -12,12 +11,7 @@ from charmming.lib.seg import Seg
 
 class Chain(BaseStruct):
     """
-    Properties
-        `addr`
-        `chainid`
-    Public Methods
-        `iter_res`
-        `iter_seg`
+    DOCME
     """
     def __init__(self, iterable=None, **kwargs):
         super(Chain, self).__init__(iterable, **kwargs)

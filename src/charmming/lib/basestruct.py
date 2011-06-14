@@ -65,13 +65,6 @@ class BaseStruct(list):
     method.  Any output format which is supplied to the :meth:`Print` method
     for the container's :class:`Atom`-like objects is valid.
 
-    Unlike in the :class:`MetaAtom` class, this **STUB** will not preclude the
-    general use of this class, it will just (obviously) preclude the use
-    of this method until it is defined by a child class.
-
-    **STUBS:**
-        | ``addr``
-
     Default values for *kwargs* are listed first.
 
     **kwargs:**
@@ -125,19 +118,6 @@ class BaseStruct(list):
 ##############
 
     @Property
-    def addr():
-        doc =\
-        """
-        The `addr` property provides a human readable unique string
-        representation for each :class:`BaseStruct` instance.
-
-        **STUB**
-        """
-        def fget(self):
-            raise NotImplementedError
-        return locals()
-
-    @Property
     def code():
         doc =\
         """
@@ -154,7 +134,8 @@ class BaseStruct(list):
     def com():
         doc =\
         """
-        The center of mass of the collection of atoms, in Angstroms.
+        The property for the center of mass of the collection of
+        atoms, in Angstroms.  Read only.
         """
         def fget(self):
             result = array([ atom.mass * atom.cart for atom in self ])
@@ -166,7 +147,8 @@ class BaseStruct(list):
     def mass():
         doc =\
         """
-        The total mass of the collection of atoms, in AMU.
+        The property for the total mass of the collection of atoms,
+        in AMU.  Read only.
         """
         def fget(self):
             return sum( ( atom.mass for atom in self ) )
@@ -176,7 +158,8 @@ class BaseStruct(list):
     def name():
         doc =\
         """
-        An arbitrary string label for the :class:`BaseStruct`.
+        The property for an arbitrary string label for the
+        :class:`BaseStruct`.
         """
         def fget(self):
             return self._name
