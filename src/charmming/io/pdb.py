@@ -63,7 +63,8 @@ class PDBFile(object):
     a dictionary for later use.  The ``Mol`` objects created at instantisation
     may be accessed by the ``PDBFile`` object in either a dictionary-like way or
     a list-like way.  Files which contain only one model will store the ``Mol``
-    object as *model 0*.
+    object as *model 0*.  Please note, that as of right now, the string keys for models
+    are zero-padded.
 
     For example, to access *model 4* from the 1o1o.pdb file one could write:
 
@@ -71,12 +72,19 @@ class PDBFile(object):
 
     or...
 
-    >>> taco = PDBFile('1o1o.pdb')['model4']
+    >>> taco = PDBFile('1o1o.pdb')['model04']
     
     Furthermore, this object may also be used to couple other ``Mol`` objects to
     each other.  Such as a structure that has been patched, or a minimized
-    structure.  The syntax for doing this will be dictionary-like and is TBD.
+    structure.  The syntax for doing this is dictionary-like, for example...
 
+    >>> taco = PDBFile('1ski.pdb')
+    >>> taco['lulz'] = PDBFile('1o1o.pdb')[4]
+
+    Would couple the 4th model of the 1o1o structure to the ``taco`` object using
+    the key ``'lulz'``.  Please note that keys begining with the string `'model'`
+    are not allowed, nor are :class:`int` keys.  Using either of which will raise
+    a :exc:`KeyError`.
 
     **kwargs:**
         | ``informat``      ['auto','pdborg','charmm']
