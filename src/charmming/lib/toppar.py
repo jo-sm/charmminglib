@@ -86,9 +86,6 @@ class BasePRM(object):
             tmp = self.__class__._altFormatting % tuple(self.body)
         return '%s(%s)' % (self.__class__.__name__, tmp)
 
-    def __hash__(self):
-        raise NotImplementedError
-
     def __eq__(self, other):
         if self.__class__ != other.__class__:
             return False
@@ -234,7 +231,7 @@ class NBFixPRM(BondPRM):
 
 class Residue(object):
     """
-    TODO
+    **TODO**
     """
     def __init__(self, arg):
         super(Residue, self).__init__()

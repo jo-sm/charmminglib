@@ -17,6 +17,16 @@ from math import pi
 from charmming.const.units import RAD2DEG
 
 
+def chomp(String):
+    """
+    A copy of the perl method, it removes newlines from the end of strings.
+    """
+    if String.endswith('\n'):
+        return String[:-1]
+    else:
+        return String
+
+
 def paragraphs(iterable,splitter):
     """
     Cut a text stream up into 'paragraphs,' where partitions are

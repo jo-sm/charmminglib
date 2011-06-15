@@ -4,7 +4,7 @@
 """
 
 
-from charmming.tools import paragraphs
+from charmming.tools import cleanStrings, paragraphs
 from charmming.lib.toppar import AnglePRM, BondPRM, DihedralPRM, ImproperPRM, \
         MassPRM, NonBondPRM, NBFixPRM
 from charmming.io.basecharmm import BaseCHARMMFile
@@ -18,33 +18,27 @@ class PRMFile(BaseCHARMMFile):
     _sections = ['atom','bond','angl','thet','dihe','phi','impr','imph','cmap',
                 'nbon','nonb','nbfi','hbon','end']
 
-    _prmClass = {
-        'atom': MassPRM,
-        'angl': AnglePRM,
-        'bond': BondPRM,
-        'dihe': DihedralPRM,
-        'impr': ImproperPRM,
-        'nbon': NonBondPRM,
-        'nbfi': NBFixPRM
-        }
+    def __init__(self, filename, **kwargs):
+        super(PRMFile, self).__init__(filename, **kwargs)
+        self.parse()
 
-    def __init__(self, arg=None, **kwargs):
-        super(PRMFile, self).__init__(arg, **kwargs)
-
-    def _parse(self):
-        """
-        Reads the .prm text file, and parses the data into their relevant sections.
-        """
+    def parse(self):
+        super(PRMFile, self).parse()
         self.sectionCmd = {}
         self.sectionPrm = {}
-        #
-        iterator = ( line for line in self.body if not line.startswith('!') )
-        for taco in paragraphs(iterator, self._sections):
+        self.comments = []
+        self._parse_mass()
+
+        for taco in paragraphs(self.body, self._sections):
             try:
-                self.sectionCmd[taco[0][:4]] = taco[0]
-                self.sectionPrm[taco[0][:4]] = taco[1:]
+                if taco[0][:4] in self._sections:
+                    self.sectionCmd[taco[0][:4]] = taco[0]
+                    self.sectionPrm[taco[0][:4]] = taco[1:]
+                else:
+                    self.comments.append(taco)
             except IndexError:
                 pass
+
         # discard empties
         tmp = []
         for key, value in self.sectionPrm.iteritems():
@@ -53,6 +47,7 @@ class PRMFile(BaseCHARMMFile):
         for key in tmp:
             del self.sectionCmd[key]
             del self.sectionPrm[key]
+
         # rename sections
         def rename(old, new):
             if old in self.sectionCmd.keys():
@@ -65,14 +60,70 @@ class PRMFile(BaseCHARMMFile):
         rename('imph', 'impr')
         rename('nonb', 'nbon')
 
-    def objectify(self):
-        """
-        convert text to PRM objects
-        """
-        self.sectionObj = {}
-        for key, Value in self._prmClass.iteritems():
-            try:
-                iterator = ( Value(line) for line in self.sectionPrm[key] )
-                self.sectionObj[key] = sorted(list(set(iterator)))
-            except KeyError:
-                pass
+        # parse sections
+        self._parse_bond()
+        self._parse_angl()
+        self._parse_dihe()
+        self._parse_impr()
+        self._parse_nbon()
+        self._parse_hbon()
+        self._parse_cmap()
+
+    def _parse_mass(self):
+        tmp = []
+        for line in self.body:
+            if line.startswith('mass'):
+                tmp.append(line)
+        if tmp:
+            self.sectionCmd['mass'] = ''
+            self.sectionPrm['mass'] = tmp
+        self.mass = tmp
+
+    def _parse_bond(self):
+        try:
+            self.bond = [ BondPRM(line) for line in cleanStrings(
+                self.sectionPrm['bond'], CC='!') ]
+        except KeyError:
+            self.bond = []
+
+    def _parse_angl(self):
+        try:
+            self.angl = [ AnglePRM(line) for line in cleanStrings(
+                self.sectionPrm['angl'], CC='!') ]
+        except KeyError:
+            self.angl = []
+
+    def _parse_dihe(self):
+        try:
+            self.dihe = [ DihedralPRM(line) for line in cleanStrings(
+                self.sectionPrm['dihe'], CC='!') ]
+        except KeyError:
+            self.dihe = []
+
+    def _parse_impr(self):
+        try:
+            self.impr = [ line for line in cleanStrings(self.sectionPrm['impr'],
+                                                        CC='!') ]
+        except KeyError:
+            self.impr = []
+
+    def _parse_nbon(self):
+        try:
+            self.nbon = [ line for line in cleanStrings(self.sectionPrm['nbon'],
+                                                        CC='!') ]
+        except KeyError:
+            self.nbon = []
+
+    def _parse_hbon(self):
+        try:
+            self.hbon = [ line for line in cleanStrings(self.sectionPrm['hbon'],
+                                                        CC='!') ]
+        except KeyError:
+            self.hbon = []
+
+    def _parse_cmap(self):
+        try:
+            self.cmap = self.sectionCmd['cmap']
+        except KeyError:
+            self.cmap = []
+

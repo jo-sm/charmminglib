@@ -1,7 +1,7 @@
 
 
-import charmming.io.basecharmm
+import charmming.io.inp
 import charmming.io.pdb
 
 
-__all__ = ['basecharmm', 'pdb']
+__all__ = ['inp', 'pdb']
