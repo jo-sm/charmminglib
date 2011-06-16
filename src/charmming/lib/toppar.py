@@ -155,6 +155,13 @@ class DihedralPRM(BasePRM):
                 (prm2int(b1) + prm2int(b2)) + 36**8 * prm2int(c1)
 
 
+class HBondPRM(BasePRM):
+    """
+    """
+    def __init__(self, arg=None):
+        super(HBondPRM, self).__init__(arg)
+        raise NotImplementedError
+
 class ImproperPRM(DihedralPRM):
     """
     """
