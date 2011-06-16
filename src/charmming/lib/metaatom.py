@@ -150,11 +150,11 @@ class MetaAtom(object):
             self._init_null()
         elif isinstance(text, str):
             # card format files are whitespace sensitive
-            if inFormat == 'shortcard' or inFormat == 'longcard':
-                self._text  = text.lower()
+            if inFormat in ['crd', 'cor', 'card', 'short', 'shortcard'] or \
+                inFormat in ['xcrd', 'xcor', 'xcard', 'long', 'longcard']:
+                self._text  = text.lower().rstrip()
             else:
                 self._text  = text.lower().split(commentChar)[0].strip()
-
             self.parse(inFormat)
             self._addr0 = self.addr
         elif isinstance(text, MetaAtom):

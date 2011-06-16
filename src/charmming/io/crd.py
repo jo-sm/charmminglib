@@ -1,6 +1,10 @@
 """
 :Author: Tim Miller
 :Date: 12/29/2010
+
+**DEPRICATION:**
+With the addition of the :func:charmming.io.pdb.get_molFromCRD function,
+this module is depricated, and will be removed in the near future.
 """
 
 

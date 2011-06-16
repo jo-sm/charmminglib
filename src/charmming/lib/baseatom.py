@@ -166,21 +166,27 @@ class BaseAtom(MetaAtom):
         and neighboring chemical environment.  Typically the first
         two characters define the element, and the final two define
         the chemical environment.  However many sources do not adhere
-        to this rule
+        to this rule.
 
         **Note:** ``atomType`` should always be 4 characters long,
         and whitespace should never be stripped.
         Remember kids, ``' CA ' != 'CA  '``.
+
+        **Note:** The one exception to the above rule, that is now
+        recognized by charmming, is for elements which have a single
+        character abbreviation, and might have 3 characters denoting
+        their type, for example ``HD22``.  Other single character
+        elements should also work, however this has not been tested.
         """
         def fget(self):
             return self._atomType
         def fset(self, value):
             value = str(value).lower()
-            if len(value) > 4:
+            if len(value) > 5:
                 if self._autoFix:
-                    value = value[:4]
+                    value = value[:5]
                 else:
-                    raise AtomError('atomType %s: %s is longer than 4 characters' %
+                    raise AtomError('atomType %s: %s is longer than 5 characters' %
                                     (self.addr0, value))
             self._atomType = value
         return locals()

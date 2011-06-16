@@ -140,10 +140,11 @@ backbone = set([' n  ',' ca ',' c  ',' o  ',' ot1'])
 
 # Atom.atomType
 charmm2pdbAtomNames = {
-    'sod' :'na','sod ':'na',' sod':'na',
-    'ces' :'cs','ces ':'cs',' ces':'cs',
-    'cla' :'cl','cla ':'cl',' cla':'cl',
-    'pot' :'k' ,'pot ':'k' ,' pot':'k'
+    'sod' :'na  ','sod ':'na  ',' sod':'na  ',
+    'ces' :'cs  ','ces ':'cs  ',' ces':'cs  ',
+    'cla' :'cl  ','cla ':'cl  ',' cla':'cl  ',
+    'pot' :'k   ','pot ':'k'   ,' pot':'k   ',
+    'cal' :'ca  ','cal ':'ca  ',' cal':'ca  '
     }
 
 

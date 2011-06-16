@@ -13,29 +13,107 @@ from charmming.lib.atom import Atom
 from charmming.lib.mol import Mol, MolError
 
 
-def get_formatting(input):
+def get_formatting(filename, **kwargs):
     """
-    Takes a string representing the location of a .pdb file or an
-    iterator of strings as input, and returns a string indicating the
-    formatting of the pdb data: "pdborg", "charmm" or "unknown".
+    Takes a string representing the path to a file containing molecular
+    coordinate data, in either *.pdb* or *.crd* format, and attempts
+    to return a string representing the exact formatting of that file.
+
+    This is done by trying to apply an :class:`Atom`-like constructor
+    to lines of text in a brute force manner.  If the constructor is
+    called without raising an error the formatting is accepted.
+    Possible return values are: *'pdborg', 'charmm', 'crd', 'xcrd',
+    'unknown'*.
+
+    **kwargs:**
+        | ``atomobj`` Specify the :class:`Atom`-like constructor to use
+        defaults to :class:`Atom`.
     """
-    try:
-        iterator = ( line.lower() for line in open(input) if
-                    line.lower().startswith(('atom', 'hetatm')) )
-    except IOError:
-        iterator = ( line.lower() for line in input
-                    if line.lower().startswith(('atom', 'hetatm')) )
+    # kwargs
+    kwargs = lowerKeys(kwargs)
+    AtomObj = kwargs.get('atomobj', Atom)
+    #
+    def crd_or_pdb():
+        formatDict = {'pdborg': 'pdb', 'charmm': 'pdb', 'crd': 'crd', 'xcrd':'xcrd'}
+        for k, v in formatDict.items():
+            for line in open(filename):
+                try:
+                    dummy = AtomObj(line, informat=k)
+                    return v
+                except:
+                    pass
+        return 'unknown'
+    tmp = crd_or_pdb()
+    if tmp == 'pdb': # differentiate between pdborg and charmm types
+        iterator = ( line.lower() for line in open(filename) )
+        iterator = ( line for line in iterator if
+                    line.startswith(('atom', 'hetatm')) )
+        for line in iterator:
+            if line[21:22] == ' ' and line[72:73] in alphanum:
+                return 'charmm'
+            elif line[21:22] in alphanum and line[12:14].strip() == line[66:].strip(): # this might have a funny corner case with a 'he22' type atomType
+                return 'pdborg'
+        return 'unknown'
+    else:
+        return tmp
+
+
+#def get_formatting(input):
+#    """
+#    Takes a string representing the location of a .pdb file or an
+#    iterator of strings as input, and returns a string indicating the
+#    formatting of the pdb data: "pdborg", "charmm" or "unknown".
+#    """
+#    try:
+#        iterator = ( line.lower() for line in open(input) if
+#                    line.lower().startswith(('atom', 'hetatm')) )
+#    except IOError:
+#        iterator = ( line.lower() for line in input
+#                    if line.lower().startswith(('atom', 'hetatm')) )
+#    for line in iterator:
+#        if line[21:22] == ' ' and line[72:73] in alphanum:
+#            return 'charmm'
+#        elif line[21:22] in alphanum and line[12:14].strip() == line[66:].strip():
+#            return 'pdborg'
+#    return 'unknown'
+
+def get_molFromCRD(filename, **kwargs):
+    """
+    A function that returns a single :class:`Mol` object from a single
+    *.crd* text file.
+
+    **kwargs:**
+        | ``atomobj`` Specify the :class:`Atom`-like constructor to use
+        defaults to :class:`Atom`.
+        | ``informat`` Specify the plaintext formatting of the file,
+        defaults to *'auto'*.
+    """
+    # kwargs
+    kwargs = lowerKeys(kwargs)
+    AtomObj = kwargs.get('atomobj', Atom)
+    inFormat = kwargs.get('informat', 'auto')
+    #
+    if inFormat == 'auto':
+        inFormat = get_formatting(filename, **kwargs)
+        if inFormat == 'unknown':
+            raise AssertionError('Unknown formatting type, quitting.\n')
+    kwargs['informat'] = inFormat
+    #
+    iterator = ( line.lower().rstrip() for line in open(filename) )
+    tmp = []
     for line in iterator:
-        if line[21:22] == ' ' and line[72:73] in alphanum:
-            return 'charmm'
-        elif line[21:22] in alphanum and line[12:14].strip() == line[66:].strip():
-            return 'pdborg'
-    return 'unknown'
+        try:
+            dummy = AtomObj(line, **kwargs)
+            tmp.append(dummy)
+        except:
+            pass
+    return Mol(tmp, **kwargs)
 
-
-def get_simpleMol(filename, **kwargs):
+def get_molFromPDB(filename, **kwargs):
     """
-    A function for creating single ``Mol`` objects from a .pdb text file.
+    A function that returns a single :class:`Mol` object from a single
+    *.pdb* text file.
+
     Useful if you do not need the additional features provided by a
     ``PDBFile`` object.  If the input .pdb text file contains more than one
     model, a ``MolError`` will be raised due to ambiguity.
