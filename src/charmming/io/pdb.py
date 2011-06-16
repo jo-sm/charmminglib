@@ -188,7 +188,7 @@ class PDBFile(object):
     a .pdb file named using CHARMMing conventions.
     """
 
-    def __init__(self, filename, **kwargs):
+    def __init__(self, filename=None, **kwargs):
         super(PDBFile, self).__init__()
         # kwargs
         kwargs = lowerKeys(kwargs)
@@ -199,32 +199,38 @@ class PDBFile(object):
         self._verbose = kwargs.get('verbose', False)
         #
         self.warnings = []
-        # Filename
-        self.filename = filename
-        if self._verbose:
-            print 'Parsing data from `%s`\n' % filename
-        # Partitioning
-        self._partitions()          # self.header / self.crd / self.footer
-        # Input Formatting
-        if inFormat == 'auto':
-            self._inFormat = self._get_formatting(self.filename)
-        else:
-            self._inFormat = inFormat
-        if self._verbose:
-            print '%s: Input formatting set to `%s`' % (self.code, self.inFormat)
-        # auto fixing
-        if fix_chainid:
-            if self._verbose:
-                print '%s: Fixing `chainid`s' % self.code
-            self._fix_chainids()
-        #TODO Implement fix_resids
-        if fix_resid:
-            if self._verbose:
-                print '%s: Fixing `resid`s' % self.code
-            #self._fix_resids()
-        # Processing
         self._mols = {}
-        self._build_models()
+        if filename is not None:
+            # Filename
+            self.filename = filename
+            if self._verbose:
+                print 'Parsing data from `%s`\n' % filename
+            # Partitioning
+            self._partitions()          # self.header / self.crd / self.footer
+            # Input Formatting
+            if inFormat == 'auto':
+                self._inFormat = self._get_formatting(self.filename)
+            else:
+                self._inFormat = inFormat
+            if self._verbose:
+                print '%s: Input formatting set to `%s`' % (self.code, self.inFormat)
+            # auto fixing
+            if fix_chainid:
+                if self._verbose:
+                    print '%s: Fixing `chainid`s' % self.code
+                self._fix_chainids()
+            #TODO Implement fix_resids
+            if fix_resid:
+                if self._verbose:
+                    print '%s: Fixing `resid`s' % self.code
+                #self._fix_resids()
+            # Processing
+            self._build_models()
+        else:
+            self.filename = 'null'
+            self._header = 'null'
+            self._crd = 'null'
+            self._footer = 'null'
 
 ##############
 # Properties #
