@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Installation script for standalone usage of charmminglib.
+Installation script for standalone usage of pychmlib.
 
 :Author: fcp
 :Date: 10/28/2010
@@ -14,24 +14,24 @@ import sys
 # Make sure python version is 2.6 or 2.7
 ver = sys.version_info
 if not (ver[0] == 2 and ver[1] in [6,7]):
-    print '\ncharmming requires python version 2.6.x or 2.7.x to function properly\n'
+    print '\npychm requires python version 2.6.x or 2.7.x to function properly\n'
     sys.exit(1)
 
 
 setup(
-    name = 'charmming',
+    name = 'pychm',
     version = '0.2',
-    description = 'Python backend to CHARMMing',
+    description = 'Python backend to pychm',
     author = 'Frank C. Pickard IV and Tim Miller',
     author_email = 'pickard81@gmail.com, btamiller@gmail.com',
-    url = 'www.charmming.googlecode.com/svn/',
+    url = 'www.pychm.googlecode.com/svn/',
     packages = [
-        'charmming', 'charmming.analysis', 'charmming.cg',
-        'charmming.cg.analysis', 'charmming.const', 'charmming.io',
-        'charmming.lib', 'charmming.scripts'
+        'pychm', 'pychm.analysis', 'pychm.cg',
+        'pychm.cg.analysis', 'pychm.const', 'pychm.io',
+        'pychm.lib', 'pychm.scripts'
         ],
-    package_dir = {'charmming': 'src/charmming'},
-    package_data = {'charmming': ['data/*']},
+    package_dir = {'pychm': 'src/pychm'},
+    package_data = {'pychm': ['data/*']},
     requires = ['numpy'],
     license = 'Public Domain',
     classifiers = [

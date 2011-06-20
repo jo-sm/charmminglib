@@ -20,6 +20,7 @@
     :maxdepth: 2
     
     io/basecharmm
+    io/inp
     io/crd
     io/prm
     io/psf
