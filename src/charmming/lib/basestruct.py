@@ -341,6 +341,19 @@ class BaseStruct(list):
         else:
             return I
 
+    def get_span(self):
+        """
+        Returns a 3-tuple which represents the span (max - min)for
+        the x, y and z coordinates.
+        """
+        iterator = ( crd for atom in self for crd in atom.cart )
+        tmp = fromiter(iterator, float)
+        tmp.resize((len(self), 3))
+        x = tmp[:,0]
+        y = tmp[:,1]
+        z = tmp[:,2]
+        return (x.max() - x.min(), y.max() - y.min(), z.max() - z.min())
+
     def orient(self):
         """
         This method centers the atom selection about the origin, and
