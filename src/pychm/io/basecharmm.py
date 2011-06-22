@@ -15,12 +15,12 @@ class BaseCHARMMFile(object):
     def __init__(self, filename, **kwargs):
         super(BaseCHARMMFile, self).__init__()
         self.filename = filename
+        self.header = []
+        self.body = []
 
     def parse(self):
         """
         """
-        self.header = []
-        self.body = []
         iterator = ( line.strip() for line in open(self.filename) )
         iterator = ( line for line in iterator if line )
         for line in iterator:

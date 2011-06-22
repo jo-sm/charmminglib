@@ -28,9 +28,11 @@ class BasePRM(object):
         #
         if isinstance(arg, str):
             arg = arg.lower()
+            tmp = arg.split('!')
+            arg = tmp[0]
             try:
-                arg, self.comment = arg.split('!',1)
-            except ValueError:
+                self.comment = '!'.join(tmp[1:])
+            except IndexError:
                 self.comment = ''
             self.parse(arg)
         elif arg is None:
@@ -55,7 +57,7 @@ class BasePRM(object):
                 taco = self.__class__._formatting + ' ! %s'
                 try:
                     taco = taco % tuple(tmp)
-                except TyprError:
+                except TypeError:
                     taco = self.__class__._altFormatting + ' ! %s'
                     taco = taco % tuple(tmp)
             else:
@@ -197,7 +199,7 @@ class MassPRM(BasePRM):
                 taco = taco % tuple(tmp)
             else:
                 taco = self.__class__._formatting % tuple(tmp)
-            return taco.upper()
+            return taco
         else:
             return ''
 
@@ -208,6 +210,10 @@ class MassPRM(BasePRM):
     def _set_hash(self):
         a1 = self.body[0]
         self._hash = prm2int(a1)
+
+    def __repr__(self):
+        tmp = self.__class__._formatting % tuple([0] + self.body)
+        return '%s(%s)' % (self.__class__.__name__, tmp)
 
 
 class NonBondPRM(BasePRM):

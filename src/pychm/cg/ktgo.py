@@ -468,9 +468,8 @@ class KTGo(Mol):
             for line in String:
                 print line.upper()
         else:
-            String = '\n'.join(String).upper()
             writeTo = open(filename, 'w')
-            writeTo.write(String)
+            writeTo.write('\n'.join(String).upper())
             writeTo.close()
 
 ###################

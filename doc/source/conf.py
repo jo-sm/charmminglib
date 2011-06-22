@@ -37,7 +37,7 @@ source_encoding = 'utf-8'
 master_doc = 'index'
 
 # General information about the project.
-project = u'charmminglib'
+project = u'tacochem'
 copyright = u'2010-2011, The CHARMMing team'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -60,7 +60,7 @@ release = '0.2'
 #today_fmt = '%B %d, %Y'
 
 # List of documents that shouldn't be included in the build.
-#unused_docs = []
+unused_docs = []
 
 # List of directories, relative to source directory, that shouldn't be searched
 # for source files.
@@ -70,7 +70,7 @@ exclude_trees = []
 #default_role = None
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
-#add_function_parentheses = True
+add_function_parentheses = True
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).

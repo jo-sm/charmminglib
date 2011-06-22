@@ -149,15 +149,24 @@ def out2inp(iterable,lookFor='CHARMM>',CC='!',maxDrought=1000):
             return
 
 
-def logicalLines(iterable,continueChar='-'):
+def logicalLines(iterable, **kwargs):
     """
     Convert an iterable of physical lines with `continueChar` into
     an iterator of logical lines.
+
+    **kwargs:**
+        | ``continuechar`` # defaults to '-'
+        | ``commentchar`` # defaults to '!'
     """
+    # kwargs
+    kwargs = lowerKeys(kwargs)
+    continueChar = kwargs.get('continuechar', '-')
+    commentChar = kwargs.get('commentchar', '!')
+    #
     iterable = ( line.strip() for line in iterable )
     tmp = []
     for line in iterable:
-        if line.endswith(continueChar):
+        if line.split(commentChar)[0].endswith(continueChar):
             tmp.append(line[:-1])
         else:
             if tmp:
