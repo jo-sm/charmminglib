@@ -22,13 +22,13 @@ class BaseCHARMMFile(object):
         """
         """
         iterator = ( line.strip() for line in open(self.filename) )
-        iterator = ( line for line in iterator if line )
+        iterator = ( line.lower() for line in iterator if line )
         for line in iterator:
             if line.startswith('*'):
-                self.header.append(line[1:].lower())
+                self.header.append(line[1:])
             else:
                 iterator = chain([line], iterator) # rewind by one
                 break
         for line in iterator:
-            self.body.append(line.lower())
+            self.body.append(line)
 

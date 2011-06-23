@@ -116,9 +116,9 @@ def mkdir(path):
 
     >>> mkdir('~/python/projects/taco/sauce')
     """
-    value = expandPath(value).split(os.sep)[1:]
+    path = expandPath(path).split(os.sep)[1:]
     tmp = os.sep
-    for entry in value:
+    for entry in path:
         tmp += '%s%s' % (entry,os.sep)
         try:
             os.mkdir(tmp)

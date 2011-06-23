@@ -30,7 +30,7 @@ class PRMFile(BaseCHARMMFile):
     def parse(self):
         super(PRMFile, self).parse()
         self._parse_mass()
-        iterator = ( line for line in self.body if not line.lstrip().startswith('!') )
+        iterator = ( line for line in self.body if not line.startswith('!') )
         iterator = paragraphs(logicalLines(iterator), self._sections)
         for taco in iterator:
             try:
@@ -127,47 +127,49 @@ class PRMFile(BaseCHARMMFile):
         tmp = [ line for line in self.body if line.startswith('mass') ]
         if tmp:
             self.sectionPrm['atom'] = tmp
-            self.atom = [ MassPRM(line) for line in tmp ]
+            self.atom = map(MassPRM, tmp)
+        else:
+            self.atom = []
 
     def _parse_bond(self):
         try:
-            self.bond = [ BondPRM(line) for line in self.sectionPrm['bond'] ]
+            self.bond = map(BondPRM, self.sectionPrm['bond'])
         except KeyError:
             self.bond = []
 
     def _parse_angl(self):
         try:
-            self.angl = [ AnglePRM(line) for line in self.sectionPrm['angl'] ]
+            self.angl = map(AnglePRM, self.sectionPrm['angl'])
         except KeyError:
             self.angl = []
 
     def _parse_dihe(self):
         try:
-            self.dihe = [ DihedralPRM(line) for line in self.sectionPrm['dihe'] ]
+            self.dihe = map(DihedralPRM, self.sectionPrm['dihe'])
         except KeyError:
             self.dihe = []
 
     def _parse_impr(self):
         try:
-            self.impr = [ ImproperPRM(line) for line in self.sectionPrm['impr'] ]
+            self.impr = map(ImproperPRM, self.sectionPrm['impr'])
         except KeyError:
             self.impr = []
 
     def _parse_nbon(self):
         try:
-            self.nbon = [ NonBondPRM(line) for line in self.sectionPrm['nbon'] ]
+            self.nbon = map(NonBondPRM, self.sectionPrm['nbon'])
         except KeyError:
             self.nbon = []
 
     def _parse_nbfi(self):
         try:
-            self.nbfi = [ NBFixPRM(line) for line in self.sectionPrm['nbfi'] ]
+            self.nbfi = map(NBFixPRM, self.sectionPrm['nbfi'])
         except KeyError:
             self.nbfi = []
 
     def _parse_hbon(self):
         try:
-            self.hbon = [ HBondPRM(line) for line in self.sectionPrm['hbon'] ]
+            self.hbon = map(HBondPRM, self.sectionPrm['hbon'])
         except KeyError:
             self.hbon = []
 
