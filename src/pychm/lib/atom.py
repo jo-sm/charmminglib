@@ -272,6 +272,9 @@ class Atom(BaseAtom):
             except KeyError:
                 if len(tmp) == 4:
                     self._atomType = ' %s' % tmp
+                elif len(tmp) in [2, 3]:
+                    tmp = '%s  ' % tmp
+                    self._atomType = tmp[:4]
                 else:
                     tmp = ' %s  ' % tmp
                     self._atomType = tmp[:4]

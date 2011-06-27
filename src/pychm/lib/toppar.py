@@ -40,6 +40,9 @@ class BasePRM(object):
         else:
             raise TypeError('argument should be a string')
 
+    def is_wild(self):
+        return 'x' in self.body
+
     def parse(self, arg):
         self.body = arg.split()
         for i in range(len(self.body)):
@@ -47,7 +50,6 @@ class BasePRM(object):
                 self.body[i] = float(self.body[i])
             except ValueError:
                 pass
-        self._set_hash()
 
     def Print(self):
         if self.body:
@@ -69,13 +71,13 @@ class BasePRM(object):
         else:
             return ''
 
-    def _set_hash(self):
+    def _set_sort(self):
         raise NotImplementedError
 
     def _init_null(self):
         self.body = []
         self.comment = ''
-        self._hash = 0
+        self._sort = 0
 
 ###################
 # Special Methods #
@@ -88,28 +90,27 @@ class BasePRM(object):
             tmp = self.__class__._altFormatting % tuple(self.body)
         return '%s(%s)' % (self.__class__.__name__, tmp)
 
+    # STUB
     def __eq__(self, other):
-        if self.__class__ != other.__class__:
-            return False
-        return self.__hash__() == other.__hash__()
+        raise NotImplementedError
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
     def __lt__(self, other):
-        return self.__hash__() < other.__hash__()
+        return self._sort < other._sort
 
     def __le__(self, other):
-        return self.__hash__() <= other.__hash__()
+        return self._sort <= other._sort
 
     def __gt__(self, other):
-        return self.__hash__() > other.__hash__()
+        return self._sort > other._sort
 
     def __ge__(self, other):
-        return self.__hash__() >= other.__hash__()
+        return self._sort >= other._sort
 
     def __hash__(self):
-        return self._hash
+        return hash(self._sort)
 
 
 class AnglePRM(BasePRM):
@@ -121,10 +122,17 @@ class AnglePRM(BasePRM):
 
     def __init__(self, arg=None):
         super(AnglePRM, self).__init__(arg)
+        if not self.body[0] < self.body[2]:
+            self.body[0], self.body[2] = self.body[2], self.body[0]
+        self._set_sort()
 
-    def _set_hash(self):
-        a1, b1, a2 = self.body[:3]
-        self._hash = prm2int(a1) + prm2int(a2) + 36**4 * prm2int(b1)
+    def __eq__(self, other):
+        if self.__class__ != other.__class__:
+            return False
+        return self.body[:3] == other.body[:3]
+
+    def _set_sort(self):
+        self._sort = '%-8s%-8s%-8s' % tuple(self.body[:3])
 
 
 class BondPRM(BasePRM):
@@ -135,10 +143,17 @@ class BondPRM(BasePRM):
 
     def __init__(self, arg=None):
         super(BondPRM, self).__init__(arg)
+        if not self.body[0] < self.body[1]:
+            self.body[0], self.body[1] = self.body[1], self.body[0]
+        self._set_sort()
 
-    def _set_hash(self):
-        a1, a2 = self.body[:2]
-        self._hash = prm2int(a1) + prm2int(a2)
+    def __eq__(self, other):
+        if self.__class__ != other.__class__:
+            return False
+        return self.body[:2] == other.body[:2]
+
+    def _set_sort(self):
+        self._sort = '%-8s%-8s' % tuple(self.body[:2])
 
 
 class DihedralPRM(BasePRM):
@@ -149,12 +164,20 @@ class DihedralPRM(BasePRM):
 
     def __init__(self, arg=None):
         super(DihedralPRM, self).__init__(arg)
+        if not self.body[0] < self.body[3]:
+            self.body[0], self.body[3] = self.body[3], self.body[0]
+            self.body[1], self.body[2] = self.body[2], self.body[1]
+        self._set_sort()
 
-    def _set_hash(self):
-        a1, b1, b2, a2 = self.body[:4]
-        c1 = str(int(self.body[5]))
-        self._hash = prm2int(a1) + prm2int(a2) + 36**4 * \
-                (prm2int(b1) + prm2int(b2)) + 36**8 * prm2int(c1)
+    def __eq__(self, other):
+        if self.__class__ != other.__class__:
+            return False
+        return self.body[:4] == other.body[:4] and self.body[5] == other.body[5]
+
+    def _set_sort(self):
+        tmp = self.body[:6]
+        tmp.pop(4)
+        self._sort = '%-8s%-8s%-8s%-8s%2s' % tuple(map(str,tmp[:5]))
 
 
 class HBondPRM(BasePRM):
@@ -163,6 +186,7 @@ class HBondPRM(BasePRM):
     def __init__(self, arg=None):
         super(HBondPRM, self).__init__(arg)
         raise NotImplementedError
+        self._set_sort()
 
 class ImproperPRM(DihedralPRM):
     """
@@ -179,6 +203,7 @@ class MassPRM(BasePRM):
 
     def __init__(self, arg=None):
         super(MassPRM, self).__init__(arg)
+        self._set_sort()
 
     def parse(self, arg):
         self.body = arg.split()[2:]
@@ -187,7 +212,7 @@ class MassPRM(BasePRM):
                 self.body[i] = float(self.body[i])
             except ValueError:
                 pass
-        self._set_hash()
+        self._set_sort()
         self.index = 0
 
     def Print(self):
@@ -207,13 +232,17 @@ class MassPRM(BasePRM):
         super(MassPRM, self)._init_null()
         self.index = 0
 
-    def _set_hash(self):
-        a1 = self.body[0]
-        self._hash = prm2int(a1)
+    def __eq__(self, other):
+        if self.__class__ != other.__class__:
+            return False
+        return self.body[0] == other.body[0]
 
     def __repr__(self):
         tmp = self.__class__._formatting % tuple([0] + self.body)
         return '%s(%s)' % (self.__class__.__name__, tmp)
+
+    def _set_sort(self):
+        self._sort = '%-8s' % self.body[0]
 
 
 class NonBondPRM(BasePRM):
@@ -225,10 +254,15 @@ class NonBondPRM(BasePRM):
 
     def __init__(self, arg=None):
         super(NonBondPRM, self).__init__(arg)
+        self._set_sort()
 
-    def _set_hash(self):
-        a1 = self.body[0]
-        self._hash = prm2int(a1)
+    def __eq__(self, other):
+        if self.__class__ != other.__class__:
+            return False
+        return self.body[0] == other.body[0]
+
+    def _set_sort(self):
+        self._sort = '%-8s' % self.body[0]
 
 
 class NBFixPRM(BondPRM):

@@ -86,7 +86,7 @@ def parse(pdbFilename, **kwargs):
     if modelNum == 'auto':
         thisMol = pdb.iter_models().next()
     else:
-        thisMol = pdb['model%d' % int(modelNum)]
+        thisMol = pdb[modelNum]
     if verbose:
         print '%s: Loading `%s`' % (pdb.code, thisMol.name)
     # Determine explicit output Path

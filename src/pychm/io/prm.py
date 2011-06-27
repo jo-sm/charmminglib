@@ -21,22 +21,22 @@ class PRMFile(BaseCHARMMFile):
 
     def __init__(self, filename=None, **kwargs):
         super(PRMFile, self).__init__(filename, **kwargs)
-        self.sectionCmd = {}
-        self.sectionPrm = {}
+        self.cmd = {}
+        self.prm = {}
         self.comments = []
+        self.warnings = []
         if filename is not None:
             self.parse()
 
     def parse(self):
         super(PRMFile, self).parse()
-        self._parse_mass()
         iterator = ( line for line in self.body if not line.startswith('!') )
         iterator = paragraphs(logicalLines(iterator), self._sections)
         for taco in iterator:
             try:
                 if taco[0][:4] in self._sections:
-                    self.sectionCmd[taco[0][:4]] = taco[0]
-                    self.sectionPrm[taco[0][:4]] = taco[1:]
+                    self.cmd[taco[0][:4]] = taco[0]
+                    self.prm[taco[0][:4]] = taco[1:]
                 else:
                     self.comments.append(taco)
             except IndexError:
@@ -44,33 +44,40 @@ class PRMFile(BaseCHARMMFile):
 
         # discard empties
         tmp = []
-        for key, value in self.sectionPrm.iteritems():
+        for key, value in self.prm.iteritems():
             if not value:
                 tmp.append(key)
         for key in tmp:
-            del self.sectionCmd[key]
-            del self.sectionPrm[key]
+            try:
+                del self.cmd[key]
+            except KeyError:
+                pass
+            try:
+                del self.prm[key]
+            except KeyError:
+                pass
 
         # rename sections
         def rename(old, new):
-            if old in self.sectionCmd.keys():
-                self.sectionCmd[new] = self.sectionCmd[old]
-                del self.sectionCmd[old]
-                self.sectionPrm[new] = self.sectionPrm[old]
-                del self.sectionPrm[old]
+            if old in self.cmd.keys():
+                self.cmd[new] = self.cmd[old]
+                del self.cmd[old]
+                self.prm[new] = self.prm[old]
+                del self.prm[old]
         rename('thet', 'angl')
         rename('phi', 'dihe')
         rename('imph', 'impr')
         rename('nonb', 'nbon')
 
         # parse sections
-        self._parse_bond()
-        self._parse_angl()
-        self._parse_dihe()
-        self._parse_impr()
-        self._parse_nbon()
-        self._parse_nbfi()
-        # self._parse_hbon() TODO -- implement HBondPRM objects in lib.toppar
+        self._parse('atom', MassPRM)
+        self._parse('bond', BondPRM)
+        self._parse('angl', AnglePRM)
+        self._parse('dihe', DihedralPRM)
+        self._parse('impr', ImproperPRM)
+        self._parse('nbon', NonBondPRM)
+        self._parse('nbfi', NBFixPRM)
+        # self._parse('hbon', HBondPRM) TODO -- implement HBondPRM objects in lib.toppar
         self._parse_cmap()
 
     def write(self, filename=None):
@@ -79,8 +86,8 @@ class PRMFile(BaseCHARMMFile):
         def get_section(name):
             tmp = []
             try:
-                tmp.append(self.sectionCmd[name])
-                iterator = ( prm.Print() for prm in getattr(self, name) )
+                tmp.append(self.cmd[name])
+                iterator = ( prm.Print() for prm in self.prm[name] )
                 tmp.extend(iterator)
                 tmp.append('')
             except KeyError:
@@ -95,10 +102,13 @@ class PRMFile(BaseCHARMMFile):
         tmp.append('')
         #
         # atom
-        i = 1
-        for prm in self.atom:
-            prm.index = i
-            i += 1
+        try:
+            i = 1
+            for prm in self.prm['atom']:
+                prm.index = i
+                i += 1
+        except KeyError:
+            pass
         tmp.extend(get_section('atom'))
         tmp.extend(get_section('bond'))
         tmp.extend(get_section('angl'))
@@ -108,6 +118,11 @@ class PRMFile(BaseCHARMMFile):
         tmp.extend(get_section('nbfi'))
 
         # cmap -- OO cmap not implemented
+        try:
+            tmp.append(self.cmd['cmap'])
+            tmp.extend(self.prm['cmap'])
+        except KeyError:
+            pass
         # TODO hbon -- hbon not yet implemented
 
         #
@@ -123,71 +138,88 @@ class PRMFile(BaseCHARMMFile):
 # Private Methods #
 ###################
 
-    def _parse_mass(self):
-        tmp = [ line for line in self.body if line.startswith('mass') ]
-        if tmp:
-            self.sectionPrm['atom'] = tmp
-            self.atom = map(MassPRM, tmp)
-        else:
-            self.atom = []
-
-    def _parse_bond(self):
-        try:
-            self.bond = map(BondPRM, self.sectionPrm['bond'])
-        except KeyError:
-            self.bond = []
-
-    def _parse_angl(self):
-        try:
-            self.angl = map(AnglePRM, self.sectionPrm['angl'])
-        except KeyError:
-            self.angl = []
-
-    def _parse_dihe(self):
-        try:
-            self.dihe = map(DihedralPRM, self.sectionPrm['dihe'])
-        except KeyError:
-            self.dihe = []
-
-    def _parse_impr(self):
-        try:
-            self.impr = map(ImproperPRM, self.sectionPrm['impr'])
-        except KeyError:
-            self.impr = []
-
-    def _parse_nbon(self):
-        try:
-            self.nbon = map(NonBondPRM, self.sectionPrm['nbon'])
-        except KeyError:
-            self.nbon = []
-
-    def _parse_nbfi(self):
-        try:
-            self.nbfi = map(NBFixPRM, self.sectionPrm['nbfi'])
-        except KeyError:
-            self.nbfi = []
-
-    def _parse_hbon(self):
-        try:
-            self.hbon = map(HBondPRM, self.sectionPrm['hbon'])
-        except KeyError:
-            self.hbon = []
-
     def _parse_cmap(self):
         try:
-            self.cmap = self.sectionCmd['cmap']
+            self.prm['cmap'] = self.prm['cmap']
         except KeyError:
-            self.cmap = []
+            pass
+
+    def _parse(self, section, obj):
+        try:
+            self.prm[section] = sorted(map(obj, self.prm[section]))
+            wild = []
+            not_wild = []
+            for prm in self.prm[section]:
+                if prm.is_wild():
+                    wild.append(prm)
+                else:
+                    not_wild.append(prm)
+            self.prm[section] = wild + not_wild
+        except KeyError:
+            pass
 
 ###################
 # Special Methods #
 ###################
 
     def __repr__(self):
-        return '%s(%r)' % (self.__class__.__name__, self.sectionPrm.keys())
-
-    def __getitem__(self, key):
-        return getattr(self, key)
+        return '%s(%r)' % (self.__class__.__name__, self.prm.keys())
 
     def __add__(self, other):
-        tmp = deepcopy(self)
+        def merge_section(obj, name):
+            tmp = []
+            try:
+                tmp.extend(self.prm[name])
+            except KeyError:
+                pass
+            try:
+                for prm in other.prm[name]:
+                    if prm not in tmp:
+                        tmp.append(prm)
+                    else:
+                        print 'Warning, duplicate parameters found in %s section!\n' % name
+                        print '%r\n' % prm
+                        print 'Keeping parameter from original (left) prm object\n'
+                        obj.warnings.append('Duplicate PRM: %r' % prm)
+            except KeyError:
+                pass
+            if tmp:
+                # prm
+                obj.prm[name] = tmp
+                # cmd
+                obj.cmd[name] = ''
+                try:
+                    obj.cmd[name] = self.cmd[name]
+                except KeyError:
+                    try:
+                        obj.cmd[name] = other.cmd[name]
+                    except KeyError:
+                        pass
+                if not obj.cmd[name]:
+                    print 'Warning, no CMD found for %s section!\n' % name
+                    obj.warnings.append('No CMD for %s' % name)
+            return
+        #
+        taco = PRMFile()
+        taco.header = self.header + other.header
+        #
+        merge_section(taco, 'atom')
+        merge_section(taco, 'bond')
+        merge_section(taco, 'angl')
+        merge_section(taco, 'dihe')
+        merge_section(taco, 'impr')
+        merge_section(taco, 'nbon')
+        merge_section(taco, 'nbfi')
+        merge_section(taco, 'hbon')
+        # cmap
+        try:
+            taco.prm['cmap'] = self.prm['cmap'][:]
+        except KeyError:
+            try:
+                taco.prm['cmap'] = other.prm['cmap'][:]
+            except KeyError:
+                pass
+        if 'cmap' in taco.prm.keys():
+            taco.cmd['cmap'] = 'cmap'
+        #
+        return taco

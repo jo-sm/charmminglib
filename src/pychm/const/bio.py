@@ -143,7 +143,7 @@ charmm2pdbAtomNames = {
     'sod' :'na  ','sod ':'na  ',' sod':'na  ',
     'ces' :'cs  ','ces ':'cs  ',' ces':'cs  ',
     'cla' :'cl  ','cla ':'cl  ',' cla':'cl  ',
-    'pot' :'k   ','pot ':'k'   ,' pot':'k   ',
+    'pot' :' k  ','pot ':' k  ',' pot':' k  ',
     'cal' :'ca  ','cal ':'ca  ',' cal':'ca  '
     }
 
@@ -153,7 +153,7 @@ dna = set(['da','dg','dt','dc'])
 
 
 # Atom.resName
-good = set(['hoh','tip3','ip3''zn2','sod','ces','cla','cal','pot','zn','fe',
+good = set(['hoh','tip3','ip3','zn2','sod','ces','cla','cal','pot','zn','fe',
             'na','ca','mg','cs','k','cl'])
 
 
