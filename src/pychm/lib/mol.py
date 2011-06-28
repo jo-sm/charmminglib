@@ -280,9 +280,87 @@ class Mol(BaseStruct):
         Becomes:
 
         ``15  CE  MET A   1      16.764  26.891  42.696  0.73 60.01           C``
+
+        **Note:**
+            | This implementation currently iterates over `segments` and
+            | not `residues`.  The upshot of this is that there is a nasty
+            | corner case where you might have a break in a residue, only
+            | the resnames are such that an atom is erroneously deleted.
+            | An example to illuminate...
+
+        For example:
+
+        ``15  CE AMET A   1      16.764  26.891  42.696  0.73 60.01           C``
+        ``16  CE BMET A   2      18.983  29.323  38.169  0.27 60.30           C``
+
+        Should become:
+
+        ``15  CE  MET A   1      16.764  26.891  42.696  0.73 60.01           C``
+        ``16  CE  MET A   2      18.983  29.323  38.169  0.27 60.30           C``
+
+        Instead becomes:
+
+        ``15  CE  MET A   1      16.764  26.891  42.696  0.73 60.01           C``
+        """
+        delete_me = []
+        for seg in self.iter_seg():
+            tmp = []
+            for i, atom in enumerate(seg):
+                try:
+                    # check if the resname is 4 chars long
+                    if len(atom.resName) < 4:
+                        continue
+                    # Comparison atom
+                    comp = seg[i + 1]
+                    if len(comp.resName) < 4:
+                        raise AssertionError
+                    # check first char of comp atom
+                    # if comp is bigger, buffer this atom
+                    if atom.resName[0] < comp.resName[0]:
+                        tmp.append(atom)
+                    else:
+                        raise AssertionError
+                except (AssertionError, IndexError):
+                    tmp.append(atom)
+                    maxWeight = max(( atom1.weight for atom1 in tmp ))
+                    # Write Notes
+                    for atom1 in tmp:
+                        if atom1.weight == maxWeight:
+                            atom1.note = 'rename'
+                            break
+                        else:
+                            atom1.note = 'delete'
+                    # Process Notes
+                    for atom1 in tmp:
+                        try:
+                            if atom1.note == 'rename':
+                                atom1.resName = atom1.resName[1:]
+                            elif atom1.note == 'delete':
+                                delete_me.append(atom1)
+                            else:
+                                raise WTFError
+                            del atom1.note
+                        except AttributeError:
+                            delete_me.append(atom1)
+                    tmp = []
+        self.del_atoms(delete_me)
+
+    def _old_fix_multiModels(self):
+        """
+        Searches for multi-model sections, and "fixes" them. Renames
+        residues, and deletes atoms.
+
+        For example:
+
+        ``15  CE AMET A   1      16.764  26.891  42.696  0.73 60.01           C``
+        ``16  CE BMET A   1      18.983  29.323  38.169  0.27 60.30           C``
+
+        Becomes:
+
+        ``15  CE  MET A   1      16.764  26.891  42.696  0.73 60.01           C``
         """
         delete_these = []
-        residues = ( res for res in self.iter_res() if len(res.resName) == 4 )
+        residues = ( res for res in self.iter_res() )
         for res in residues:
             resLen = len(res)
             if resLen < 2: continue
@@ -290,13 +368,20 @@ class Mol(BaseStruct):
             keep = False
             for i,atom in enumerate(res):
                 try:
+                    # Check if the resname is 4 characters long
+                    if len(atom.resName) < 4:
+                        if tmp:
+                            tmp2 = ''
+                            raise AssertionError
+                        else:
+                            continue
                     # Comparison atom:
                     ##### check ahead if first, check behind for all others
                     if i == 0:
                         comp = res[1]
                     else:
                         comp = res[i - 1]
-                    # Check last 3 chars are different, and first char is the same.
+                    # Check last 3 chars are the same , and first char is the same.
                     # for example: AMET and BMET
                     if atom.resName[-3:] == comp.resName[-3:] and \
                         atom.resName[0] != comp.resName[0]:
