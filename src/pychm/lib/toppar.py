@@ -5,7 +5,7 @@
 
 
 from pychm.const import alphanum2num
-from pychm.tools import Property, lowerKeys
+from pychm.tools import Property, lowerKeys, cleanStrings, paragraphs, flatten
 
 
 def prm2int(arg):
@@ -276,12 +276,38 @@ class NBFixPRM(BondPRM):
         super(NBFixPRM, self).__init__(arg)
 
 
-class Residue(object):
+class TopRes(object):
     """
     **TODO**
     """
     def __init__(self, arg):
-        super(Residue, self).__init__()
+        super(TopRes, self).__init__()
+        tmp1 = []
+        tmp2 = []
+        for line in cleanStrings(arg, CC='!'):
+            if line.startswith(('group', 'atom')):
+                tmp1.append(line) # atom data
+            else:
+                tmp2.append(line) # everything else
+        # turn tmp1 into a list
+        self.groups = []
+        for group in paragraphs(tmp1, ['grou']):
+            self.groups.append([ tuple(line.split()[1:]) for line in group[1:] ])
+        self.atoms = flatten(self.groups, ltypes=list)
+        # turn tmp2 into a dict
+        meta = {}
+        for line in tmp2:
+            key = line.split()[0]
+            value = line.split(key)[1].lstrip()
+            if key not in meta.keys():
+                meta[key] = [value]
+            else:
+                meta[key].append(value)
+        self.meta = meta
+        # dicts
+        self.chemDict = dict(( line[:2] for line in self.atoms ))
+        self.chargeDict = dict(( [line[0], float(line[2])] for line in self.atoms ))
+
 
 
 """

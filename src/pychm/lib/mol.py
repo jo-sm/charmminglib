@@ -41,6 +41,13 @@ class Mol(BaseStruct):
 # Public Methods #
 ##################
 
+    def get_noCharge(self):
+        """
+        Returns a :class:`BaseStruct` containing :class:`Atom` objects
+        for which the ``charge`` attribute is undefined.
+        """
+        return BaseStruct(( atom for atom in self if not hasattr(atom, 'charge') ))
+
     def iter_chain(self, **kwargs):
         """
         A generator that returns one :class:`Chain` per iteration.
@@ -126,6 +133,19 @@ class Mol(BaseStruct):
         self.reindex_resIndex(start=1)
         self._compliance_charmmTerminalOxygen()
         self._compliance_charmmNames()
+
+    def populate_charges(self, RTFFile):
+        """
+        Takes a :class:RTFFile object and uses it to define the :attr:`Atom.charge`
+        attribute.  **It is strongly encouraged to call the :meth:`Mol.parse` method
+        before calling this method.**
+        """
+        chargeDict = RTFFile.chargeResiDict
+        for atom in self:
+            try:
+                atom.charge = chargeDict[atom.resName][atom.atomType.strip()]
+            except KeyError:
+                pass
 
     def reindex_atomNum(self, start=1):
         """

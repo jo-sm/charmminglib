@@ -27,10 +27,12 @@ def chomp(String):
         return String
 
 
-def paragraphs(iterable,splitter):
+def paragraphs(iterable, splitter):
     """
     Cut a text stream up into 'paragraphs,' where partitions are
     determined by a :mod:`list` named `splitter`.
+
+    >>> iterable = paragraphs(iterable, ['taco', 'beans'])
     """
     assert isinstance(splitter, (tuple, list))
     splitter = tuple(splitter)
