@@ -192,6 +192,16 @@ class BaseAtom(MetaAtom):
         return locals()
 
     @Property
+    def atomType0():
+        doc =\
+        """
+        The value of the ``atomType`` property at instantization, read only.
+        """
+        def fget(self):
+            return self._atomType0
+        return locals()
+
+    @Property
     def bFactor():
         doc =\
         """
