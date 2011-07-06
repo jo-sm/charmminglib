@@ -354,6 +354,16 @@ class BaseAtom(MetaAtom):
         return locals()
 
     @Property
+    def resName0():
+        doc =\
+        """
+        The value of the `resName` property at instantization, read only.
+        """
+        def fget(self):
+            return self._resName0
+        return locals()
+
+    @Property
     def segid():
         doc =\
         """

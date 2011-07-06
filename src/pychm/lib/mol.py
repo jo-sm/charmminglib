@@ -134,16 +134,38 @@ class Mol(BaseStruct):
         self._compliance_charmmTerminalOxygen()
         self._compliance_charmmNames()
 
+    def diff_charges(self):
+        """
+        """
+        tmp = []
+        for atom in self:
+            try:
+                if atom.charge != atom.charge0:
+                    tmp.append(atom)
+            except AttributeError:
+                tmp.append(atom)
+        return BaseStruct(tmp)
+
     def populate_charges(self, RTFFile):
         """
-        Takes a :class:RTFFile object and uses it to define the :attr:`Atom.charge`
+        Takes a :class:`RTFFile` object and uses it to define the :attr:`Atom.charge`
         attribute.  **It is strongly encouraged to call the :meth:`Mol.parse` method
         before calling this method.**
         """
         chargeDict = RTFFile.chargeResiDict
         for atom in self:
             try:
-                atom.charge = chargeDict[atom.resName][atom.atomType.strip()]
+                atom.charge0 = chargeDict[atom.resName][atom.atomType.strip()]
+                atom.charge = atom.charge0
+            except KeyError:
+                pass
+        # now populate atoms which dont have a charge, but are not "bad"
+        iterator = ( atom for atom in self if not hasattr(atom, 'charge0') and
+                    atom.segType != 'bad' )
+        for atom in iterator:
+            try:
+                atom.charge0 = chargeDict[atom.resName0][atom.atomType0.strip()]
+                atom.charge = atom.charge0
             except KeyError:
                 pass
 

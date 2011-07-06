@@ -200,7 +200,7 @@ class BaseStruct(list):
         for index in reversed(del_indicies):
             self.pop(index)
 
-    def find(self, addr=None, **kwargs):
+    def find(self, **kwargs):
         """
         Returns a :class:`BaseStruct` object containing all "atom-like"
         objects which match the specified search criteria.
@@ -218,49 +218,43 @@ class BaseStruct(list):
             | ``resid``
             | ``atomnum``
             | ``atomtype``
-
-        For a shorthand, one may also use an ``addr`` string.  However
-        this method is less precise as you can't, for example, specify
-        only a ``chainid`` and a ``atomnum``.
-
-        Both examples result in the same output.
+            | ``resName``
 
         >>> self.find(chainid='a', segtype='pro', resid=3)
 
-        >>> self.find('a.pro.3')
-
         """
-        if addr is not None:
-            tmp = addr.split('.')
-            chainid = segtype = resid = atomnum = atomtype = None
-            try:
-                chainid = tmp[0]
-                segtype = tmp[1]
-                resid = tmp[2]
-                atomnum = tmp[3]
-                atomtype = tmp[4]
-            except IndexError:
-                pass
-        elif kwargs:
+        if kwargs:
+            kwargs = lowerKeys(kwargs)
             chainid = kwargs.get('chainid', None)
             segtype = kwargs.get('segtype', None)
             resid = kwargs.get('resid', None)
             atomnum = kwargs.get('atomnum', None)
             atomtype = kwargs.get('atomtype', None)
+            resname = kwargs.get('resname', None)
+            chainid0 = kwargs.get('chainid0', None)
+            segtype0 = kwargs.get('segtype0', None)
+            resid0 = kwargs.get('resid0', None)
+            atomnum0 = kwargs.get('atomnum0', None)
+            atomtype0 = kwargs.get('atomtype0', None)
+            resname0 = kwargs.get('resname0', None)
         else:
             return BaseStruct([], autofix=False)
         #
         try:
             resid = int(resid)
-        except ValueError:
-            pass
-        except TypeError:
+        except (ValueError, TypeError):
             pass
         try:
             atomnum = int(atomnum)
-        except ValueError:
+        except (ValueError, TypeError):
             pass
-        except TypeError:
+        try:
+            resid0 = int(resid0)
+        except (ValueError, TypeError):
+            pass
+        try:
+            atomnum0 = int(atomnum0)
+        except (ValueError, TypeError):
             pass
         #
         iterator = ( atom for atom in self)
@@ -274,6 +268,20 @@ class BaseStruct(list):
             iterator = ( atom for atom in iterator if atom.atomNum == atomnum )
         if atomtype:
             iterator = ( atom for atom in iterator if atom.atomType == atomtype )
+        if resname:
+            iterator = ( atom for atom in iterator if atom.resName == resname )
+        if chainid0:
+            iterator = ( atom for atom in iterator if atom.chainid0 == chainid0 )
+        if segtype0:
+            iterator = ( atom for atom in iterator if atom.segType0 == segtype0 )
+        if resid0:
+            iterator = ( atom for atom in iterator if atom.resid0 == resid0 )
+        if atomnum0:
+            iterator = ( atom for atom in iterator if atom.atomNum0 == atomnum0 )
+        if atomtype0:
+            iterator = ( atom for atom in iterator if atom.atomType0 == atomtype0 )
+        if resname0:
+            iterator = ( atom for atom in iterator if atom.resName0 == resname0 )
         return BaseStruct(iterator, autofix=False)
 
     def find_byDistance(self, selection, distance):
@@ -502,3 +510,12 @@ class BaseStruct(list):
             raise TypeError("unsupported operand type for '%s' and '%s'" %
                             (type(self), type(other)))
         return super(BaseStruct, self).__add__(other.__sub__(self))
+
+    def __getitem__(self, key):
+        try:
+            return super(BaseStruct, self).__getitem__(key)
+        except TypeError:
+            for atom in self:
+                if atom.addr == key:
+                    return atom
+            raise KeyError('No atom with the specified addr value: "%s"' % key)

@@ -1,7 +1,6 @@
 """
 :Author: fcp
 
-**STUB**
 """
 
 
@@ -18,9 +17,6 @@ class RTFFile(BaseCHARMMFile):
     _sections = ['resi', 'pres', 'end']
 
     def __init__(self, filename=None, **kwargs):
-        """
-        DOCME
-        """
         super(RTFFile, self).__init__(filename, **kwargs)
         self.parse()
 
@@ -38,19 +34,15 @@ class RTFFile(BaseCHARMMFile):
         self.resi = {}
         self.pres = {}
         self._wtf = []
-        try:
-            for taco in iterator:
-                if taco[0][:4] == 'resi':
-                    tmp = taco[0].split()[1]
-                    self.resi[tmp] = TopRes(taco)
-                elif taco[0][:4] == 'pres':
-                    tmp = taco[0].split()[1]
-                    self.pres[tmp] = TopRes(taco)
-                else:
-                    self._wtf.append(taco)
-        except IndexError:
-            print taco
-            raise IndexError
+        for taco in iterator:
+            if taco[0][:4] == 'resi':
+                tmp = taco[0].split()[1]
+                self.resi[tmp] = TopRes(taco)
+            elif taco[0][:4] == 'pres':
+                tmp = taco[0].split()[1]
+                self.pres[tmp] = TopRes(taco)
+            else:
+                self._wtf.append(taco)
         self.chemResiDict = dict(( (k, v.chemDict) for k, v in self.resi.iteritems() ))
         self.chemPresDict = dict(( (k, v.chemDict) for k, v in self.pres.iteritems() ))
         self.chargeResiDict = dict(( (k, v.chargeDict) for k, v in self.resi.iteritems() ))

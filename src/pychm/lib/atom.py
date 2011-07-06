@@ -165,6 +165,7 @@ class Atom(BaseAtom):
         self._resid0 = self.resid
         self._atomNum0 = self.atomNum
         self._atomType0 = self.atomType
+        self._resName0 = self.resName
 
 ##############
 # Properties #
