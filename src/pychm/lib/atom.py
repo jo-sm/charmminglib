@@ -418,3 +418,4 @@ class Atom(BaseAtom):
            self.atomType = 'cal '
         elif (self.atomType == ' k  ' and self.resName == 'k'):
            self.atomType = 'pot '
+

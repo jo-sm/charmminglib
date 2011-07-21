@@ -5,7 +5,7 @@
 
 
 from itertools import chain
-from pychm.tools import chomp
+from pychm.tools import chomp, expandPath
 
 
 class BaseCHARMMFile(object):
@@ -14,7 +14,7 @@ class BaseCHARMMFile(object):
     """
     def __init__(self, filename, **kwargs):
         super(BaseCHARMMFile, self).__init__()
-        self.filename = filename
+        self.filename = expandPath(filename)
         self.header = []
         self.body = []
 

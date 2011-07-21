@@ -407,6 +407,8 @@ class BaseStruct(list):
 
         **TODO**
         """
+
+
     def rotateByMatrix(self, rotMatrix):
         """
         Rotate an atom selection by an arbitrary rotation matrix.
