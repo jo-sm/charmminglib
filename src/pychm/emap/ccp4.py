@@ -9,7 +9,7 @@ import numpy
 from emap import EMap
 
 
-def get_pixelArrayFromCCP4File(filename):
+def get_chargeArrayFromCCP4File(filename):
     """
     # HEADER VARS
 
@@ -39,7 +39,7 @@ def get_pixelArrayFromCCP4File(filename):
     symmetry                                        TODO
 
     # NON HEADER VARS
-    pixelArray              A `numpy.array` of dimension lx, ly, lz, whose values are
+    chargeArray              A `numpy.array` of dimension lx, ly, lz, whose values are
                             electron density in coulomb
     transposeTuple          a tuple of mapc, mapr, maps -- only zero indexed
     lx, ly, lz              # of x, y, z in array -- it has been mapped from nc, nr, ns
@@ -75,25 +75,26 @@ def get_pixelArrayFromCCP4File(filename):
         tmp.label = []
         for i in range(10):
             tmp.label.append(''.join(struct.unpack('c'*80, fpointer.read(80))))
-        # TODO -- This needs a testcase to debug it!
+    # TODO -- This needs a testcase to debug it!
         tmp.symmetry = []
         for i in range(tmp.nsymbt/80):
             tmp.symmetry.append(''.join(struct.unpack('c'*80, fpointer.read(80))))
-        # TODO
-        tmp.pixelArray = numpy.array(struct.unpack('f'*tmp.nc*tmp.nr*tmp.ns,
+    # TODO
+        tmp.chargeArray = numpy.array(struct.unpack('f'*tmp.nc*tmp.nr*tmp.ns,
                                         fpointer.read(4*tmp.nc*tmp.nr*tmp.ns)))
 
     # Map Column/Row/Section -> x/y/z
     tmp.transposeTuple = (tmp.mapc - 1, tmp.mapr - 1, tmp.maps - 1)
-    tmp.pixelArray.resize((tmp.nc, tmp.nr, tmp.ns))
-    tmp.pixelArray = numpy.transpose(tmp.pixelArray, tmp.transposeTuple)
+    tmp.chargeArray.resize((tmp.nc, tmp.nr, tmp.ns))
+    tmp.chargeArray = numpy.transpose(tmp.chargeArray, tmp.transposeTuple)
     # Permutation Related Bookkeeping
-    tmp.lx, tmp.ly, tmp.lz = tmp.pixelArray.shape
+    tmp.lx, tmp.ly, tmp.lz = tmp.chargeArray.shape
     start = [tmp.ncstart, tmp.nrstart, tmp.nsstart]
     startDict = dict(zip(start, tmp.transposeTuple))
     start.sort(key=lambda x: startDict[x])
     tmp.nxstart, tmp.nystart, tmp.nzstart = start
-
+    # store flattened charge array
+    tmp.flatChargeArray = tmp.get_flatChargeArray()
     # Fin!
     return tmp
 
@@ -105,4 +106,4 @@ if __name__ == '__main__':
 
     print "\nThis currently only supports interactive debugging.\n"
     print "`taco` = `EMap()`"
-    taco = get_pixelArrayFromCCP4File(sys.argv[1])
+    taco = get_chargeArrayFromCCP4File(sys.argv[1])
