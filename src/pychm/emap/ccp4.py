@@ -83,18 +83,18 @@ def get_chargeArrayFromCCP4File(filename):
         tmp.chargeArray = numpy.array(struct.unpack('f'*tmp.nc*tmp.nr*tmp.ns,
                                         fpointer.read(4*tmp.nc*tmp.nr*tmp.ns)))
 
-    # Map Column/Row/Section -> x/y/z
-    tmp.transposeTuple = (tmp.mapc - 1, tmp.mapr - 1, tmp.maps - 1)
-    tmp.chargeArray.resize((tmp.nc, tmp.nr, tmp.ns))
-    tmp.chargeArray = numpy.transpose(tmp.chargeArray, tmp.transposeTuple)
-    # Permutation Related Bookkeeping
-    tmp.lx, tmp.ly, tmp.lz = tmp.chargeArray.shape
-    start = [tmp.ncstart, tmp.nrstart, tmp.nsstart]
-    startDict = dict(zip(start, tmp.transposeTuple))
-    start.sort(key=lambda x: startDict[x])
-    tmp.nxstart, tmp.nystart, tmp.nzstart = start
-    # store flattened charge array
-    tmp.flatChargeArray = tmp.get_flatChargeArray()
+    ## Map Column/Row/Section -> x/y/z
+    #tmp.transposeTuple = (tmp.mapc - 1, tmp.mapr - 1, tmp.maps - 1)
+    #tmp.chargeArray.resize((tmp.nc, tmp.nr, tmp.ns))
+    #tmp.chargeArray = numpy.transpose(tmp.chargeArray, tmp.transposeTuple)
+    ## Permutation Related Bookkeeping
+    #tmp.lx, tmp.ly, tmp.lz = tmp.chargeArray.shape
+    #start = [tmp.ncstart, tmp.nrstart, tmp.nsstart]
+    #startDict = dict(zip(start, tmp.transposeTuple))
+    #start.sort(key=lambda x: startDict[x])
+    #tmp.nxstart, tmp.nystart, tmp.nzstart = start
+    ## store flattened charge array
+    #tmp.flatChargeArray = tmp.get_flatChargeArray()
     # Fin!
     return tmp
 
@@ -104,6 +104,46 @@ if __name__ == '__main__':
 
     import sys
 
-    print "\nThis currently only supports interactive debugging.\n"
-    print "`taco` = `EMap()`"
-    taco = get_chargeArrayFromCCP4File(sys.argv[1])
+    #print "\nThis currently only supports interactive debugging.\n"
+    #print "`taco` = `EMap()`"
+    #taco = get_chargeArrayFromCCP4File(sys.argv[1])
+
+    tmp = EMap()
+    tmp.filename = sys.argv[1]
+
+    with open(tmp.filename, mode='rb') as fpointer:
+        tmp.nc, tmp.nr, tmp.ns = struct.unpack('iii', fpointer.read(12))
+        tmp.mode = struct.unpack('i', fpointer.read(4))[0]
+        tmp.ncstart, tmp.nrstart, tmp.nsstart = struct.unpack('iii', fpointer.read(12))
+        tmp.nx, tmp.ny, tmp.nz = struct.unpack('iii', fpointer.read(12))
+        tmp.xlen, tmp.ylen, tmp.zlen = struct.unpack('fff', fpointer.read(12))
+        tmp.alpha, tmp.beta, tmp.gamma = struct.unpack('fff', fpointer.read(12))
+        tmp.mapc, tmp.mapr, tmp.maps = struct.unpack('iii', fpointer.read(12))
+        tmp.amin, tmp.amax, tmp.amean = struct.unpack('fff', fpointer.read(12))
+        tmp.ispg = struct.unpack('i', fpointer.read(4))[0]
+        tmp.nsymbt = struct.unpack('i', fpointer.read(4))[0]
+        tmp.lskflg = struct.unpack('i', fpointer.read(4))[0]
+        tmp.skwmat = struct.unpack('f'*9, fpointer.read(36))
+        tmp.skwtrn = struct.unpack('fff', fpointer.read(12))
+        tmp.extra = struct.unpack('i'*15, fpointer.read(60))
+        tmp.maplabel = ''.join(struct.unpack('cccc', fpointer.read(4)))
+        tmp.machst = struct.unpack('cccc', fpointer.read(4))
+        tmp.arms = struct.unpack('f', fpointer.read(4))[0]
+        tmp.nlabl = struct.unpack('i', fpointer.read(4))[0]
+        tmp.label = []
+        for i in range(10):
+            tmp.label.append(''.join(struct.unpack('c'*80, fpointer.read(80))))
+    # TODO -- This needs a testcase to debug it!
+        tmp.symmetry = []
+        for i in range(tmp.nsymbt/80):
+            tmp.symmetry.append(''.join(struct.unpack('c'*80, fpointer.read(80))))
+    # TODO
+        rawArray = numpy.array(struct.unpack('f'*tmp.nc*tmp.nr*tmp.ns,
+                                        fpointer.read(4*tmp.nc*tmp.nr*tmp.ns)))
+        chargeArray = numpy.zeros((tmp.nc, tmp.nr, tmp.ns))
+        n = 0
+        for k in xrange(tmp.ns):
+            for j in xrange(tmp.nr):
+                for i in xrange(tmp.nc):
+                    chargeArray[i][j][k] = rawArray[n]
+                    n += 1
