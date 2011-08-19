@@ -5,6 +5,22 @@
 import numpy
 import scipy.ndimage.filters as filters
 from copy import deepcopy
+from pychm.tools import Property
+import itertools
+
+
+
+def pairwise_add(iterable):
+    def addTwo(iterable):
+        def key(x, s=2, a=[-1]):
+            r = a[0] = a[0] + 1
+            return r // s
+        for k, g in itertools.groupby(iterable, key):
+            yield sum(g)
+    iterable = list(iterable)
+    while len(iterable) > 1:
+        iterable = list(addTwo(iterable))
+    return iterable[0]
 
 
 class EMap(object):
@@ -20,8 +36,11 @@ class EMap(object):
         super(EMap, self).__init__()
         #
         self.basis = numpy.identity(3)
-        self.cartArray = None
+        self._cartArray = None
         self.chargeArray = None
+        # Operations
+        self.translations = []
+        self.rotations = []
         ## Parameters
         #self.resolution = 15. # In Angstrom
         ## State Variables
@@ -31,74 +50,70 @@ class EMap(object):
         #    self.mol = mol
         #    self.mol.orient()
 
+    @Property
+    def cartArray():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            tmpTrans = numpy.zeros(3)
+            for trans in self.translations:
+                tmp += trans
+            return self._cartArray + tmp
+        return locals()
+
 ########################################
 # Create Pixel x/y/z -> Cart x/y/z Map #
 ########################################
 
-    def set_cartArrayFromPixelArray(self):
+    def get_charge(self, i, j, k):
         """
         """
+        if i > self.lx - 1:
+            print "Warning, i index is too big ( > %d )" % (self.lx -1)
+        if j > self.ly - 1:
+            print "Warning, j index is too big ( > %d )" % (self.ly -1)
+        if k > self.lz - 1:
+            print "Warning, k index is too big ( > %d )" % (self.lz -1)
 
-        def pixel2cart_map(x, y, z):
-            """
-            I think this is wrong because nc/nr/ns-start are not properly permuted.
-            """
-            xcart = (self.ncstart + x) * (self.xlen/self.nx)
-            ycart = (self.nrstart + y) * (self.ylen/self.ny)
-            zcart = (self.nsstart + z) * (self.zlen/self.nz)
-            return numpy.array([xcart, ycart, zcart])
+        return self.chargeArray[i + self.lx * j + self.lx * self.ly * k]
 
-        def fixed_pixel2cart_map(x, y, z):
-            """
-            Properly permuted starting indicies.
-
-            TODO -- Include crystal skews in mapping.
-            """
-            # Do work
-            xcart = (self.nxstart + x) * (self.xlen/self.nx)
-            ycart = (self.nystart + y) * (self.ylen/self.ny)
-            zcart = (self.nzstart + z) * (self.zlen/self.nz)
-            return numpy.array([xcart, ycart, zcart])
-
-        # make 3-D array
-        tmp = numpy.zeros((self.lx, self.ly, self.lz, 3))
-        iterable = ( (i, j, k) for i in xrange(self.lx) for j in xrange(self.ly)
-                    for k in xrange(self.lz) )
-        for i, j, k in iterable:
-            tmp[i][j][k] = pixel2cart_map(i, j, k)
-        self.cartArray = tmp
-        # store flattened cart array
-        self.flatCartArray = self.get_flatCartArray()
-
-    def get_flatChargeArray(self):
+    def get_cart(self, i, j, k):
         """
         """
-        iterable = ( self.chargeArray[i][j][k] for k in xrange(self.lz)
-                    for j in xrange(self.ly) for i in xrange(self.lx) )
-        tmp = numpy.fromiter(iterable, numpy.float)
-        tmp.resize(len(tmp), 1)
-        return tmp
+        if i > self.lx - 1:
+            print "Warning, i index is too big ( > %d )" % (self.lx -1)
+        if j > self.ly - 1:
+            print "Warning, j index is too big ( > %d )" % (self.ly -1)
+        if k > self.lz - 1:
+            print "Warning, k index is too big ( > %d )" % (self.lz -1)
 
-    def get_flatCartArray(self):
-        """
-        """
-        tmp = numpy.zeros((self.lx * self.ly * self.lz, 3))
-        iterable = ( self.cartArray[i][j][k] for k in xrange(self.lz)
-                    for j in xrange(self.ly) for i in xrange(self.lx) )
-        for n in xrange(self.lx * self.ly * self.lz):
-            tmp[n] = iterable.next()
-        return tmp
+        return self.cartArray[i + self.lx * j + self.lx * self.ly * k]
 
-    def get_coq(self):
-        return (self.flatCartArray * self.flatChargeArray).sum(axis=0)/self.chargeArray.sum()
+    def init_cart(self):
+        # Center and translate
+        chargeArray = self.chargeArray.reshape((len(self.chargeArray), 1))
+        tmp = (self.cartArray * chargeArray)
+        coq = tmp.sum(axis=0)/chargeArray.sum()
+        self.translations.append(coq)
+        self._cartArray -= coq
 
-    def get_basis(self):
-        tmpCart = self.flatCartArray - self.get_coq()
-        tmpCharge = self.flatChargeArray.flatten()
-        xx, yy, zz, xy, xz, yz = numpy.zeros(6)
-        for i, cart in enumerate(tmpCart):
+    def init_cart2(self):
+        # Orient and rotate
+        tensor0 = self.get_chargeTensor(eigen=True)[1]
+        self.rotate_byMatrix(tensor0.transpose())
+        tensor1 = self.get_chargeTensor(eigen=True)[1]
+        self.rotate_byMatrix(tensor1.transpose())
+        self.rotations.append(numpy.dot(tensor0, tensor1))
+
+    def get_chargeTensor(self, eigen=False, array=None):
+        if array is None:
+            array = self._cartArray
+        xx, yy, zz, xy, xz, yz = (0., 0., 0., 0., 0., 0.)
+        for i, cart in enumerate(array):
             x, y, z = cart
-            q = tmpCharge[i]
+            q = self.chargeArray[i]
             xx += q*(y*y+z*z)
             yy += q*(x*x+z*z)
             zz += q*(x*x+y*y)
@@ -112,36 +127,18 @@ class EMap(object):
             [-xz, -yz,  zz]
             ])
         #
-        return numpy.linalg.eig(tmp)[1]
+        if eigen:
+            return numpy.linalg.eigh(tmp)
+        else:
+            return tmp
 
     def rotate_byMatrix(self, matrix):
         """
         """
-        # Centered Cartesian Array
-        tmp = self.cartArray - self.get_coq()
-        # Unpack cartesian data into n x 3 matrix
-        tmp.resize((self.lx * self.ly * self.lz, 3))
-        # Rotate
-        tmp = numpy.dot(tmp, matrix)
-        # Repack
-        tmp.resize((self.lx, self.ly, self.lz, 3))
-        return tmp
+        self._cartArray = numpy.dot(self._cartArray, matrix.transpose())
 
-    def rotate_2(self, matrix):
-        """
-        """
-        tmp = deepcopy(self.flatCartArray)
-        tmp -= self.get_coq()
-        tmp = numpy.dot(tmp, matrix)
-        tmp += self.get_coq()
-        self.intermediate = tmp
-        returnMe = numpy.zeros(self.lx * self.ly * self.lz * 3)
-        returnMe.resize((self.lx, self.ly, self.lz, 3))
-        iterator = ( (i, j, k) for k in xrange(self.lz) for j in xrange(self.ly)
-                    for i in xrange(self.lx) )
-        for n, (i, j, k) in enumerate(iterator):
-            returnMe[i][j][k] = tmp[n]
-        return returnMe
+    def orient(self):
+        self.rotate_byMatrix(self.get_chargeTensor(eigen=True)[1].transpose())
 
     def build_map(self):
         # create coordinate matrix
@@ -206,3 +203,72 @@ class EMap(object):
 
         # return
         return (tmp, tmp1)
+
+    def get_chargeTensorAddTwo(self, eigen=False):
+        xx = []
+        yy = []
+        zz = []
+        xy = []
+        xz = []
+        yz = []
+        for i, cart in enumerate(self._cartArray):
+            x, y, z = cart
+            q = self.chargeArray[i]
+            xx.append(q*(y*y+z*z))
+            yy.append(q*(x*x+z*z))
+            zz.append(q*(x*x+y*y))
+            xy.append(q*x*y)
+            xz.append(q*x*z)
+            yz.append(q*y*z)
+        xx = pairwise_add(xx)
+        yy = pairwise_add(yy)
+        zz = pairwise_add(zz)
+        xy = pairwise_add(xy)
+        xz = pairwise_add(xz)
+        yz = pairwise_add(yz)
+        #
+        tmp = numpy.array([
+            [ xx, -yz, -xz],
+            [-yz,  yy, -yz],
+            [-xz, -yz,  zz]
+            ])
+        #
+        if eigen:
+            return numpy.linalg.eigh(tmp)
+        else:
+            return tmp
+    #def set_cartArrayFromPixelArray(self):
+    #    """
+    #    """
+
+    #    def pixel2cart_map(x, y, z):
+    #        """
+    #        I think this is wrong because nc/nr/ns-start are not properly permuted.
+    #        """
+    #        xcart = (self.ncstart + x) * (self.xlen/self.nx)
+    #        ycart = (self.nrstart + y) * (self.ylen/self.ny)
+    #        zcart = (self.nsstart + z) * (self.zlen/self.nz)
+    #        return numpy.array([xcart, ycart, zcart])
+
+    #    def fixed_pixel2cart_map(x, y, z):
+    #        """
+    #        Properly permuted starting indicies.
+
+    #        TODO -- Include crystal skews in mapping.
+    #        """
+    #        # Do work
+    #        xcart = (self.nxstart + x) * (self.xlen/self.nx)
+    #        ycart = (self.nystart + y) * (self.ylen/self.ny)
+    #        zcart = (self.nzstart + z) * (self.zlen/self.nz)
+    #        return numpy.array([xcart, ycart, zcart])
+
+    #    # make 3-D array
+    #    tmp = numpy.zeros((self.lx, self.ly, self.lz, 3))
+    #    iterable = ( (i, j, k) for i in xrange(self.lx) for j in xrange(self.ly)
+    #                for k in xrange(self.lz) )
+    #    for i, j, k in iterable:
+    #        tmp[i][j][k] = pixel2cart_map(i, j, k)
+    #    self.cartArray = tmp
+    #    # store flattened cart array
+    #    self.flatCartArray = self.get_flatCartArray()
+
