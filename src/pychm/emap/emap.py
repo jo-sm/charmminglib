@@ -6,6 +6,7 @@ import numpy
 import scipy.ndimage.filters as filters
 from copy import deepcopy
 from pychm.tools import Property
+import pychm.emap.ext
 import itertools
 
 
@@ -41,14 +42,6 @@ class EMap(object):
         # Operations
         self.translations = []
         self.rotations = []
-        ## Parameters
-        #self.resolution = 15. # In Angstrom
-        ## State Variables
-        #self.transVector = None
-        #self.rotMatrix = None
-        #if arg is not None:
-        #    self.mol = mol
-        #    self.mol.orient()
 
     @Property
     def cartArray():
@@ -57,10 +50,25 @@ class EMap(object):
         DOCME
         """
         def fget(self):
-            tmpTrans = numpy.zeros(3)
+            trans, rot = self.state
+            tmp = numpy.dot(self._cartArray, rot.transpose())
+            return tmp + trans
+        return locals()
+
+    @Property
+    def state():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            trans0 = numpy.zeros(3)
             for trans in self.translations:
-                tmp += trans
-            return self._cartArray + tmp
+                trans0 += trans
+            rot0 = numpy.identity(3)
+            for rot in self.rotations:
+                rot0 = numpy.dot(rot0, rot)
+            return (trans0, rot0)
         return locals()
 
 ########################################
@@ -98,34 +106,13 @@ class EMap(object):
         coq = tmp.sum(axis=0)/chargeArray.sum()
         self.translations.append(coq)
         self._cartArray -= coq
-
-    def init_cart2(self):
         # Orient and rotate
-        tensor0 = self.get_chargeTensor(eigen=True)[1]
-        self.rotate_byMatrix(tensor0.transpose())
-        tensor1 = self.get_chargeTensor(eigen=True)[1]
-        self.rotate_byMatrix(tensor1.transpose())
-        self.rotations.append(numpy.dot(tensor0, tensor1))
+        evec = self.get_chargeTensor(eigen=True)[1]
+        self.rotate_byMatrix(evec.transpose())
+        self.rotations.append(evec)
 
     def get_chargeTensor(self, eigen=False, array=None):
-        if array is None:
-            array = self._cartArray
-        xx, yy, zz, xy, xz, yz = (0., 0., 0., 0., 0., 0.)
-        for i, cart in enumerate(array):
-            x, y, z = cart
-            q = self.chargeArray[i]
-            xx += q*(y*y+z*z)
-            yy += q*(x*x+z*z)
-            zz += q*(x*x+y*y)
-            xy += q*x*y
-            xz += q*x*z
-            yz += q*y*z
-        #
-        tmp = numpy.array([
-            [ xx, -yz, -xz],
-            [-yz,  yy, -yz],
-            [-xz, -yz,  zz]
-            ])
+        tmp = pychm.emap.ext.get_Tensor(self._cartArray, self.chargeArray)
         #
         if eigen:
             return numpy.linalg.eigh(tmp)
@@ -136,9 +123,6 @@ class EMap(object):
         """
         """
         self._cartArray = numpy.dot(self._cartArray, matrix.transpose())
-
-    def orient(self):
-        self.rotate_byMatrix(self.get_chargeTensor(eigen=True)[1].transpose())
 
     def build_map(self):
         # create coordinate matrix

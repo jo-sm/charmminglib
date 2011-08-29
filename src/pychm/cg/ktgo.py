@@ -593,7 +593,7 @@ class KTGo(Mol):
                 bb_2 = self.bbAtoms[i+2]
                 tmp = '%-8s%-8s%-8s%14.6f%12.6f' % \
                         (bb_0.prmString, bb_1.prmString, bb_2.prmString,
-                        kangle, bb_0.calc_angle(bb_1, bb_2))
+                        kangle, bb_0.calc_angle(bb_1, bb_2, units='deg'))
                 String.append(tmp)
             except IndexError:
                 pass
@@ -605,7 +605,7 @@ class KTGo(Mol):
                 bb_1 = self.bbAtoms[i+1]
                 tmp = '%-8s%-8s%-8s%14.6f%12.6f' % \
                         (sc.prmString, bb_0.prmString, bb_1.prmString,
-                        kangle, sc.calc_angle(bb_0, bb_1))
+                        kangle, sc.calc_angle(bb_0, bb_1, units='deg'))
                 String.append(tmp)
             except IndexError:
                 pass
@@ -619,7 +619,7 @@ class KTGo(Mol):
                 sc_1 = self.scAtoms[i+1]
                 tmp = '%-8s%-8s%-8s%14.6f%12.6f' % \
                         (bb_0.prmString, bb_1.prmString, sc_1.prmString,
-                        kangle, bb_0.calc_angle(bb_1, sc_1))
+                        kangle, bb_0.calc_angle(bb_1, sc_1, units='deg'))
                 String.append(tmp)
             except IndexError:
                 pass
@@ -649,7 +649,7 @@ class KTGo(Mol):
                 bb_2 = self.bbAtoms[i+2]
                 bb_3 = self.bbAtoms[i+3]
                 #
-                dihedral = bb_0.calc_signedDihedral(bb_1, bb_2, bb_3)
+                dihedral = bb_0.calc_signedDihedral(bb_1, bb_2, bb_3, units='deg')
                 #
                 if 'alphahelix' == bb_1.structure == bb_2.structure:
                     k = [kdialhel_1, kdialhel_3]
@@ -684,7 +684,7 @@ class KTGo(Mol):
                 bb_2 = self.bbAtoms[i+2]
                 sc_1 = self.scAtoms[i+1]
                 #
-                dihedral = bb_1.calc_signedDihedral(bb_0, bb_2, sc_1)
+                dihedral = bb_1.calc_signedDihedral(bb_0, bb_2, sc_1, units='deg')
                 #
                 k = 20. * abs(self.contactMatrix.mean())
                 mult = 1
