@@ -34,8 +34,8 @@ class BaseAnalysis(INPFile):
     """
     DOCME
     """
-    def __init__(self, arg=None, **kwargs):
-        super(BaseAnalysis, self).__init__(arg, **kwargs)
+    def __init__(self, pdbFilename=None, **kwargs):
+        super(BaseAnalysis, self).__init__(pdbFilename, **kwargs)
         # kwargs
         kwargs = lowerKeys(kwargs)
         self.correlAtomSelection = kwargs.get('selection', 'all')

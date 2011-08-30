@@ -1,3 +1,7 @@
+"""
+:Author: fcp
+:Date: 08/30/2011
+"""
 
 
 import os
@@ -11,8 +15,8 @@ from pychm.analysis.baseanalysis import BaseAnalysis, load_correlOutput
 class Gyro(BaseAnalysis):
     """
     """
-    def __init__(self, aaCrdFile, **kwargs):
-        super(Gyro,self).__init__(aaCrdFile, **kwargs)
+    def __init__(self, pdbFilename=None, **kwargs):
+        super(Gyro,self).__init__(pdbFilename, **kwargs)
         self.inpFilename = '&/gyro_%s.inp' % self.correlAtomSelection
         self.outFilename = '&/gyro_%s.out' % self.correlAtomSelection
         self.anlFilename = '&/gyro_%s.anl' % self.correlAtomSelection
