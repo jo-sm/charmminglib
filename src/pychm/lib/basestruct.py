@@ -340,8 +340,8 @@ class BaseStruct(list):
             yz += m*y*z
         #
         I = array([
-            [ xx, -yz, -xz],
-            [-yz,  yy, -yz],
+            [ xx, -xy, -xz],
+            [-xy,  yy, -yz],
             [-xz, -yz,  zz]
             ])
         if eigen:

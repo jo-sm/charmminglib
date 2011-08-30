@@ -7,7 +7,7 @@
 from commands import getstatusoutput
 from os.path import abspath, dirname, expanduser, exists
 from tempfile import NamedTemporaryFile
-from pychm.tools import Property, expandPath, lowerKeys
+from pychm.tools import Property, expandPath, lowerKeys, mkdir
 
 
 class INPFile(object):
@@ -72,6 +72,19 @@ class INPFile(object):
             self._outFilename = self.expandPath(value)
         return locals()
 
+    @Property
+    def outPathname():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            return self._outPathname
+        def fset(self, value):
+            self._outPathname = self.expandPath(value)
+            mkdir(self._outPathname)
+        return locals()
+
 # CHARMM File/Path locations
     @Property
     def crdFilename():
@@ -102,6 +115,19 @@ class INPFile(object):
                 raise IOError("No such file or directory: '%s'" % value)
             self._dcdFilename = value
             self._maxatom, self._nstep, self._timestep = self.query_dcd(value)
+        return locals()
+
+    @Property
+    def dcdPathname():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            return self._dcdPathname
+        def fset(self, value):
+            self._dcdPathname = self.expandPath(value)
+            mkdir(self._dcdPathname)
         return locals()
 
     @Property

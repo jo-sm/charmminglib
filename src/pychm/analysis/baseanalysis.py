@@ -6,9 +6,10 @@ DOCME
 
 
 from os import remove
+from os.path import exists
 import numpy as np
 from pychm.tools import Property, walk, lowerKeys, mkdir
-from pychm.io.basecharmm import BaseCHARMMFile
+from pychm.io.inp import INPFile
 
 
 def load_correlOutput(filename):
@@ -29,7 +30,7 @@ def load_correlOutput(filename):
     return np.fromiter(gen(), np.float)
 
 
-class BaseAnalysis(BaseCHARMMFile):
+class BaseAnalysis(INPFile):
     """
     DOCME
     """
@@ -56,6 +57,23 @@ class BaseAnalysis(BaseCHARMMFile):
             mkdir(self._anlPathname)
         return locals()
 
+    @Property
+    def dcdFilename():
+        doc =\
+        """
+        A ``property`` for the name of the CHARMM .dcd file to be read from.
+        """
+        def fget(self):
+            return self._dcdFilename
+        def fset(self, value):
+            value = self.expandPath(value)
+            if not exists(value):
+                raise IOError("No such file or directory: '%s'" % value)
+            self._dcdFilename = value
+            self._maxatom, self.nstep, self._timestep = self.query_dcd(value)
+        return locals()
+
+
 # Correl Properties
     @Property
     def correlArrayLength():
@@ -67,7 +85,10 @@ class BaseAnalysis(BaseCHARMMFile):
             return self._correlArrayLength
         def fset(self, value):
             self._correlArrayLength = value
-            self._correlSkip = self._nstep / value
+            try:
+                self._correlSkip = self._nstep / value
+            except AttributeError:
+                pass
         return locals()
 
     @Property
@@ -80,7 +101,10 @@ class BaseAnalysis(BaseCHARMMFile):
             return self._correlSkip
         def fset(self, value):
             self._correlSkip = value
-            self._correlArrayLength = self._nstep / value
+            try:
+                self._correlArrayLength = self._nstep / value
+            except AttributeError:
+                pass
         return locals()
 
     @Property
@@ -113,6 +137,25 @@ class BaseAnalysis(BaseCHARMMFile):
             return self._correlStop
         def fset(self, value):
             self._correlStop = int(value)
+        return locals()
+
+    @Property
+    def nstep():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            return self._nstep
+        def fset(self, value):
+            self._nstep = value
+            try:
+                self._correlSkip = value / self._correlArrayLength
+            except AttributeError:
+                try:
+                    self._correlArrayLength = value / self._correlSkip
+                except AttributeError:
+                    pass
         return locals()
 
 ##################

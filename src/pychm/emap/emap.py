@@ -39,6 +39,8 @@ class EMap(object):
         self.basis = numpy.identity(3)
         self._cartArray = None
         self.chargeArray = None
+        self.coreArray = None
+        self.laplacianArray = None
         # Operations
         self.translations = []
         self.rotations = []
@@ -187,72 +189,3 @@ class EMap(object):
 
         # return
         return (tmp, tmp1)
-
-    def get_chargeTensorAddTwo(self, eigen=False):
-        xx = []
-        yy = []
-        zz = []
-        xy = []
-        xz = []
-        yz = []
-        for i, cart in enumerate(self._cartArray):
-            x, y, z = cart
-            q = self.chargeArray[i]
-            xx.append(q*(y*y+z*z))
-            yy.append(q*(x*x+z*z))
-            zz.append(q*(x*x+y*y))
-            xy.append(q*x*y)
-            xz.append(q*x*z)
-            yz.append(q*y*z)
-        xx = pairwise_add(xx)
-        yy = pairwise_add(yy)
-        zz = pairwise_add(zz)
-        xy = pairwise_add(xy)
-        xz = pairwise_add(xz)
-        yz = pairwise_add(yz)
-        #
-        tmp = numpy.array([
-            [ xx, -yz, -xz],
-            [-yz,  yy, -yz],
-            [-xz, -yz,  zz]
-            ])
-        #
-        if eigen:
-            return numpy.linalg.eigh(tmp)
-        else:
-            return tmp
-    #def set_cartArrayFromPixelArray(self):
-    #    """
-    #    """
-
-    #    def pixel2cart_map(x, y, z):
-    #        """
-    #        I think this is wrong because nc/nr/ns-start are not properly permuted.
-    #        """
-    #        xcart = (self.ncstart + x) * (self.xlen/self.nx)
-    #        ycart = (self.nrstart + y) * (self.ylen/self.ny)
-    #        zcart = (self.nsstart + z) * (self.zlen/self.nz)
-    #        return numpy.array([xcart, ycart, zcart])
-
-    #    def fixed_pixel2cart_map(x, y, z):
-    #        """
-    #        Properly permuted starting indicies.
-
-    #        TODO -- Include crystal skews in mapping.
-    #        """
-    #        # Do work
-    #        xcart = (self.nxstart + x) * (self.xlen/self.nx)
-    #        ycart = (self.nystart + y) * (self.ylen/self.ny)
-    #        zcart = (self.nzstart + z) * (self.zlen/self.nz)
-    #        return numpy.array([xcart, ycart, zcart])
-
-    #    # make 3-D array
-    #    tmp = numpy.zeros((self.lx, self.ly, self.lz, 3))
-    #    iterable = ( (i, j, k) for i in xrange(self.lx) for j in xrange(self.ly)
-    #                for k in xrange(self.lz) )
-    #    for i, j, k in iterable:
-    #        tmp[i][j][k] = pixel2cart_map(i, j, k)
-    #    self.cartArray = tmp
-    #    # store flattened cart array
-    #    self.flatCartArray = self.get_flatCartArray()
-

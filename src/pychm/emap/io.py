@@ -2,22 +2,14 @@
 """
 
 
+import copy
 import struct
 import numpy as np
 from emap import EMap
+from pychm.tools import flatten
 
 
-class BaseBinaryIO(object):
-    """
-    """
-    def read(self):
-        NotImplementedError
-
-    def write(self):
-        NotImplementedError
-
-
-class CCP4File(BaseBinaryIO):
+class CCP4File(object):
     """
     ccp4 file specification as per --
     http://www.ccp4.ac.uk/html/maplib.html#description
@@ -62,7 +54,7 @@ class CCP4File(BaseBinaryIO):
     def read(cls, filename):
         cls.map = EMap()
         cls.filename = filename
-        cls._read_binData()
+        cls._read_data()
         cls._map_pixelVars2CartVars()
         cls._processDensityData()
         cls._processCartData()
@@ -70,7 +62,7 @@ class CCP4File(BaseBinaryIO):
         return cls.map
 
     @classmethod
-    def _read_binData(cls):
+    def _read_data(cls):
         with open(cls.filename, mode='rb') as fp:
             nc, nr, ns = struct.unpack('iii', fp.read(12))
             mode = struct.unpack('i', fp.read(4))[0]
@@ -213,6 +205,63 @@ class CCP4File(BaseBinaryIO):
                              (0,  0, sb * sa)])
             #
             tmp._cartArray = np.dot(tmp._cartArray, skew.T)
+
+
+class CharmmOutFile(CCP4File):
+    """
+    """
+    @classmethod
+    def _read_data(cls):
+        metadata = []
+        mapdata = []
+        with open(cls.filename, mode='r') as fp:
+            for line in fp:
+                if line.startswith(('emapwrite>', 'emapread>')):
+                    if '=' in line:
+                        metadata.append(line[11:30].lower().split('='))
+                elif line.startswith('<EMAPOUT>'):
+                    mapdata.append(line.lower().split()[2:6])
+        # metadata processing
+        metadata = dict(( (line[0].strip(), line[1]) for line in metadata ))
+        cls.map.nc = int(metadata['nc'])
+        cls.map.nr = int(metadata['nr'])
+        cls.map.ns = int(metadata['ns'])
+        cls.map.mode = int(metadata['mode'])
+        cls.map.ncstart = int(metadata['ncstart'])
+        cls.map.nrstart = int(metadata['nrstart'])
+        cls.map.nsstart = int(metadata['nsstart'])
+        cls.map.nx = int(metadata['nx'])
+        cls.map.ny = int(metadata['ny'])
+        cls.map.nz = int(metadata['nz'])
+        cls.map.xlen = np.float64(metadata['x length'])
+        cls.map.ylen = np.float64(metadata['y length'])
+        cls.map.zlen = np.float64(metadata['z length'])
+        cls.map.alpha = np.radians(np.float64(metadata['alpha']))
+        cls.map.beta = np.radians(np.float64(metadata['beta']))
+        cls.map.gamma = np.radians(np.float64(metadata['gamma']))
+        cls.map.mapc = int(metadata['mapc'])
+        cls.map.mapr = int(metadata['mapr'])
+        cls.map.maps = int(metadata['maps'])
+        cls.map.amin = np.float64(metadata['amin'])
+        cls.map.amax = np.float64(metadata['amax'])
+        cls.map.amean = np.float64(metadata['amean'])
+        cls.map.ispg = int(metadata['ispg'])
+        cls.map.nsymbt = int(metadata['nsymbt'])
+        cls.map.lskflg = int(metadata['lskflg'])
+        cls.map.skwmat = ()
+        cls.map.skwtrn = ()
+        cls.map.extra = ()
+        cls.map.maplabel = ''
+        cls.map.machst = ''
+        cls.map.arms = np.float64(metadata['arms'])
+        cls.map.nlabl = 0
+        cls.map.label = []
+        cls.map.symmetry = []
+        # emap data processing
+        mapdata = flatten(mapdata)
+        mapdata = np.fromiter(mapdata, dtype=np.float64)
+        mapdata.resize((len(mapdata)/4, 4))
+        cls.map.rawArray = mapdata[:, 3]
 
 
 if __name__ == '__main__':
