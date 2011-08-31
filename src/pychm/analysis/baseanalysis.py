@@ -45,6 +45,18 @@ class BaseAnalysis(INPFile):
 
 # File/Path locations
     @Property
+    def anlFilename():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            return self._anlFilename
+        def fset(self, value):
+            self._anlFilename = self.expandPath(value)
+        return locals()
+
+    @Property
     def anlPathname():
         doc =\
         """
