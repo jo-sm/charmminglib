@@ -31,10 +31,10 @@ class BBRMSD(BaseAnalysis):
             filename = '%s.pickle' % self.anlFilename
             try:
                 self._data = pickle.load(open(filename))
-                print 'found pickled data data in %s ...' % filename
+                print 'found pickled data in: %s' % filename
                 return self._data
             except IOError:
-                print 'processing data data in %s ...' % self.anlFilename
+                print 'processing data in %s:' % self.anlFilename
                 self._data = load_correlOutput('%s' % self.anlFilename)
                 pickle.dump(self._data ,open(filename, 'w'))
                 return self._data

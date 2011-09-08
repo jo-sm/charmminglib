@@ -5,7 +5,7 @@ DOCME
 # 10/27/2010
 
 
-from numpy import log
+import numpy as np
 from pychm.const.units import BOLTZMANN, AVOGADRO, JOULE2CAL, CAL2JOULE
 from pychm.tools import Property
 
@@ -65,7 +65,10 @@ class DelG(object):
         BETA = 1. / (BOLTZMANN * self.temp)
         count0 = float(self.stateCount[state0])
         count1 = float(self.stateCount[state1])
-        energy =  -1 * log(count0 / count1) / BETA  # Joule
+        try:
+            energy =  -1 * np.log(count0 / count1) / BETA  # Joule
+        except ZeroDivisionError:
+            energy = np.inf
         energy = energy / 1000.                 # Kilo Joule
         energy = energy * AVOGADRO              # Joule * Mole**-1
         energy = energy * JOULE2CAL             # KCal / mol
