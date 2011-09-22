@@ -2,11 +2,11 @@
 """
 
 
-import numpy
+import numpy as np
 import scipy.ndimage.filters as filters
 from copy import deepcopy
 from pychm.tools import Property
-import pychm.emap.ext
+import pychm.emap.ext as ext
 import itertools
 
 
@@ -28,15 +28,30 @@ class EMap(object):
     """
     """
 
-    dx = 3.
-    dy = 3.
-    dz = 3.
-    diff = numpy.array([dx, dy, dz])
+    _defaults = {
+        'resolution' : np.float64(15),
+        'rhocut' : np.float64(0),
+        'dx' : np.float64(3),
+        'dy' : np.float64(3),
+        'dz' : np.float64(3)
+    }
+
+    _metaData = [
+        'nc', 'nr', 'ns',
+        'mode',
+        'ncstart', 'nrstart', 'nsstart',
+        'nx', 'ny', 'nz',
+        'xlen', 'ylen', 'zlen',
+        'alpha', 'beta', 'gamma',
+        'mapc', 'mapr', 'maps',
+        'amin', 'amax', 'amean',
+        #'ispg', 'nsymbt', 'lskflg', 'skwmat', 'skwtrn',
+        #'extra', 'maplabel', 'macst', 'arms', 'nlabl', 'label'
+        ]
 
     def __init__(self, mol=None):
         super(EMap, self).__init__()
         #
-        self.basis = numpy.identity(3)
         self._cartArray = None
         self.chargeArray = None
         self.coreArray = None
@@ -44,6 +59,102 @@ class EMap(object):
         # Operations
         self.translations = []
         self.rotations = []
+        # default parameters
+        for k, v in self.__class__._defaults.iteritems():
+            setattr(self, k, v)
+
+    @Property
+    def shape():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            return (self.lx, self.ly, self.lz)
+        return locals()
+
+    @Property
+    def res():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            return (self.xres, self.yres, self.zres)
+        return locals()
+
+    @Property
+    def xres():
+        doc =\
+        """
+        """
+        def fget(self):
+            return self.xlen / self.nx
+        def fset(self, value):
+            self.xlen = self.nx * np.float64(value)
+        return locals()
+
+    @Property
+    def yres():
+        doc =\
+        """
+        """
+        def fget(self):
+            return self.ylen / self.ny
+        def fset(self, value):
+            self.ylen = self.ny * np.float64(value)
+        return locals()
+
+    @Property
+    def zres():
+        doc =\
+        """
+        """
+        def fget(self):
+            return self.zlen / self.nz
+        def fset(self, value):
+            self.zlen = self.nz * np.float64(value)
+        return locals()
+
+    @Property
+    def cartArray3d():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            return np.reshape(self.cartArray, (self.lx, self.ly, self.lz, 3), order='F')
+        return locals()
+
+    @Property
+    def chargeArray3d():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            return np.reshape(self.chargeArray, (self.lx, self.ly, self.lz), order='F')
+        return locals()
+
+    @Property
+    def coreArray3d():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            return np.reshape(self.coreArray, (self.lx, self.ly, self.lz), order='F')
+        return locals()
+
+    @Property
+    def laplacianArray3d():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            return np.reshape(self.laplacianArray, (self.lx, self.ly, self.lz), order='F')
+        return locals()
 
     @Property
     def cartArray():
@@ -53,8 +164,12 @@ class EMap(object):
         """
         def fget(self):
             trans, rot = self.state
-            tmp = numpy.dot(self._cartArray, rot.transpose())
+            tmp = np.dot(self._cartArray, rot.transpose())
             return tmp + trans
+        def fset(self, value):
+            trans, rot = self.state
+            value -= trans
+            self._cartArray = np.dot(value, rot)
         return locals()
 
     @Property
@@ -64,12 +179,12 @@ class EMap(object):
         DOCME
         """
         def fget(self):
-            trans0 = numpy.zeros(3)
+            trans0 = np.zeros(3)
             for trans in self.translations:
                 trans0 += trans
-            rot0 = numpy.identity(3)
+            rot0 = np.identity(3)
             for rot in self.rotations:
-                rot0 = numpy.dot(rot0, rot)
+                rot0 = np.dot(rot0, rot)
             return (trans0, rot0)
         return locals()
 
@@ -114,22 +229,130 @@ class EMap(object):
         self.rotations.append(evec)
 
     def get_chargeTensor(self, eigen=False, array=None):
-        tmp = pychm.emap.ext.get_Tensor(self._cartArray, self.chargeArray)
+        tmp = ext.get_Tensor(self._cartArray, self.chargeArray)
         #
         if eigen:
-            return numpy.linalg.eigh(tmp)
+            return np.linalg.eigh(tmp)
         else:
             return tmp
+
+    def get_laplacianArray(self):
+        return ext.get_laplacian(self.chargeArray3d)
+
+    def get_coreArray(self):
+        return ext.get_core(self.chargeArray3d, self.laplacianArray3d, self.rhocut)
 
     def rotate_byMatrix(self, matrix):
         """
         """
-        self._cartArray = numpy.dot(self._cartArray, matrix.transpose())
+        self._cartArray = np.dot(self._cartArray, matrix.transpose())
+
+    def densityCorrelation(self, other):
+        """
+        DC_{mn} = \frac{    \bar{\rho_m \rho_n} -\bar{\rho_m}\bar{\rho_n}}
+                       {    \delta(\rho_m)\delta(\rho_n)}
+        """
+        assert isinstance(other, EMap)
+        sRho = self.chargeArray
+        oRho = other.chargeArray
+        rhoSquared = np.fromiter(itertools.imap(lambda (x,y): x*y,
+                                itertools.izip(sRho, oRho)), dtype=np.float64)
+        return ((rhoSquared.mean() - sRho.mean() * oRho.mean()) /
+                (sRho.std() * oRho.std()))
+
+    def laplacianCorrelation(self, other):
+        """
+        """
+        assert isinstance(other, EMap)
+        sLap = self.laplacianArray
+        oLap = other.laplacianArray
+        lapSquared = np.fromiter(itertools.imap(lambda (x,y): x*y,
+                                itertools.izip(sLap, oLap)), dtype=np.float64)
+        return ((lapSquared.mean() - sLap.mean() * oLap.mean()) /
+                (sLap.std() * oLap.std()))
+
+    def pad_mapByPixel(self, lessI, moreI, lessJ, moreJ, lessK, moreK):
+        lessI = int(lessI)
+        moreI = int(moreI)
+        lessJ = int(lessJ)
+        moreJ = int(moreJ)
+        lessK = int(lessK)
+        moreK = int(moreK)
+        assert lessI >= 0
+        assert moreI >= 0
+        assert lessJ >= 0
+        assert moreJ >= 0
+        assert lessK >= 0
+        assert moreK >= 0
+        #
+        tmp = self._new()
+        tmp.nxstart = self.nxstart - (lessI + moreI - 1)
+        tmp.nystart = self.nystart - (lessJ + moreJ - 1)
+        tmp.nzstart = self.nzstart - (lessK + moreK - 1)
+        tmp.ncstart = tmp.nxstart
+        tmp.nrstart = tmp.nystart
+        tmp.nsstart = tmp.nzstart
+        #
+        chargeArray3d = ext.padZero(self.chargeArray3d, lessI, moreI, lessJ, moreJ, lessK, moreK)
+        tmp.lx, tmp.ly, tmp.lz = chargeArray3d.shape
+        tmp.nc, tmp.nr, tmp.ns = chargeArray3d.shape
+        tmp.chargeArray = chargeArray3d.flatten('F')
+        #
+        tmp.cartArray = ext.build_cart(tmp.lx, tmp.ly, tmp.lz,
+                                        tmp.nxstart, tmp.nystart, tmp.nzstart,
+                                        tmp.xres, tmp.yres, tmp.zres)
+        #
+        return tmp
+
+    def pad_mapByCart(self, lessX, moreX, lessY, moreY, lessZ, moreZ):
+        assert lessX >= 0.
+        assert moreX >= 0.
+        assert lessY >= 0.
+        assert moreY >= 0.
+        assert lessZ >= 0.
+        assert moreZ >= 0.
+        #
+        lessI = int(lessX / self.xres) + 1
+        moreI = int(moreX / self.xres) + 1
+        lessJ = int(lessY / self.yres) + 1
+        moreJ = int(moreY / self.yres) + 1
+        lessK = int(lessZ / self.zres) + 1
+        moreK = int(moreZ / self.zres) + 1
+        #
+        return self.pad_mapByPixel(lessI, moreI, lessJ, moreJ, lessK, moreK)
+
+    def combine_maps(self, other):
+        pass
+
+    def recast_map(self):
+        pass
+
+    def write_map(self):
+        pass
+
+    def _new(self):
+        tmp = EMap()
+        tmp.nx = self.nx
+        tmp.ny = self.ny
+        tmp.nz = self.nz
+        tmp.mode = 2
+        tmp.xlen = self.xlen
+        tmp.ylen = self.ylen
+        tmp.zlen = self.zlen
+        tmp.alpha = self.alpha
+        tmp.beta = self.beta
+        tmp.gamma = self.gamma
+        tmp.mapc = 1
+        tmp.mapr = 2
+        tmp.maps = 3
+        tmp.rotations = deepcopy(self.rotations)
+        tmp.translations = deepcopy(self.translations)
+        return tmp
 
     def build_map(self):
         # create coordinate matrix
         iterator = ( crd for atom in self.mol for crd in atom.cart )
-        crdMatrix = numpy.fromiter(iterator, float)
+        crdMatrix = np.fromiter(iterator, float)
         crdMatrix.resize((len(self.mol), 3))
         if self.transVector is not None:
             crdMatrix += self.transVector
@@ -140,7 +363,7 @@ class EMap(object):
         xMin = crdMatrix[:,0].min()
         yMin = crdMatrix[:,1].min()
         zMin = crdMatrix[:,2].min()
-        crdMatrix -= numpy.array([xMin, yMin, zMin])
+        crdMatrix -= np.array([xMin, yMin, zMin])
 
         # pad minimum borders
         padding = 2 * self.resolution / self.diff + 1
@@ -152,7 +375,7 @@ class EMap(object):
         zMax = int(crdMatrix[:,2].max() + padding[2])
 
         # initialize
-        tmp = numpy.zeros( xMax * yMax * zMax )
+        tmp = np.zeros( xMax * yMax * zMax )
         tmp.resize((xMax, yMax, zMax))
         tmp1 = deepcopy(tmp)
 
@@ -189,3 +412,4 @@ class EMap(object):
 
         # return
         return (tmp, tmp1)
+

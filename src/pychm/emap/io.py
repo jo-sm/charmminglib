@@ -7,6 +7,7 @@ import struct
 import numpy as np
 from emap import EMap
 from pychm.tools import flatten
+import pychm.emap.ext as ext
 
 
 class CCP4File(object):
@@ -59,17 +60,22 @@ class CCP4File(object):
         cls._processDensityData()
         cls._processCartData()
         cls.map.init_cart()
+        cls.map.laplacianArray = cls.map.get_laplacianArray()
+        cls.map.coreArray = cls.map.get_coreArray()
         return cls.map
 
     @classmethod
     def _read_data(cls):
+        """
+        50 ms
+        """
         with open(cls.filename, mode='rb') as fp:
             nc, nr, ns = struct.unpack('iii', fp.read(12))
             mode = struct.unpack('i', fp.read(4))[0]
             ncstart, nrstart, nsstart = struct.unpack('iii', fp.read(12))
-            nx, ny, nz = map(np.float64, struct.unpack('iii', fp.read(12)))
+            nx, ny, nz = struct.unpack('iii', fp.read(12))
             xlen, ylen, zlen = map(np.float64, struct.unpack('fff', fp.read(12)))
-            alpha, beta, gamma = map(np.radians, struct.unpack('fff', fp.read(12)))
+            alpha, beta, gamma = map(np.float64, map(np.radians, struct.unpack('fff', fp.read(12))))
             mapc, mapr, maps = struct.unpack('iii', fp.read(12))
             amin, amax, amean = map(np.float64, struct.unpack('fff', fp.read(12)))
             ispg = struct.unpack('i', fp.read(4))[0]
@@ -101,6 +107,9 @@ class CCP4File(object):
 
     @classmethod
     def _map_pixelVars2CartVars(cls):
+        """
+        2 us
+        """
         tmp = cls.map
 
         if tmp.mapc == 1 and tmp.mapr == 2 and tmp.maps == 3:
@@ -156,42 +165,27 @@ class CCP4File(object):
 
     @classmethod
     def _processDensityData(cls):
+        """
+        3 ms
+        """
         tmp = cls.map
-        rawArray = tmp.rawArray
-
         # Roll raw electron density array data into a 3D matrix
-        rawMatrix = np.zeros((tmp.nc, tmp.nr, tmp.ns))
-        n = 0
-        for k in xrange(tmp.ns):
-            for j in xrange(tmp.nr):
-                for i in xrange(tmp.nc):
-                    rawMatrix[i, j, k] = rawArray[n]
-                    n += 1
-
+        rawMatrix = np.reshape(tmp.rawArray, (tmp.nc, tmp.nr, tmp.ns), order='F')
         # Remap electron density data
         chargeMatrix = np.transpose(rawMatrix, tmp.transposeTuple)
-
         # Unroll electron density data into flat array
-        iterator = ( chargeMatrix[i, j, k] for k in xrange(tmp.lz)
-                    for j in xrange(tmp.ly) for i in xrange(tmp.lx) )
-        tmp.chargeArray = np.fromiter(iterator, np.float64)
+        tmp.chargeArray = chargeMatrix.flatten('F')
 
     @classmethod
     def _processCartData(cls):
+        """
+        67 ms
+        """
         tmp = cls.map
         # build cartesian data
-        tmp._cartArray = np.zeros((tmp.lx * tmp.ly * tmp.lz, 3))
-        n = 0
-        for k in xrange(tmp.nzstart, tmp.nzstart + tmp.lz):
-            for j in xrange(tmp.nystart, tmp.nystart + tmp.ly):
-                for i in xrange(tmp.nxstart, tmp.nxstart + tmp.lx):
-                    tmp._cartArray[n, 0] = i
-                    tmp._cartArray[n, 1] = j
-                    tmp._cartArray[n, 2] = k
-                    n += 1
-        # scale
-        tmp._cartArray *= np.array([tmp.xlen/tmp.nx, tmp.ylen/tmp.ny,
-                                    tmp.zlen/tmp.nz])
+        tmp._cartArray = ext.build_cart(tmp.lx, tmp.ly, tmp.lz,
+                                        tmp.nxstart, tmp.nystart, tmp.nzstart,
+                                        tmp.xres, tmp.yres, tmp.zres)
         if tmp.alpha != np.pi/2 or tmp.beta != np.pi/2 or tmp.gamma != np.pi/2:
             # skew matrix (un-tested)
             cg = np.cos(tmp.gamma)
@@ -202,7 +196,7 @@ class CCP4File(object):
             sa = np.sin(tmp.alpha)
             skew = np.array([(1, cg,      cb),
                              (0, sg, sb * ca),
-                             (0,  0, sb * sa)])
+                             (0,  0, sb * sa)], dtype=np.float64)
             #
             tmp._cartArray = np.dot(tmp._cartArray, skew.T)
 
@@ -220,7 +214,7 @@ class CharmmOutFile(CCP4File):
                     if '=' in line:
                         metadata.append(line[11:30].lower().split('='))
                 elif line.startswith('<EMAPOUT>'):
-                    mapdata.append(line.lower().split()[2:6])
+                    mapdata.append(line.lower().split()[2:8])
         # metadata processing
         metadata = dict(( (line[0].strip(), line[1]) for line in metadata ))
         cls.map.nc = int(metadata['nc'])
@@ -258,10 +252,20 @@ class CharmmOutFile(CCP4File):
         cls.map.label = []
         cls.map.symmetry = []
         # emap data processing
-        mapdata = flatten(mapdata)
-        mapdata = np.fromiter(mapdata, dtype=np.float64)
-        mapdata.resize((len(mapdata)/4, 4))
+        mapdata = np.array(mapdata, dtype=np.float64)
         cls.map.rawArray = mapdata[:, 3]
+        cls.map.rawlaplacianArray = mapdata[:, 4]
+        cls.map.rawcoreArray = np.array(mapdata[:, 5], dtype=np.int)
+
+
+class Mol2Map(CCP4File):
+    """
+    """
+    @classmethod
+    def _read_data(cls):
+        from pychm.io.pdb import PDBFile
+
+        PDBFil
 
 
 if __name__ == '__main__':
