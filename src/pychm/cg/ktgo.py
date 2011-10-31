@@ -99,6 +99,29 @@ class KTGo(Mol):
                 raise TypeError('Invalid `contactSet` specified specified')
             self.calc_contactMatrix()
         return locals()
+    @Property
+    def kBond():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            return self._parameters['kbond']
+        def fset(self, value):
+            self._parameters['kbond'] = value
+        return locals()
+
+    @Property
+    def kAngle():
+        doc =\
+        """
+        DOCME
+        """
+        def fget(self):
+            return self._parameters['kangle']
+        def fset(self, value):
+            self._parameters['kangle'] = value
+        return locals()
 
     @Property
     def domainScale():
