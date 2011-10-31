@@ -445,6 +445,7 @@ class BaseStruct(list):
             | ``old_atomNum``   [False,True]
             | ``ter``           [False,True]
             | ``end``           True if `outformat` in ["pdborg","charmm"]
+            | ``append``        [False,True]
 
         >>> thisSeg.write('~/1yjp.pdb',outformat='charmm',old_resid=True)
         """
@@ -453,6 +454,8 @@ class BaseStruct(list):
         outFormat = kwargs.get('outformat', 'charmm')
         end = kwargs.get('end', None)
         ter = kwargs.get('ter', None)
+        append = kwargs.get('append', False)
+       
         #
         filename = expandPath(filename)
         writeMe = []
@@ -477,7 +480,10 @@ class BaseStruct(list):
             writeMe.append('END\n')
         # Write file
         writeMe = '\n'.join(writeMe)
-        writeTo = open(filename,'w')
+        if append:
+            writeTo = open(filename,'a')
+        else:
+            writeTo = open(filename,'w')
         writeTo.write(writeMe)
         writeTo.close()
 
