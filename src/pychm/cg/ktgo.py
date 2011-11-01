@@ -424,6 +424,7 @@ class KTGo(Mol):
         for atom in self:
             String.append(atom.Print(outformat='charmm'))
         String.append('TER')
+        String.append('END\n')
         #
         if filename is None:
             for line in String:
