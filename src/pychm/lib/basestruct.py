@@ -462,6 +462,8 @@ class BaseStruct(list):
         if outFormat in ['pdborg', 'charmm']:
             for atom in self:
                 writeMe.append(atom.Print(**kwargs))
+                if ter is None:
+                    ter = True
                 if end is None:
                     end = True
         elif outFormat in ['debug', 'xdebug']:
