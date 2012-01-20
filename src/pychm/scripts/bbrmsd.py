@@ -13,7 +13,7 @@ from pychm.scripts.getprop import getProp
 # Script Inputs #
 #################
 taco = BBRMSD('~/bigbox/chem/cg_paper/1prb/run_rex/1prb_a_pro_7_53.pdb')
-nscale = 0.95
+nscale = 0.93
 pdbcode = '1prb'
 
 # input files
@@ -24,12 +24,11 @@ taco.crdFilename = '&/cg-vacuum.crd'
 taco.dcdPathname = '&/nscale_%4.2f/ld' % nscale
 
 # output path
-anlPath = '&/nscale_%4.2f/test/rep_%02d'
+anlPath = '&/nscale_%4.2f/bbrmsd/rep_%02d'
 
 # other options
 taco.correlArrayLength = 10000
 taco.charmmBin = 'cg_mscale'
-
 
 ###############################################################################
 ###############################################################################
@@ -51,16 +50,17 @@ tempList = []
 for tempFile in tempFileList:
     tempList.append(np.array(getProp(open(tempFile), 'avertemp',
                                     stopIter=1000)['avertemp']).mean())
+
 #############
 # DO Correl #
 #############
-
 
 # Write/Run Correl Jobs
 if 0:
     taco.correlStart = 0
     taco.correlStop = -2
     for i, dcdFile in enumerate(dcdFileList):
+        print "Processing Correl jobs on replica %d." % i
         taco.anlPathname = anlPath % (nscale, i)
         taco.anlFilename = '%s/bbrmsd_%s.anl' % (taco.anlPathname, taco.correlAtomSelection)
         taco.outFilename = '%s/bbrmsd_%s.out' % (taco.anlPathname, taco.correlAtomSelection)
@@ -82,13 +82,13 @@ if 1:
 
     delGList = []
     counts = []
-    for i in range(len(dcdFileList)):
+    for i in xrange(len(dcdFileList)):
         taco.anlPathname = anlPath % (nscale, i)
         taco.anlFilename = '%s/bbrmsd_%s.anl' % (taco.anlPathname, taco.correlAtomSelection)
         # DelG Calculation
         burrito = DelG(taco.data, tempList[i])
-        burrito.addState('folded',0,10)
-        burrito.addState('unfolded',10,30)
+        burrito.addState('folded', 0, 10)
+        burrito.addState('unfolded', 10, 30)
         burrito.count()
         delGList.append(burrito.get_DelG('unfolded', 'folded'))
     # Filter out infinite energies (for plotting and regression)
@@ -105,6 +105,7 @@ if 1:
         from scipy.optimize import leastsq
         from scipy import linspace
         import matplotlib.pyplot as pyplot
+        from pychm.const.units import CAL2JOULE
 
 
         def residuals(v, x):
@@ -129,13 +130,23 @@ if 1:
         y = np.array(plotDelG)
 
         ## Initial parameter values
-        paramArray_0 = np.array([16.8,300,0.28])
+        paramArray_0 = np.array([30., 350., 0.30])
 
         ## Fitting
         paramArray, success = leastsq(error, paramArray_0, args=(x,y), maxfev=10000)
 
         ## Plot
-        print 'Estimater parameters: ', paramArray
+        paramArrayJ = np.array([paramArray[0] * CAL2JOULE, paramArray[1], paramArray[2] * CAL2JOULE])
+        print 'Estimater parameters: ', paramArrayJ
+        writeMe = []
+        writeMe.append('Tm = %5.1f' % paramArrayJ[1])
+        writeMe.append('delH = %5.1f' % paramArrayJ[0])
+        writeMe.append('delC_p = %5.2f' % paramArrayJ[2])
+        writeMe.append('')
+        writeTo = open('bbrmsd_params.txt', 'w')
+        writeTo.write('\n'.join(writeMe))
+        writeTo.close()
+
         X = linspace(x.min(),x.max(),len(x)*5)
         pyplot.plot(x,y,'g^', X, residuals(paramArray,X),'k-')
         pyplot.xlabel(r'$Temperature\ (K)$')
@@ -144,6 +155,6 @@ if 1:
         pyplot.title(r'%s Melting Curve' % pdbcode)
         if True:
             Format = 'png'
-            pyplot.savefig('%s_delG.%s' % (pdbcode, Format), format=Format)
+            pyplot.savefig('bbrmsd_delG.%s' % (Format), format=Format)
         else:
             pyplot.show()

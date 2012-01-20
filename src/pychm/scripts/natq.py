@@ -13,7 +13,7 @@ from pychm.scripts.getprop import getProp
 # Script Inputs #
 #################
 taco = NatQ('~/bigbox/chem/cg_paper/1prb/run_rex/1prb_a_pro_7_53.pdb')
-nscale = 0.95
+nscale = 0.93
 pdbcode = '1prb'
 
 # input files
@@ -25,7 +25,7 @@ taco.crdFilename = '&/cg-vacuum.crd'
 taco.dcdPathname = '&/nscale_%4.2f/ld' % nscale
 
 # output path
-anlPath = '&/nscale_%4.2f/test/rep_%02d'
+anlPath = '&/nscale_%4.2f/natq/rep_%02d'
 
 # other options
 taco.correlArrayLength = 10000
@@ -57,9 +57,8 @@ for tempFile in tempFileList:
 # DO Correl #
 #############
 
-
 # Write/Run correl jobs
-if 1:
+if 0:
     taco.correlStart = 0
     taco.correlStop = -2
     for i, dcdFile in enumerate(dcdFileList):
@@ -74,7 +73,6 @@ if 1:
                 ]
         taco.do_correl(comments=comments)
         taco.data
-
 
 # Calculate DelG(T)
 if 1:
@@ -108,6 +106,7 @@ if 1:
         from scipy.optimize import leastsq
         from scipy import linspace
         import matplotlib.pyplot as pyplot
+        from pychm.const.units import CAL2JOULE
 
 
         def residuals(v, x):
@@ -138,7 +137,17 @@ if 1:
         paramArray, success = leastsq(error, paramArray_0, args=(x,y), maxfev=10000)
 
         ## Plot
-        print 'Estimater parameters: ', paramArray
+        paramArrayJ = np.array([paramArray[0] * CAL2JOULE, paramArray[1], paramArray[2] * CAL2JOULE])
+        print 'Estimater parameters: ', paramArrayJ
+        writeMe = []
+        writeMe.append('Tm = %5.1f' % paramArrayJ[1])
+        writeMe.append('delH = %5.1f' % paramArrayJ[0])
+        writeMe.append('delC_p = %5.2f' % paramArrayJ[2])
+        writeMe.append('')
+        writeTo = open('natq_params.txt', 'w')
+        writeTo.write('\n'.join(writeMe))
+        writeTo.close()
+
         X = linspace(x.min(),x.max(),len(x)*5)
         pyplot.plot(x,y,'g^', X, residuals(paramArray,X),'k-')
         pyplot.xlabel(r'$Temperature\ (K)$')
@@ -147,6 +156,6 @@ if 1:
         pyplot.title(r'%s Melting Curve' % pdbcode)
         if True:
             Format = 'png'
-            pyplot.savefig('%s_delG.%s' % (pdbcode, Format), format=Format)
+            pyplot.savefig('natq_delG.%s' % (Format), format=Format)
         else:
             pyplot.show()

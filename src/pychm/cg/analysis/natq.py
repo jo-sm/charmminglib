@@ -117,6 +117,7 @@ class NatQ(BaseAnalysis):
         kwargs = lowerKeys(kwargs)
         header = kwargs.get('header', [])
         #
+        print self.anlPathname
         if self.anlPathname is None:
             raise IOError("No directory specified.")
         mkdir(self.anlPathname)
@@ -146,6 +147,7 @@ class NatQ(BaseAnalysis):
             String = '\n'.join(String)
             # Write file
             self.inpFilename = '%s/natq%02d.inp' % (self.inpPathname, i)
+            print '%s' % self.inpFilename
             write_to = open(self.inpFilename, 'w')
             write_to.write(String)
             write_to.close()
