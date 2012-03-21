@@ -18,15 +18,23 @@ def load_correlOutput(filename):
     of time.  Data is returned as a 1darray.
     """
     def gen():
+        start_parse = False
         for line in open(filename):
-            try:
-                dummy = int(line.split()[0])
+            if start_parse:
                 value = line.split()[1]
                 if value.lower() == 'nan':
-                    raise AssertionError('load_correlOutput: Parsed NaN in %s' % filename)
+                    raise AssertionError("parsed NaN in %s" % filename)
                 yield float(value)
-            except ValueError:
-                pass
+            else:
+                try:
+                    dummy = int(line.split()[0])
+                    value = line.split()[1]
+                    if value.lower() == 'nan':
+                        raise AssertionError('load_correlOutput: Parsed NaN in %s' % filename)
+                    start_parse = True
+                    yield float(value)
+                except ValueError:
+                    pass
     return np.fromiter(gen(), np.float)
 
 

@@ -81,7 +81,7 @@ class BBRMSD(BaseAnalysis):
         String.append('traj query unit 10')
         String.append('correl maxtimesteps %d maxatom %d maxseries 1' %
                     (self.correlArrayLength, self.maxatom))
-        String.append('enter rmsd rms orient')
+        String.append('enter rmsd rms mass orient')
         String.append('traj firstu 10 nunit 1 begin %d stop %d skip %d select bb end' %
                     (self.correlStart, self.correlStop, self.correlSkip))
         String.append('')
