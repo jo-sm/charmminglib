@@ -4,8 +4,9 @@
 """
 
 
+from copy import deepcopy
 from itertools import tee
-from numpy import array, fromiter, float, dot, sin, cos
+from numpy import array, fromiter, float, dot, sin, cos, ones
 from numpy.linalg import eig, norm
 from pychm.const.units import DEG2RAD
 from pychm.tools import Property, expandPath, lowerKeys
@@ -348,6 +349,43 @@ class BaseStruct(list):
             return eig(I)
         else:
             return I
+
+    def get_rmsd(self, other, orient=False, mass=False):
+        """
+        Get the root mean squared deviation between two struct objects.
+        Flags:
+            'orient'    -- Defaults to False, if set orients the two structures
+                        to each other before calculating RMSD.
+            'mass'      -- Defaults to False, if set calculates a mass weighted
+                        RMSD instead of a non-weighted RMSD.
+        """
+        # validate data
+        assert len(self) == len(other)
+        if mass:
+            assert abs(self.mass - other.mass) < 0.001
+        # make copies so we dont change original objects
+        tmp_self = deepcopy(self)
+        tmp_other = deepcopy(other)
+        if orient:
+            tmp_self.orient()
+            tmp_other.orient()
+        #
+        iterator = ( crd for atom in tmp_self for crd in atom.cart )
+        self_crd = fromiter(iterator, float)
+        self_crd.resize((len(self), 3))
+        iterator = ( crd for atom in tmp_other for crd in atom.cart )
+        other_crd = fromiter(iterator, float)
+        other_crd.resize((len(other), 3))
+        # weighting
+        if mass:
+            iterator = ( atom.mass for atom in tmp_self )
+            weight = fromiter(iterator, float)
+            weight = array((weight, weight, weight)).T
+        else:
+            weight = ones(self_crd.shape)
+        # calc rms
+        diff_crd = (self_crd - other_crd) * weight
+        return ((diff_crd**2).mean())**0.5
 
     def get_span(self):
         """
