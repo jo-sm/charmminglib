@@ -387,6 +387,21 @@ class BaseStruct(list):
         diff_crd = (self_crd - other_crd) * weight
         return ((diff_crd**2).mean())**0.5
 
+    def get_rg(self):
+        """
+        Returns the mass weighted radius of gyration of the `BaseStruct`
+        object. Note that mass weighting occurs automagically. Also note
+        that this isn't vectorized, so it might be dog slow for *Large*
+        Structs.
+        """
+        iterator = ( crd for atom in self for crd in atom.cart )
+        crd = fromiter(iterator, float)
+        crd.resize((len(self), 3))
+        crd = crd - self.com
+        iterator = ( norm(crd[i])**2 for i in xrange(len(self)) )
+        tmp = fromiter(iterator, float)
+        return tmp.mean()**0.5
+
     def get_span(self):
         """
         Returns a 3-tuple which represents the span (max - min)for
