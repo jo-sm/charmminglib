@@ -345,7 +345,7 @@ class Mol(BaseStruct):
         ``15  CE  MET A   1      16.764  26.891  42.696  0.73 60.01           C``
         """
         delete_me = []
-        for seg in self.iter_seg():
+        for seg in self.iter_seg(segtypes=['pro']):
             tmp = []
             for i, atom in enumerate(seg):
                 try:
