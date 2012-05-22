@@ -19,7 +19,6 @@ __author__ = ("Frank C. Pickard <frank.pickard@nih.gov>")
 __all__ = ["open_dcd", "read_header", "pack_header"]
 
 from array import array
-from io import DEFAULT_BUFFER_SIZE
 import os
 import struct
 import warnings
@@ -185,12 +184,6 @@ def open_dcd(fname, mode='r', buffering=None, header=True, has_rec=True,
     kwargs['Q_PREC'] = q_prec
     if 'has_q' not in kwargs:
         kwargs['has_q'] = False
-    # parse buffering
-    if buffering is None or buffering < 0:
-        try:
-            buffering = os.stat(os.curdir).st_blksize
-        except (os.error, AttributeError):
-            buffering = DEFAULT_BUFFER_SIZE
     # instantiate!
     return DCDFile(fname,
                     (reading and "r" or "") +
@@ -445,7 +438,7 @@ def guess_xtl(fname, endian='@', rec_head_prec='i', xtl_prec='d'):
 
 
 class DCDFile(CharmmBin):
-    def __init__(self, fname, mode='rb', buffering=DEFAULT_BUFFER_SIZE,
+    def __init__(self, fname, mode='rb', buffering=None,
                 endian='@', rec_head_prec='i', **kwargs):
         super(DCDFile, self).__init__(fname=fname, mode=mode,
             buffering=buffering, endian=endian, rec_head_prec=rec_head_prec)

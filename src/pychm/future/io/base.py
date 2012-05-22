@@ -15,6 +15,17 @@ import numpy as np
 from pychm.future.tools import rwprop
 
 
+def get_buffer_size(arg=None):
+    """Function to calculate buffer size if it is not explicitly specified."""
+    if arg is None or arg < 0 or arg==1:
+        try:
+            return os.stat(os.curdir).st_blksize
+        except (os.error, AttributeError):
+            return DEFAULT_BUFFER_SIZE
+    else:
+        return arg
+
+
 def open_fort(fname, mode='r', buffering=None, endian='@',
             rec_head_prec='i'):
     """The public function responsible for mediating access to the Fort file-
@@ -74,12 +85,6 @@ def open_fort(fname, mode='r', buffering=None, endian='@',
         raise ValueError("must have exactly one read/write/append mode")
     if "x" in modes and os.path.isfile(fname):
         raise ValueError("you may not set `mode=x` for existing files")
-    # parse buffering
-    if buffering is None or buffering < 0:
-        try:
-            buffering = os.stat(os.curdir).st_blksize
-        except (os.error, AttributeError):
-            buffering = DEFAULT_BUFFER_SIZE
     # instantiate!
     return FortFile(fname=fname,mode=
                     (reading and "r" or "") +
@@ -94,8 +99,9 @@ def open_fort(fname, mode='r', buffering=None, endian='@',
 class File(object):
     """
     """
-    def __init__(self, fname, mode='r', buffering=DEFAULT_BUFFER_SIZE):
+    def __init__(self, fname, mode='r', buffering=None):
         super(File, self).__init__()
+        buffering = get_buffer_size(buffering)
         self._buffer_size = buffering
         self.fp = open(name=fname, mode=mode, buffering=buffering)
 
@@ -126,7 +132,7 @@ class File(object):
         return self.fp.read(n)
 
     def readline(self):
-        self.fp.readline()
+        return self.fp.readline()
 
     def readlines(self, n=-1):
         if n < 0:
@@ -215,7 +221,7 @@ class File(object):
 class BinFile(File):
     """
     """
-    def __init__(self, fname, mode='rb', buffering=DEFAULT_BUFFER_SIZE,
+    def __init__(self, fname, mode='rb', buffering=None,
                 endian='@'):
         if 'b' not in mode:
             mode += 'b'
@@ -275,7 +281,7 @@ class BinFile(File):
 
 
 class FortFile(BinFile):
-    def __init__(self, fname, mode='rb', buffering=DEFAULT_BUFFER_SIZE,
+    def __init__(self, fname, mode='rb', buffering=None,
                 endian='@', rec_head_prec='i'):
         """The `func:open_fort` should be used in lieu of this constructor.
         """
@@ -406,7 +412,7 @@ class FortFile(BinFile):
 class TextFile(File):
     """
     """
-    def __init__(self, fname, mode='r', buffering=DEFAULT_BUFFER_SIZE):
+    def __init__(self, fname, mode='r', buffering=None):
         if 'b' in mode:
             raise ValueError("Invalid mode, opening TextFile using 'b'.")
         super(TextFile, self).__init__(fname=fname, mode=mode,
