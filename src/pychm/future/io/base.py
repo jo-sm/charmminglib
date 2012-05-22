@@ -207,7 +207,10 @@ class File(object):
         return self
 
     def __repr__(self):
-        return "%s(%d, %s)" % (self.__class__.__name__, self.fileno(), self.mode)
+        try:
+            return "%s(%d, %s)" % (self.__class__.__name__, self.fileno(), self.mode)
+        except ValueError:
+            return "%s(CLOSED, %s)" % (self.__class__.__name__, self.mode)
 
     # #### Context Manager Protocol
     def __enter__(self):

@@ -452,7 +452,8 @@ class DCDFile(CharmmBin):
         self._frame_size = self._frame_dt.itemsize
         # etc
         self._leftovers = []
-        self.seek(0, whence=0)
+        if 'r' in mode:
+            self.seek(0, whence=0)
 
     # Highest level methods ###################################################
     def iter_frame(self, begin=0, end=None, stride=None):

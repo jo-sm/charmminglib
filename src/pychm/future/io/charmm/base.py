@@ -6,6 +6,8 @@ from __future__ import division
 
 __all__ = []
 
+from collections import deque
+
 from pychm.future.io.base import FortFile, TextFile
 
 
@@ -28,50 +30,16 @@ class CharmmCard(TextFile):
         super(CharmmCard, self).__init__(fname=fname, mode=mode,
                                         buffering=buffering)
         self.title = None
+        self.body = None
+        self.deque = None
 
-    def get_title(self):
-        cur_pos = self.tell()
-        self.seek(0, 0)
-        title = []
-        for line in self:
-            line = line.strip()
-            if not line:
-                continue
-            if line == '*':
-                self.seek(cur_pos, 0)
-                return title
-            elif line.startswith('*'):
-                title.append(line)
-            else:
-                self.seek(cur_pos, 0)
-                return None
-
-    def pack_title(self):
-        try:
-            tmp = []
-            for line in self.title:
-                if not line.startswith('*'):
-                    line = '* ' + line
-                tmp.append(line)
-            if tmp[-1].strip() != '*':
-                tmp.append('*')
-            return '\n'.join(tmp)
-        except TypeError:
-            return "* A blank title.\n*\n"
-
-    def seek_top(self):
-        if self.title:
-            self.readlines(len(self.title)+1)
-        else:
-            self.seek(0, 0)
-
-    def iter_normalize_card_data(self):
+    def iter_normalize_card(self):
         """Returns an iterator over the card file's lines, with comments,
         exterior whitespace and blanklines removed. Also, lines that are
         broken over multiple physical lines in the file are combined.
         """
         cc = self.comment_char
-        self.seek_top()
+        self.seek(0, 0)
         # filter comments, whitespace, blanklines
         iterable = ( line.strip() for line in self )
         iterable = ( line for line in iterable if line )
@@ -82,7 +50,7 @@ class CharmmCard(TextFile):
         tmp = []
         for line in iterable:
             if line.endswith(self.continue_char):
-                tmp.append(line)
+                tmp.append(line[:-1].strip())
             else:
                 if tmp:
                     tmp.append(line)
@@ -93,3 +61,23 @@ class CharmmCard(TextFile):
         # flush
         if tmp:
             yield ' '.join(tmp)
+
+    def parse(self):
+        self.deque = deque(self.iter_normalize_card())
+        title = []
+        while 1:
+            if self.deque[0].startswith('*'):
+                title.append(self.deque.popleft()[1:].strip())
+            else:
+                break
+        self.title = [ line.strip() for line in title if line ]
+
+    def pack_title(self):
+        try:
+            tmp = []
+            for line in self.title:
+                tmp.append('* %s' % line)
+            tmp.append('*\n')
+            return '\n'.join(tmp)
+        except TypeError:
+            return "* A blank title.\n*\n"
