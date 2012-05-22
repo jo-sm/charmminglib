@@ -4,9 +4,9 @@ DOCME
 """
 
 import pychm.const
-import pychm.tools
-import pychm.lib
 import pychm.io
+import pychm.lib
+import pychm.tools
 
 
 __all__ = ['lib', 'io', 'const', 'tools']

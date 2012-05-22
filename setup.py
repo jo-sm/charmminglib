@@ -26,9 +26,14 @@ setup(
     author_email = 'pickard81@gmail.com, btamiller@gmail.com',
     url = 'www.pychm.googlecode.com/svn/',
     packages = [
-        'pychm', 'pychm.analysis', 'pychm.cg',
-        'pychm.cg.analysis', 'pychm.const', 'pychm.io',
-        'pychm.lib', 'pychm.scripts'
+        'pychm',
+        'pychm.analysis',
+        'pychm.cg', 'pychm.cg.analysis',
+        'pychm.const',
+        'pychm.future', 'pychm.future.io', 'pychm.future.io.charmm', 'pychm.future.lib'
+        'pychm.io',
+        'pychm.lib',
+        'pychm.scripts'
         ],
     package_dir = {'pychm': 'src/pychm'},
     package_data = {'pychm': ['data/*']},

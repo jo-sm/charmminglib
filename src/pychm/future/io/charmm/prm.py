@@ -1,9 +1,21 @@
 
 
+from __future__ import division
+
+__author__ = ("Frank C. Pickard IV <frank.pickard@nih.gov>")
+__all__ = ["open_prm"]
+
 import warnings
 
-import pychm.future.lib.toppar as tp
+from pychm.future.lib import toppar as tp
 from pychm.future.io.charmm.base import CharmmCard
+
+
+def open_prm(fname, mode='r', buffering=None, **kwargs):
+    tmp = PRMFile(fname, mode, buffering)
+    if 'r' in mode:
+        tmp.parse()
+    return tmp
 
 
 def prmobj_from_charmm(datastring, cls):

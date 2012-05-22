@@ -1,12 +1,15 @@
 
 
+from __future__ import division
+
+__all__ = ['Toppar']
+
 from abc import ABCMeta, abstractmethod, abstractproperty
 from copy import deepcopy
 import warnings
 
 
 class Toppar(object):
-
     sections = ('bond', 'angle', 'dihedral', 'improper', 'cmap', 'nonbond',
                 'nbfix', 'hbond')
 

@@ -16,7 +16,7 @@ from __future__ import division
 ## from __future__ import unicode_literals # this is a py3k
 ############################################ compatibility problem.
 __author__ = ("Frank C. Pickard <frank.pickard@nih.gov>")
-__all__ = ["open_dcd", "read_header", "pack_header"]
+__all__ = ["open_dcd"]
 
 from array import array
 import os
@@ -185,12 +185,15 @@ def open_dcd(fname, mode='r', buffering=None, header=True, has_rec=True,
     if 'has_q' not in kwargs:
         kwargs['has_q'] = False
     # instantiate!
-    return DCDFile(fname,
-                    (reading and "r" or "") +
-                    (writing and "w" or "") +
-                    (appending and "a" or "") +
-                    (updating and "+" or ""),
-                    buffering, **kwargs)
+    tmp = DCDFile(fname,
+                (reading and "r" or "") +
+                (writing and "w" or "") +
+                (appending and "a" or "") +
+                (updating and "+" or ""),
+                buffering, **kwargs)
+    if 'r' in mode:
+        tmp.seek(0, whence=0)
+    return tmp
 
 
 def read_header(fname, endian='@', rec_head_prec='i', c_array_prec='i'):
@@ -452,8 +455,6 @@ class DCDFile(CharmmBin):
         self._frame_size = self._frame_dt.itemsize
         # etc
         self._leftovers = []
-        if 'r' in mode:
-            self.seek(0, whence=0)
 
     # Highest level methods ###################################################
     def iter_frame(self, begin=0, end=None, stride=None):
