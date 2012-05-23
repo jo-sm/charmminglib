@@ -9,6 +9,10 @@ from copy import deepcopy
 import warnings
 
 
+class CMAP_Exception(Exception):
+    pass
+
+
 class Toppar(object):
     sections = ('bond', 'angle', 'dihedral', 'improper', 'cmap', 'nonbond',
                 'nbfix', 'hbond')
@@ -52,14 +56,23 @@ class Toppar(object):
             elif self_section is not None and other_section is None:
                 pass
             else:
-                setattr(tmp_self, section, getattr(tmp_self, section) + getattr(tmp_other, section))
+                if section == 'cmap':
+                    self_cmap = tuple(self_section)
+                    other_cmap = tuple(other_section)
+                    if self_cmap != other_cmap:
+                        raise CMAP_Exception("CMAPs are different between toppar")
+                    setattr(tmp_self, section, getattr(tmp_self, section))
+                else:
+                    setattr(tmp_self, section, getattr(tmp_self, section) + getattr(tmp_other, section))
         return tmp_self
 
     def make_unique(self):
         """Currently destroys original ordering."""
         for section in self.sections:
+            if section == 'cmap':
+                continue
             if getattr(self, section) is None:
-                pass
+                continue
             tmp = sorted(list(set(getattr(self, section))))
 
 class PRM(ABCMeta):
