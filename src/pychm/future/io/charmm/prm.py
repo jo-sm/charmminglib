@@ -1,7 +1,5 @@
 
 
-from __future__ import division
-
 __author__ = ("Frank C. Pickard IV <frank.pickard@nih.gov>")
 __all__ = ["open_prm"]
 
@@ -18,12 +16,12 @@ def open_prm(fname, mode='r', buffering=None, **kwargs):
     return tmp
 
 
-def prmobj_from_charmm(datastring, cls):
-    if not isinstance(datastring, basestring):
-        raise TypeError("Invalid datastring: %r" % datastring)
+def prmobj_from_charmm(arg, cls):
+    if not isinstance(arg, basestring):
+        raise TypeError("Invalid arg: %r" % arg)
     if not isinstance(cls, tp.PRM):
         raise TypeError("Invalid class: %s" % cls.__class__.__name__)
-    return cls(*datastring.split())
+    return cls(*arg.split())
 
 
 def prmobj_printer(prm):
@@ -46,7 +44,7 @@ def prmobj_printer(prm):
         args = (prm.text,)
         return '%s' % args
     elif isinstance(prm, tp.NonbondPRM):
-        args = (prm.atom0, prm.ig, prm.k, prm.eq, prm.ig14, prm.k14, prm.eq14)
+        args = (prm.atom, prm.ig, prm.k, prm.eq, prm.ig14, prm.k14, prm.eq14)
         if None in args:
             return '%-8s%5.1f%10s%12.6f' % args[:4]
         else:
@@ -99,23 +97,29 @@ class PRMFile(CharmmCard):
         """
         super(PRMFile, self).parse()
         while 1:
-            if self.deque[0].startswith('bond'):
-                self._parse_subsection('bond')
-            elif self.deque[0].startswith(('angl', 'thet')):
-                self._parse_subsection('angle')
-            elif self.deque[0].startswith(('dihe', 'phi')):
-                self._parse_subsection('dihedral')
-            elif self.deque[0].startswith(('impr', 'imph')):
-                self._parse_subsection('improper')
-            elif self.deque[0].startswith('cmap'):
-                self._parse_subsection('cmap')
-            elif self.deque[0].startswith(('nbon', 'nonb')):
-                self._parse_subsection('nonbond')
-            elif self.deque[0].startswith('nbfi'):
-                self._parse_subsection('nbfi')
-            elif self.deque[0].startswith('hbon'):
-                self._parse_subsection('hbond')
-            else:
+            try:
+                if self.deque[0].startswith('bond'):
+                    self._parse_subsection('bond')
+                elif self.deque[0].startswith(('angl', 'thet')):
+                    self._parse_subsection('angle')
+                elif self.deque[0].startswith(('dihe', 'phi')):
+                    self._parse_subsection('dihedral')
+                elif self.deque[0].startswith(('impr', 'imph')):
+                    self._parse_subsection('improper')
+                elif self.deque[0].startswith('cmap'):
+                    self._parse_subsection('cmap')
+                elif self.deque[0].startswith(('nbon', 'nonb')):
+                    self._parse_subsection('nonbond')
+                elif self.deque[0].startswith('nbfi'):
+                    self._parse_subsection('nbfi')
+                elif self.deque[0].startswith('hbon'):
+                    self._parse_subsection('hbond')
+                elif self.deque[0].startswith('end'):
+                    break
+                else:
+                    raise AssertionError("Parse: How did I get here?")
+            except IndexError:
+                warnings.warn("No END statement found.")
                 break
 
     def _parse_subsection(self, arg):
@@ -141,7 +145,7 @@ class PRMFile(CharmmCard):
             if section == 'cmap':
                 if self.cmap is not None:
                     toppar.cmap_opts = self.cmap[0]
-                    toppar.cmap = [ tp.CmapPRM(line) for line in self.cmap[1:] ]
+                    toppar.cmap = [ tp.CmapPRM('\n'.join(self.cmap[1:])) ]
             else:
                 opts, objs = self._export(section)
                 if opts is None:
@@ -183,10 +187,17 @@ class PRMFile(CharmmCard):
         tmp = []
         tmp.append(self.pack_title())
         tmp.append('')
+        tmp.append('')
         for section in self.sections:
             if getattr(self, section) is not None:
                 tmp += getattr(self, section)
                 tmp.append('')
+                tmp.append('')
+        tmp.append('')
+        tmp.append('')
+        tmp.append('end')
+        tmp.append('')
+        tmp.append('')
         return '\n'.join(tmp)
 
     def write_all(self):

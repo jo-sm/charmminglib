@@ -30,6 +30,7 @@ class CharmmCard(TextFile):
         super(CharmmCard, self).__init__(fname=fname, mode=mode,
                                         buffering=buffering)
         self.title = None
+        self.version = None
         self.body = None
         self.deque = None
 
@@ -64,20 +65,36 @@ class CharmmCard(TextFile):
 
     def parse(self):
         self.deque = deque(self.iter_normalize_card())
-        title = []
+        self.title = self._parse_title()
+        self.version = self._parse_version()
+
+    def _parse_title(self):
+        tmp = []
         while 1:
             if self.deque[0].startswith('*'):
-                title.append(self.deque.popleft()[1:].strip())
+                tmp.append(self.deque.popleft()[1:].strip())
             else:
                 break
-        self.title = [ line.strip() for line in title if line ]
+        return [ line for line in tmp if line ]
+
+    def _parse_version(self):
+        test_line = self.deque[0]
+        try:
+            ver, subver = map(int, test_line.split())
+            self.deque.popleft()
+            return (ver, subver)
+        except ValueError:
+            return None
 
     def pack_title(self):
         try:
             tmp = []
             for line in self.title:
                 tmp.append('* %s' % line)
-            tmp.append('*\n')
+            tmp.append('*')
             return '\n'.join(tmp)
         except TypeError:
-            return "* A blank title.\n*\n"
+            return "* A blank title.\n*"
+
+    def pack_version(self):
+        return "%5d%5d" % self.version

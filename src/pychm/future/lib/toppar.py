@@ -1,12 +1,25 @@
 
 
-from __future__ import division
-
 __all__ = ['Toppar']
 
 from abc import ABCMeta, abstractmethod, abstractproperty
 from copy import deepcopy
 import warnings
+
+
+# Convenience functions ############################
+def _myfloat(k):
+    try:
+        return float(k)
+    except TypeError:
+        return k
+
+def _myint(k):
+    try:
+        return int(k)
+    except TypeError:
+        return k
+#####################################################
 
 
 class CMAP_Exception(Exception):
@@ -35,8 +48,12 @@ class Toppar(object):
         self.nonbond_opts = None
         self.nbfix_opts = None
         self.hbond_opts = None
+        # rtf
+        self.mass = None
+        self.residue = None
+        self.patch = None
 
-    def __add__(self, other):
+    def merge(self, other):
         """Creates a new Toppar object, where rtf/prm objects from `self` are
         given priority over rtf/prm objects from `other`.
         """
@@ -57,14 +74,15 @@ class Toppar(object):
                 pass
             else:
                 if section == 'cmap':
-                    self_cmap = tuple(self_section)
-                    other_cmap = tuple(other_section)
-                    if self_cmap != other_cmap:
+                    if self_section != other_section:
                         raise CMAP_Exception("CMAPs are different between toppar")
                     setattr(tmp_self, section, getattr(tmp_self, section))
                 else:
                     setattr(tmp_self, section, getattr(tmp_self, section) + getattr(tmp_other, section))
         return tmp_self
+
+    def __add__(self, other):
+        return self.merge(other)
 
     def make_unique(self):
         """Currently destroys original ordering."""
@@ -97,6 +115,7 @@ class BasePRM(object):
 
     def __repr__(self):
         return '%s%r' % (self.__class__.__name__, self._sortkey)
+
     #### Comparison Methods #########################################
     def __eq__(self, other):
         if self.__class__ != other.__class__:
@@ -124,8 +143,8 @@ class BondPRM(BasePRM):
 
     def __init__(self, atom0=None, atom1=None, k=None, eq=None):
         self.atom0, self.atom1 = sorted((atom0, atom1))
-        self.k = float(k)
-        self.eq = float(eq)
+        self.k = _myfloat(k)
+        self.eq = _myfloat(eq)
 
     @property
     def _sortkey(self):
@@ -143,16 +162,10 @@ class AnglePRM(BasePRM):
     def __init__(self, atom0=None, atom1=None, atom2=None, k=None, eq=None, k13=None, eq13=None):
         self.atom0, self.atom2 = sorted((atom0, atom2))
         self.atom1 = atom1
-        self.k = float(k)
-        self.eq = float(eq)
-        if k13 is None:
-            self.k13 = None
-        else:
-            self.k13 = float(k13)
-        if eq13 is None:
-            self.eq13 = None
-        else:
-            self.eq13 = float(eq13)
+        self.k = _myfloat(k)
+        self.eq = _myfloat(eq)
+        self.k13 = _myfloat(k13)
+        self.eq13 = _myfloat(eq13)
 
     @property
     def _sortkey(self):
@@ -176,9 +189,9 @@ class DihedralPRM(BasePRM):
             self.atom1, self.atom2 = (atom1, atom2)
         else:
             self.atom1, self.atom2 = (atom2, atom1)
-        self.k = float(k)
-        self.mult = int(mult)
-        self.eq = float(eq)
+        self.k = _myfloat(k)
+        self.mult = _myint(mult)
+        self.eq = _myfloat(eq)
 
     @property
     def _sortkey(self):
@@ -198,9 +211,9 @@ class ImproperPRM(BasePRM):
             self.atom1, self.atom2 = (atom1, atom2)
         else:
             self.atom1, self.atom2 = (atom2, atom1)
-        self.k = float(k)
-        self.mult = int(mult)
-        self.eq = float(eq)
+        self.k = _myfloat(k)
+        self.mult = _myint(mult)
+        self.eq = _myfloat(eq)
 
     @property
     def _sortkey(self):
@@ -227,29 +240,20 @@ class CmapPRM(BasePRM):
 
 
 class NonbondPRM(BasePRM):
-    __slots__ = ['atom0', 'ig', 'k', 'eq', 'ig14', 'k14', 'eq14']
+    __slots__ = ['atom', 'ig', 'k', 'eq', 'ig14', 'k14', 'eq14']
 
-    def __init__(self, atom0=None, ig=None, k=None, eq=None, ig14=None, k14=None, eq14=None):
-        self.atom0 = atom0
-        self.ig = float(ig)     # ignored
-        self.k = float(k)       # epsilon
-        self.eq = float(eq)     # r_min/2
-        if ig14 is None:        # 1-4 interaction ignored
-            self.ig14 = None
-        else:
-            self.ig14 = float(ig14)
-        if k14 is None:         # 1-4 epsilon
-            self.k14 = None
-        else:
-            self.k14 = float(k14)
-        if eq14 is None:        # 1-4 r_min/2
-            self.eq14 = None
-        else:
-            self.eq14 = float(eq14)
+    def __init__(self, atom=None, ig=None, k=None, eq=None, ig14=None, k14=None, eq14=None):
+        self.atom = atom
+        self.ig = _myfloat(ig)     # ignored
+        self.k = _myfloat(k)       # epsilon
+        self.eq = _myfloat(eq)     # r_min/2
+        self.ig14 = _myfloat(ig14)
+        self.k14 = _myfloat(k14)
+        self.eq14 = _myfloat(eq14)
 
     @property
     def _sortkey(self):
-        return (self.atom0,)
+        return (self.atom,)
 
     def _validate(self):
         for attrname in self.__slots__[:4]:
@@ -268,16 +272,10 @@ class NBFixPRM(BasePRM):
 
     def __init__(self, atom0=None, atom1=None, k=None, eq=None, k14=None, eq14=None):
         self.atom0, self.atom1 = sorted((atom0, atom1))
-        self.k = float(k)
-        self.eq = float(eq)
-        if k14 is None:
-            self.k14 = None
-        else:
-            self.k14 = float(k14)
-        if eq14 is None:
-            self.eq14 = None
-        else:
-            self.eq14 = float(eq14)
+        self.k = _myfloat(k)
+        self.eq = _myfloat(eq)
+        self.k14 = _myfloat(k14)
+        self.eq14 = _myfloat(eq14)
 
     @property
     def _sortkey(self):
@@ -300,8 +298,8 @@ class HBondPRM(BasePRM):
 
     def __init__(self, atom0=None, atom1=None, k=None, eq=None):
         self.atom0, self.atom1 = sorted((atom0, atom1))
-        self.k = float(k)
-        self.eq = float(eq)
+        self.k = _myfloat(k)
+        self.eq = _myfloat(eq)
 
     @property
     def _sortkey(self):
@@ -311,3 +309,66 @@ class HBondPRM(BasePRM):
         for attrname in self.__slots__[:4]:
             if getattr(self, attrname) is None:
                 warnings.warn("%r has uninitialized attr: %s" % (self, attrname))
+
+
+class Mass(BasePRM):
+    __slots__ = ['atom', 'id', 'mass', 'element']
+
+    def __init__(self, id=None, atom=None, mass=None, element=None):
+        self.id = int(id)
+        self.atom = atom
+        self.mass = _myfloat(mass)
+        self.element = element
+
+    @property
+    def _sortkey(self):
+        return (self.atom,)
+
+    def _validate(self):
+        for attrname in self.__slots__[:3]:
+            if getattr(self, attrname) is None:
+                warnings.warn("%r has uninitialized attr: %s" % (self, attrname))
+
+
+class Residue(object):
+    def __init__(self, name=None, charge=None, body=None):
+        self.name = name
+        self.charge = _myfloat(charge)
+        self.body = body
+
+    @property
+    def _sortkey(self):
+        return "a%r" % self.name
+
+    # Magic Methods #################################################
+    def __hash__(self):
+        return hash(self._sortkey)
+
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__, self.name)
+
+    #### Comparison Methods #########################################
+    def __eq__(self, other):
+        if self.__class__ != other.__class__:
+            return False
+        return self._sortkey == other._sortkey
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __lt__(self, other):
+        return self._sortkey < other._sortkey
+
+    def __le__(self, other):
+        return self._sortkey <= other._sortkey
+
+    def __gt__(self, other):
+        return self._sortkey > other._sortkey
+
+    def __ge__(self, other):
+        return self._sortkey >= other._sortkey
+
+class Patch(Residue):
+    @property
+    def _sortkey(self):
+        return "b%r" % self.name
