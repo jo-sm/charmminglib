@@ -168,27 +168,21 @@ class RTFFile(CharmmCard):
         self._export_commands(toppar)
 
     def _export_mass(self, toppar):
-        if self.mass is None:
-            pass
-        else:
+        if self.mass is not None:
             masses = [ massobj_from_charmm(line) for line in self.mass ]
         merged = tp._merge_mass(masses, toppar.mass)
         if merged is not None:
             toppar.mass = merged
 
     def _export_residue(self, toppar):
-        if self.residue is None:
-            pass
-        else:
+        if self.residue is not None:
             resi = [ resiobj_from_charmm(block) for block in self.residue ]
         merged = tp._merge_section(resi, toppar.residue)
         if merged is not None:
             toppar.residue = merged
 
     def _export_patch(self, toppar):
-        if self.patch is None:
-            pass
-        else:
+        if self.patch is not None:
             pres = [ presobj_from_charmm(block) for block in self.patch ]
         merged = tp._merge_section(pres, toppar.patch)
         if merged is not None:
@@ -198,9 +192,7 @@ class RTFFile(CharmmCard):
         commands = ('declare', 'autogen', 'default')
         for command in commands:
             cmd = self.commands[command]
-            if cmd is None:
-                pass
-            else:
+            if cmd is not None:
                 merged = tp._merge_command(cmd, toppar.commands[command])
                 if merged is not None:
                     toppar.commands[command] = cmd
@@ -212,9 +204,7 @@ class RTFFile(CharmmCard):
         self._import_commands(toppar)
 
     def _import_mass(self, toppar):
-        if toppar.mass is None:
-            self.mass = None
-        else:
+        if toppar.mass is not None:
             self.mass = [ massobj_printer(mass) for mass in toppar.mass ]
 
     def _import_residue(self, toppar):

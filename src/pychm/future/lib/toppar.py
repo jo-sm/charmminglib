@@ -29,9 +29,11 @@ def _myint(k):
 def _unique(this):
     if this is not None and not isinstance(this, list):
         raise TypeError("argument needs to be a list")
-    this = deepcopy(this)
     if this is None:
         return None
+    if len(this) == len(set(this)):
+        return this
+    this = deepcopy(this)
     tmp = []
     for data in this:
         if data in tmp:
@@ -250,6 +252,7 @@ class AnglePRM(BasePRM):
         if self.eq13 is None and self.k13 is not None:
             warnings.warn("%r has uninitialized attr: eq13" % self)
 
+
 class DihedralPRM(BasePRM):
     __slots__ = ['atom0', 'atom1', 'atom2', 'atom3' 'k', 'mult', 'eq']
 
@@ -271,6 +274,7 @@ class DihedralPRM(BasePRM):
         for attrname in self.__slots__:
             if getattr(self, attrname) is None:
                 warnings.warn("%r has uninitialized attr: %s" % (self, attrname))
+
 
 class ImproperPRM(BasePRM):
     __slots__ = ['atom0', 'atom1', 'atom2', 'atom3' 'k', 'mult', 'eq']

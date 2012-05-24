@@ -191,9 +191,7 @@ class PRMFile(CharmmCard):
                 self._export_section(section, toppar)
 
     def _export_cmap(self, toppar):
-        if self.commands['cmap'] is None:
-            pass
-        else:
+        if self.commands['cmap'] is not None:
             cmap = [ tp.CmapPRM('\n'.join(self.cmap)) ]
             merged = tp._merge_cmap(cmap, toppar.cmap)
             if merged is not None:
@@ -203,9 +201,7 @@ class PRMFile(CharmmCard):
                 toppar.commands['cmap'] = merged
 
     def _export_atom(self, toppar):
-        if self.commands['atom'] is None:
-            pass
-        else:
+        if self.commands['atom'] is not None:
             masses = [ rtf.massobj_from_charmm(line) for line in self.atom ]
             merged = tp._merge_mass(masses, toppar.mass)
             if merged is not None:
@@ -215,9 +211,7 @@ class PRMFile(CharmmCard):
         if section not in self.sections:
             raise ValueError("invalid section specified %s" % section)
         #
-        if self.commands[section] is None:
-            pass
-        else:
+        if self.commands[section] is not None:
             self_section = getattr(self, section)
             cls = self.prm_class_map[section]
             objs = [ prmobj_from_charmm(line, cls) for line in self_section ]
@@ -236,9 +230,7 @@ class PRMFile(CharmmCard):
                 self._import_section(section, toppar)
 
     def _import_atom(self, toppar):
-        if toppar.mass is None:
-            pass
-        else:
+        if toppar.mass is not None:
             self.commands['atom'] = 'atom'
             self.atom = [ prmobj_printer(prm) for prm in toppar.mass ]
 
