@@ -97,4 +97,7 @@ class CharmmCard(TextFile):
             return "* A blank title.\n*"
 
     def pack_version(self):
-        return "%5d%5d" % self.version
+        try:
+            return "%5d%5d" % self.version
+        except TypeError:
+            return "    0    0"

@@ -6,6 +6,11 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 from copy import deepcopy
 import warnings
 
+from pychm.future.tools import _mydict
+
+class CMAP_Exception(Exception):
+    pass
+
 
 # Convenience functions ############################
 def _myfloat(k):
@@ -19,19 +24,97 @@ def _myint(k):
         return int(k)
     except TypeError:
         return k
+
+# Merging functions##################################
+def _unique(this):
+    if this is not None and not isinstance(this, list):
+        raise TypeError("argument needs to be a list")
+    this = deepcopy(this)
+    if this is None:
+        return None
+    tmp = []
+    for data in this:
+        if data in tmp:
+            warnings.warn("Duplicate data: %r" % data)
+        else:
+            tmp.append(data)
+    return tmp
+
+def _merge_section(this, that):
+    this = _unique(this)
+    that = _unique(that)
+    if this is None:
+        return that
+    if that is None:
+        return this
+    if this == that:
+        return this
+    #
+    for data in that:
+        if data in this:
+            pass
+            #warnings.warn("Duplicate data: %r" % data)
+        else:
+            this.append(data)
+    return this
+
+def _merge_mass(this, that):
+    this = _unique(this)
+    that = _unique(that)
+    if this is None:
+        return that
+    if that is None:
+        return this
+    if this == that:
+        return this
+    # try merging naively, then check for overlap atom and id
+    tmp = this + that
+    tmpid = [ x.id for x in tmp ]
+    if len(this) + len(that) == len(set(tmp)) and len(this) + len(that) == len(set(tmpid)):
+        # naive merge works!
+        return sorted(tmp, key=lambda x: x.id)
+    # naive merge fails
+    tmp = sorted(list(set(tmp)))
+    for i in range(1, len(tmp)+1):
+        tmp.id = i
+    warnings.warn("Original mass id's could not be retained!")
+    return tmp
+
+def _merge_command(this, that):
+    if this is not None and not isinstance(this, basestring):
+        raise TypeError("argument needs to be a string")
+    if that is not None and not isinstance(that, basestring):
+        raise TypeError("argument needs to be a string")
+    if this is None:
+        return that
+    if that is None:
+        return this
+    if this == that:
+        return this
+    #
+    warnings.warn("Conflicting command strings:\n\n%s\n\n%s\n\nusing first string" % (this,that))
+    return this
+
+def _merge_cmap(this, that):
+    if this is None:
+        return that
+    if that is None:
+        return this
+    if this == that:
+        return this
+    raise CMAP_Exception("CMAPs are different between toppar")
+
 #####################################################
-
-
-class CMAP_Exception(Exception):
-    pass
 
 
 class Toppar(object):
     sections = ('bond', 'angle', 'dihedral', 'improper', 'cmap', 'nonbond',
-                'nbfix', 'hbond')
+                'nbfix', 'hbond', 'mass', 'residue', 'patch', 'declare',
+                'autogen', 'default')
 
     def __init__(self):
-        # prm
+        # data
+        #### prm
         self.bond = None
         self.angle = None
         self.dihedral = None
@@ -40,58 +123,45 @@ class Toppar(object):
         self.nonbond = None
         self.nbfix = None
         self.hbond = None
-        self.bond_opts = None
-        self.angle_opts = None
-        self.dihedral_opts = None
-        self.improper_opts = None
-        self.cmap_opts = None
-        self.nonbond_opts = None
-        self.nbfix_opts = None
-        self.hbond_opts = None
-        # rtf
+        #### rtf
         self.mass = None
         self.residue = None
         self.patch = None
+        # commands
+        self.commands = _mydict()
 
     def merge(self, other):
         """Creates a new Toppar object, where rtf/prm objects from `self` are
         given priority over rtf/prm objects from `other`.
         """
-        tmp_self = deepcopy(self)
-        tmp_self.make_unique()
-
-        tmp_other = deepcopy(other)
-        tmp_other.make_unique()
+        tmp = Toppar()
+        for section in self.sections:
+            try:
+                if section == 'mass':
+                    merged = _merge_mass(self.mass, other.mass)
+                elif section == 'cmap':
+                    merged = _merge_cmap(self.cmap, other.cmap)
+                else:
+                    merged = _merge_section(getattr(self, section),
+                                            getattr(other, section))
+                if merged is not None:
+                    setattr(tmp, section, merged)
+            except AttributeError:
+                pass
 
         for section in self.sections:
-            self_section = getattr(tmp_self, section)
-            other_section = getattr(tmp_other, section)
-            if self_section is None and other_section is None:
-                setattr(tmp_self, section, None)
-            elif self_section is None and other_section is not None:
-                setattr(tmp_self, section, other_section)
-            elif self_section is not None and other_section is None:
-                pass
-            else:
-                if section == 'cmap':
-                    if self_section != other_section:
-                        raise CMAP_Exception("CMAPs are different between toppar")
-                    setattr(tmp_self, section, getattr(tmp_self, section))
-                else:
-                    setattr(tmp_self, section, getattr(tmp_self, section) + getattr(tmp_other, section))
-        return tmp_self
+            merged = _merge_command(self.commands[section], other.commands[section])
+            if merged is not None:
+                tmp.commands[section] = merged
+        return tmp
 
     def __add__(self, other):
         return self.merge(other)
 
-    def make_unique(self):
-        """Currently destroys original ordering."""
+    def unique(self):
         for section in self.sections:
-            if section == 'cmap':
-                continue
-            if getattr(self, section) is None:
-                continue
-            tmp = sorted(list(set(getattr(self, section))))
+            setattr(self, section, _unique(getattr(self, section)))
+
 
 class PRM(ABCMeta):
     """Dummy metaclass, serves as a registrar and API definition."""
@@ -367,6 +437,7 @@ class Residue(object):
 
     def __ge__(self, other):
         return self._sortkey >= other._sortkey
+
 
 class Patch(Residue):
     @property
