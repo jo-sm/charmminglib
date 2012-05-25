@@ -5,7 +5,6 @@ __all__ = ['Toppar']
 from abc import ABCMeta, abstractmethod, abstractproperty
 from copy import deepcopy
 import warnings
-import pdb
 
 from pychm.future.tools import _mydict
 
