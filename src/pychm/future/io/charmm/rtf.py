@@ -16,6 +16,8 @@ def open_rtf(fname, mode='r', buffering=None, **kwargs):
     tmp = RTFFile(fname, mode, buffering)
     if 'r' in mode:
         tmp.parse()
+    if 'w' in mode:
+        tmp.version = (35, 1)
     return tmp
 
 
