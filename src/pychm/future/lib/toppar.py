@@ -5,6 +5,7 @@ __all__ = ['Toppar']
 from abc import ABCMeta, abstractmethod, abstractproperty
 from copy import deepcopy
 import warnings
+import pdb
 
 from pychm.future.tools import _mydict
 
@@ -77,8 +78,8 @@ def _merge_mass(this, that):
         return sorted(tmp, key=lambda x: x.id)
     # naive merge fails
     tmp = sorted(list(set(tmp)))
-    for i in range(1, len(tmp)+1):
-        tmp.id = i
+    for i in range(len(tmp)):
+        tmp[i].id = i+1
     warnings.warn("Original mass id's could not be retained!")
     return tmp
 
