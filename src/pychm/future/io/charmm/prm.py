@@ -1,4 +1,5 @@
-
+"""DOCME
+"""
 
 __author__ = ("Frank C. Pickard IV <frank.pickard@nih.gov>")
 __all__ = ["open_prm"]
@@ -11,8 +12,41 @@ from pychm.future.io.charmm import rtf
 from pychm.future.tools import _mydict
 
 
-def open_prm(fname, mode='r', buffering=None, **kwargs):
-    tmp = PRMFile(fname, mode, buffering)
+def open_prm(fname, mode='r', buffering=None):
+    """
+    The public function responsible for mediating access to PRM file-
+    like objects. Opens a file and returns a stream. If the file cannot be
+    opened, an IOError is raised. If a file is opened for reading, 
+
+
+    """
+    if not isinstance(fname, basestring):
+        raise TypeError("Invalid fname: %r" % fname)
+    if not isinstance(mode, basestring):
+        raise TypeError("Invalid mode: %r" % mode)
+    if buffering is not None and not isinstance(buffering, int):
+        raise TypeError("Invalid buffering: %r" % buffering)
+    # parse modes
+    modes = set(mode)
+    if modes - set("arw+x") or len(mode) > len(modes):
+        raise ValueError("invalid mode: %r" % mode)
+    reading = "r" in modes
+    writing = "w" in modes or "x" in modes
+    appending = "a" in modes
+    updating = "+" in modes
+    if reading + writing + appending > 1:
+        raise ValueError("Invalid mode: %r" % mode)
+    if not (reading or writing or appending):
+        raise ValueError("must have exactly one read/write/append mode")
+    if "x" in modes and os.path.isfile(fname):
+        raise ValueError("you may not set `mode=x` for existing files")
+    # instantiate!
+    tmp = PRMFile(fname,
+                (reading and "r" or "") +
+                (writing and "w" or "") +
+                (appending and "a" or "") +
+                (updating and "+" or ""),
+                buffering)
     if 'r' in mode:
         tmp.parse()
     return tmp
@@ -69,6 +103,8 @@ def prmobj_printer(prm):
 
 class PRMFile(CharmmCard):
     """
+    :TODO:
+        allow kwargs to inject attributes
     """
     _headers = ('atom', 'bond', 'angl', 'thet', 'dihe', 'phi', 'impr',
                     'imph', 'cmap', 'nbon', 'nonb', 'nbfi', 'hbon', 'end')
@@ -162,8 +198,6 @@ class PRMFile(CharmmCard):
             self.atom.extend(tmp)
 
     def _parse_section(self, section):
-        if section not in self.sections:
-            raise ValueError("invalid section specified %s" % section)
         if self.commands[section] is None:
             self.commands[section] = self.deque.popleft()
         else:
@@ -191,36 +225,26 @@ class PRMFile(CharmmCard):
                 self._export_section(section, toppar)
 
     def _export_cmap(self, toppar):
-        if self.commands['cmap'] is not None:
+        toppar.commands['cmap'] = tp._merge_command(self.commands['cmap'],
+                                                    toppar.commands['cmap'])
+        if self.cmap is not None:
             cmap = [ tp.CmapPRM('\n'.join(self.cmap)) ]
-            merged = tp._merge_cmap(cmap, toppar.cmap)
-            if merged is not None:
-                toppar.cmap = merged
-            merged = tp._merge_command(self.commands['cmap'], toppar.commands['cmap'])
-            if merged is not None:
-                toppar.commands['cmap'] = merged
+            toppar.cmap = tp._merge_cmap(cmap, toppar.cmap)
 
     def _export_atom(self, toppar):
-        if self.commands['atom'] is not None:
+        if self.atom is not None:
             masses = [ rtf.massobj_from_charmm(line) for line in self.atom ]
-            merged = tp._merge_mass(masses, toppar.mass)
-            if merged is not None:
-                toppar.mass = merged
+            toppar.mass = tp._merge_mass(masses, toppar.mass)
 
     def _export_section(self, section, toppar):
-        if section not in self.sections:
-            raise ValueError("invalid section specified %s" % section)
-        #
-        if self.commands[section] is not None:
-            self_section = getattr(self, section)
+        toppar.commands[section] = tp._merge_command(self.commands[section],
+                                                    toppar.commands[section])
+        self_section = getattr(self, section)
+        if self_section is not None:
             cls = self.prm_class_map[section]
             objs = [ prmobj_from_charmm(line, cls) for line in self_section ]
-            merged = tp._merge_section(objs, getattr(toppar, section))
-            if merged is not None:
-                setattr(toppar, section, merged)
-            merged = tp._merge_command(self.commands[section], toppar.commands[section])
-            if merged is not None:
-                toppar.commands[section] = merged
+            setattr(toppar, section, tp._merge_section(objs,
+                                                    getattr(toppar, section)))
 
     def import_from_toppar(self, toppar):
         for section in self.sections:
@@ -235,13 +259,9 @@ class PRMFile(CharmmCard):
             self.atom = [ prmobj_printer(prm) for prm in toppar.mass ]
 
     def _import_section(self, section, toppar):
-        if section not in self.sections:
-            raise ValueError("invalid section specified %s" % section)
-        #
         self.commands[section] = toppar.commands[section]
-        if self.commands[section] is None:
-            setattr(self, section, None)
-        else:
+        toppar_section = getattr(toppar, section)
+        if toppar_section is not None:
             tmp = [ prmobj_printer(prm) for prm in getattr(toppar, section) ]
             setattr(self, section, tmp)
 
@@ -253,6 +273,7 @@ class PRMFile(CharmmCard):
         for section in self.sections:
             if self.commands[section] is not None:
                 tmp.append(self.commands[section])
+            if getattr(self, section) is not None:
                 tmp.extend(getattr(self, section))
                 tmp.append('')
                 tmp.append('')

@@ -26,8 +26,7 @@ def get_buffer_size(arg=None):
         return arg
 
 
-def open_fort(fname, mode='r', buffering=None, endian='@',
-            rec_head_prec='i'):
+def open_fort(fname, mode='r', buffering=None):
     """The public function responsible for mediating access to the Fort file-
     like objects. Opens a file and returns a stream. If the file cannot be
     opened, an IOError is raised.
@@ -53,27 +52,16 @@ def open_fort(fname, mode='r', buffering=None, endian='@',
         switches buffering off. Passing negative values, or 1 sets buffer
         to default size. Passing any other positive integer sets the buffer
         size in bytes.
-    endian: an optional character specifying the endian-ness of the file.
-        Possible values are '>', '<', '@', '=' or '!'. Consult :mod:`struct`
-        for more details. Defaults to '@', native byte order.
-    rec_head_prec: an optional character specifying the fortran record header's
-        precision. Possible values are 'h', 'i', 'l' or 'q'. Consult
-        :mod:`struct` for more details. Defaults to 'i', single precision
-        integers.
     """
     if not isinstance(fname, basestring):
-        raise TypeError("Invalid mode: %r" % fname)
+        raise TypeError("Invalid fname: %r" % fname)
     if not isinstance(mode, basestring):
         raise TypeError("Invalid mode: %r" % mode)
     if buffering is not None and not isinstance(buffering, int):
         raise TypeError("Invalid buffering: %r" % buffering)
-    if not isinstance(endian, basestring):
-        raise TypeError("Invalid endian: %r" % endian)
-    if not isinstance(rec_head_prec, basestring):
-        raise TypeError("Invalid rec_head_prec: %r" % rec_head_prec)
     # parse modes
     modes = set(mode)
-    if modes - set("arw+x") or len(mode) > len(modes):
+    if modes - set("arw+xb") or len(mode) > len(modes):
         raise ValueError("invalid mode: %r" % mode)
     reading = "r" in modes
     writing = "w" in modes or "x" in modes
@@ -86,14 +74,12 @@ def open_fort(fname, mode='r', buffering=None, endian='@',
     if "x" in modes and os.path.isfile(fname):
         raise ValueError("you may not set `mode=x` for existing files")
     # instantiate!
-    return FortFile(fname=fname,mode=
+    return FortFile(fname=fname, mode=
                     (reading and "r" or "") +
                     (writing and "w" or "") +
                     (appending and "a" or "") +
                     (updating and "+" or ""),
-                    buffering=buffering,
-                    endian=endian,
-                    rec_head_prec=rec_head_prec)
+                    buffering=buffering)
 
 
 class File(object):
@@ -101,9 +87,8 @@ class File(object):
     """
     def __init__(self, fname, mode='r', buffering=None):
         super(File, self).__init__()
-        buffering = get_buffer_size(buffering)
-        self._buffer_size = buffering
-        self.fp = open(name=fname, mode=mode, buffering=buffering)
+        self._buffer_size = get_buffer_size(buffering)
+        self.fp = open(name=fname, mode=mode, buffering=self._buffer_size)
 
     # Wrapper to python file API ##############################################
     def close(self):
@@ -111,7 +96,6 @@ class File(object):
         self.fp.close()
 
     def flush(self):
-        # un-tested
         self.fp.flush()
         os.fsync(self.fileno())
 
@@ -224,12 +208,11 @@ class File(object):
 class BinFile(File):
     """
     """
-    def __init__(self, fname, mode='rb', buffering=None,
-                endian='@'):
+    def __init__(self, fname, mode='rb', buffering=None, endian='@'):
         if 'b' not in mode:
             mode += 'b'
         super(BinFile, self).__init__(fname=fname, mode=mode, buffering=buffering)
-        self._endian = endian
+        self.ENDIAN = endian
 
     def _read_exactly(self, nbytes):
         """Read exactly nbytes, raise an error otherwise."""
@@ -290,7 +273,7 @@ class FortFile(BinFile):
         """
         super(FortFile, self).__init__(fname=fname, mode=mode,
                                     buffering=buffering, endian=endian)
-        self._rec_head_prec = rec_head_prec
+        self.REC_HEAD_PREC = rec_head_prec
 
     def _read_chk(self):
         return struct.unpack(self.ENDIAN + self.REC_HEAD_PREC,
@@ -301,6 +284,10 @@ class FortFile(BinFile):
 
     def readline(self):
         """Read a single fortran record."""
+        return self.read_record()
+
+    def read_record(self):
+        """Read a single fortran record."""
         l = self._read_chk()
         data = self._read_exactly(l)
         chk = self._read_chk()
@@ -308,16 +295,13 @@ class FortFile(BinFile):
             raise IOError("Chk failure.")
         return data
 
-    def read_record(self):
-        """Read a single fortran record."""
-        return self.readline()
-
     def write_record(self, s):
         """Write a single fortran record, containing bytestring `s`."""
         l = len(s)
         self._write_chk(l)
         self.write(s)
         self._write_chk(l)
+        self.flush()
 
     def writelines(self, iterable):
         """Write an iterable of bytestrings to multiple fortran records."""

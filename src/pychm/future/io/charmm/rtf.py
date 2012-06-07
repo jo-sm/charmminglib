@@ -12,7 +12,7 @@ from pychm.future.tools import _mydict, paragraphs
 import pdb
 
 
-def open_rtf(fname, mode='r', buffering=None, **kwargs):
+def open_rtf(fname, mode='r', buffering=None):
     tmp = RTFFile(fname, mode, buffering)
     if 'r' in mode:
         tmp.parse()

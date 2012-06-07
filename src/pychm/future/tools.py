@@ -2,9 +2,10 @@
 This is the module to put commonly used utility functions, classes and
 generators. These objects should have very broad applicability.
 
-This module should *NOT* ever make any imports from other pychm modules.
+This module should *NEVER* import from other pychm modules.
 """
 
+from os.path import expanduser, abspath
 
 def rwprop(func):
     """A decorator similar to the built in `property`, however this one allows
@@ -14,11 +15,20 @@ def rwprop(func):
 
 
 class _mydict(dict):
+    """The same as a regular class:`dict`, except instead of raising exec:`KeyError`
+    `None` is returned.
+    """
     def __getitem__(self, key):
         try:
             return super(_mydict, self).__getitem__(key)
         except KeyError:
             return None
+
+
+def _myexpandpath(path):
+    if '~' in path:
+        return expanduser(path)
+    return abspath(path)
 
 
 def paragraphs(iterable, splitter):
@@ -28,15 +38,17 @@ def paragraphs(iterable, splitter):
 
     >>> iterable = paragraphs(iterable, ['taco', 'beans'])
     """
-    assert isinstance(splitter, (tuple, list))
-    splitter = tuple(splitter)
-    paragraph = []
+    if isinstance(splitter, basestring):
+        splitter = (splitter,)
+    else:
+        splitter = tuple(splitter)
+    tmp = []
     for line in iterable:
         if line.startswith(splitter):
-            if paragraph:
-                yield paragraph
-            paragraph = [line]
+            if tmp:
+                yield tmp
+            tmp = [line]
         else:
-            paragraph.append(line)
-    if paragraph:
-        yield paragraph
+            tmp.append(line)
+    if tmp:
+        yield tmp

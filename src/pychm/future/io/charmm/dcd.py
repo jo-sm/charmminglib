@@ -1,20 +1,15 @@
-"""
-TODO:
-    func:open_dcd() -- finish writing doc_string
-    func:open_dcd() -- validate byte related variables
-    func:guess_natoms() -- untested
-    guess_xtl() -- untested
-    read_header() -- rewrite as classs for mod via subclass
-    pack_header() -- rewrite as class for mod via sublclass
+"""DOCME
 
-    write:
-        DCDFile.info() -- a method to pretty print header information
+Documentation mostly done!
+
+:TODO:
+    :meth:`DCDFile.info` -- new method to pretty print header information
+    :meth:`write_nparray` -- test, add error checking, right now it blindly
+    writes
 """
 
 from __future__ import division
-############################################ This still breaks numpy
-## from __future__ import unicode_literals # this is a py3k
-############################################ compatibility problem.
+
 __author__ = ("Frank C. Pickard <frank.pickard@nih.gov>")
 __all__ = ["open_dcd"]
 
@@ -22,27 +17,26 @@ from array import array
 import os
 import struct
 import warnings
+import pdb
 
 import numpy as np
 
-from pychm.future.io.base import open_fort
+from pychm.future.io.base import FortFile
 from pychm.future.io.charmm.base import CharmmBin
 from pychm.future.tools import rwprop
 
 
-def open_dcd(fname, mode='r', buffering=None, header=True, has_rec=True,
-            endian='@', rec_head_prec='i', c_array_prec='i', xtl_prec='d',
-            xyz_prec='f', d4_prec='f', q_prec='f', **kwargs):
-    """The public function responsible for mediating access to DCD file-
-    like objects. Opens a file and returns a stream. If the file cannot be
-    opened, an IOError is raised.
+def open_dcd(fname, mode='r', buffering=None):
+    """The public function responsible for mediating access to DCD file- like
+    objects. Opens a file and returns a stream. If the file cannot be opened,
+    an :exec:`IOError` is raised.
 
     Parameters
     ----------
-    fname : a string representing the path to a CHARMM DCD file
-    mode : an optional string that specifies the mode in which the file is
-        opened. It defaults to 'r' which means open for reading in binary
-        mode. Other values are shown in the table below:
+    fname: a string representing the path to a CHARMM DCD file
+    mode: an optional string that specifies the mode in which the file is
+    opened. It defaults to 'r' which means open for reading in binary mode.
+    Other values are shown in the table below:
     ========= =================================================================
     Character Meaning
     --------- -----------------------------------------------------------------
@@ -51,21 +45,13 @@ def open_dcd(fname, mode='r', buffering=None, header=True, has_rec=True,
     'a'       open for writing, appending to the end of the file if it exists
     'x'       open for writing, noclobber, raises a value error if file exists
     '+'       open a disk for updating (reading and writing)
-    'w+'     open for writing, random access, truncates the file to 0 bytes
-    'r+'     open for reading and writing, random access, without truncation
+    'w+'      open for writing, random access, truncates the file to 0 bytes
+    'r+'      open for reading and writing, random access, without truncation
     ========= =================================================================
     buffering: an optional integer used to set the buffering policy. Passing 0
-        switches buffering off. Passing negative values, or 1 sets buffer
-        to default size. Passing any other positive integer sets the buffer
-        size in bytes.
-    endian: an optional character specifying the endian-ness of the file.
-        Possible values are '>', '<', '@', '=' or '!'. Consult :mod:`struct`
-        for more details. Defaults to '@', native byte order.
-    rec_head_prec: an optional character specifying the fortran record header's
-        precision. Possible values are 'h', 'i', 'l' or 'q'. Consult
-        :mod:`struct` for more details. Defaults to 'i', single precision
-        integers.
-    TODO Finish the doc string...
+    switches buffering off. Passing negative values, or 1 sets buffer to
+    default size. Passing any other positive integer sets the buffer size in
+    bytes.
     """
     if not isinstance(fname, basestring):
         raise TypeError("Invalid fname: %r" % fname)
@@ -73,21 +59,9 @@ def open_dcd(fname, mode='r', buffering=None, header=True, has_rec=True,
         raise TypeError("Invalid mode: %r" % mode)
     if buffering is not None and not isinstance(buffering, int):
         raise TypeError("Invalid buffering: %r" % buffering)
-    if not isinstance(header, bool):
-        raise TypeError("Invalid header: %r" % header)
-    if not isinstance(has_rec, bool):
-        raise TypeError("Invalid has_rec: %r" % has_rec)
-
-    # #################################################################
-    # TODO
-    # We should probably validate all the byte related variables here.
-    # While I am lazy, these variables do get validated eventually
-    # by descriptors in the TRJFile class.
-    # #################################################################
-
     # parse modes
     modes = set(mode)
-    if modes - set("arw+x") or len(mode) > len(modes):
+    if modes - set("arw+xb") or len(mode) > len(modes):
         raise ValueError("invalid mode: %r" % mode)
     reading = "r" in modes
     writing = "w" in modes or "x" in modes
@@ -99,365 +73,195 @@ def open_dcd(fname, mode='r', buffering=None, header=True, has_rec=True,
         raise ValueError("must have exactly one read/write/append mode")
     if "x" in modes and os.path.isfile(fname):
         raise ValueError("you may not set `mode=x` for existing files")
-    # parse has_rec
-    if has_rec:
-        # kwargs can explicitly overwrite parsed metadata from header
-        if header:
-            tmp = read_header(fname, endian, rec_head_prec, c_array_prec)
-            tmp.update(kwargs)
-            kwargs = tmp
-            del tmp
-        else:
-            # has_rec = True && header = False
-            rec_head_prec = None
-            c_array_prec = None
-            kwargs['header_size'] = 0
-            pass
-    else:
-        if header:
-            raise ValueError("reader does not yet support files with a header and without record markers")
-        else:
-            # has_rec = False && header = False
-            rec_head_prec = None
-            c_array_prec = None
-            kwargs['header_size'] = 0
-    # any metadata (if it exists) should be in kwargs by now
-    # parse kwargs
-    if 'dcdtype' not in kwargs:
-        kwargs['dcdtype'] = 'taco'
-    # figure out natoms
-    if 'natoms' not in kwargs and 'ndegfree' in kwargs:
-        kwargs['natoms'] = kwargs['ndegfree'] / 3
-    elif 'natoms' in kwargs and 'ndegfree' not in kwargs:
-        kwargs['ndegfree'] = kwargs['natoms'] * 3
-    elif 'natoms' not in kwargs and 'ndegfree' not in kwargs:
-        if header:
-            # if we have a header, and we dont know natoms, this is bad
-            raise ValueError("no natom info found in header, aborting...")
-        if not has_rec:
-            # if we have no record markers, we cant possibly guess natoms
-            raise ValueError("no natom information provided, aborting...")
-        warnings.warn("`natoms` not specified, trying to autodetect", UserWarning)
-        # has_rec = True && header = False
-        try:
-            kwargs['natoms'] = guess_natoms(fname, endian, rec_head_prec,
-                                        xyz_prec)
-        except (ValueError, IOError):
-            raise ValueError("unable to guess natoms, aborting...")
-        kwargs['ndegfree'] = kwargs['natoms'] * 3
-        warnings.warn("detected natoms = %d" % kwargs['natoms'], UserWarning)
-    # figure out has_xtl
-    if 'has_xtl' not in kwargs:
-        if header:
-            # if we have a header, and we dont know has_xtl, this is bad
-            raise ValueError("no has_xtl information found in header, aborting...")
-        if not has_rec:
-            # if we have no record markers, we cant possible guess has_xtl
-            # lets assume false (most common use case), and throw a warning
-            warnings.warn("has_xtl not specified, assuming False", UserWarning)
-            kwargs['has_xtl'] = False
-        else:
-            # has_rec = True && header = False
-            # try to guess has_xtl, if we fail assume false and throw a warning
-            warnings.warn("has_xtl not specified, trying to autodetect", UserWarning)
-            try:
-                kwargs['has_xtl'] = guess_xtl(fname, endian, rec_head_prec,
-                                            xtl_prec)
-            except (ValueError, IOError):
-                warnings.warn("unable to guess has_xtl, assuming False", UserWarning)
-            else:
-                warnings.warn("detected has_xtl = %s" % kwargs['has_xtl'], UserWarning)
-    if 'has_d4' not in kwargs:
-        warnings.warn("has_d4 not specified, assuming False", UserWarning)
-        kwargs['has_d4'] = False
-    if 'validated' not in kwargs:
-        warnings.warn("validated not specified, assuming False", UserWarning)
-        kwargs['validated'] = False
-    # other kwarg processing
-    kwargs['has_rec'] = has_rec
-    kwargs['ENDIAN'] = endian
-    kwargs['REC_HEAD_PREC'] = rec_head_prec
-    kwargs['C_ARRAY_PREC'] = c_array_prec
-    kwargs['XTL_PREC'] = xtl_prec
-    kwargs['XYZ_PREC'] = xyz_prec
-    kwargs['D4_PREC'] = d4_prec
-    kwargs['Q_PREC'] = q_prec
-    if 'has_q' not in kwargs:
-        kwargs['has_q'] = False
     # instantiate!
-    tmp = DCDFile(fname,
+    tmp = DCDFile(fname, mode=
                 (reading and "r" or "") +
                 (writing and "w" or "") +
                 (appending and "a" or "") +
                 (updating and "+" or ""),
-                buffering, **kwargs)
-    if 'r' in mode:
-        tmp.seek(0, whence=0)
+                buffering=buffering)
+    if reading or appending:
+        tmp.read_header()
+        tmp.seek_frame(0, whence=0)
     return tmp
-
-
-def read_header(fname, endian='@', rec_head_prec='i', c_array_prec='i'):
-    """Attempts to parse out metadata from `fname`s header information. Returns
-    a dictionary. This function should *only* be called on a charmm trajectory
-    *with* record markers and *with* a trajectory header.
-
-    Parameters
-    ----------
-    fname : a string representing the path to a fortran binary file
-    endian: an optional character specifying the endian-ness of the file.
-        Possible values are '>', '<', '@', '=' or '!'. Consult :mod:`struct`
-        for more details. Defaults to '@', native byte order.
-    rec_head_prec: an optional character specifying the fortran record header's
-        precision. Possible values are 'h', 'i', 'l' or 'q'. Consult
-        :mod:`struct` for more details. Defaults to 'i', single precision
-        integers.
-    c_array_prec: an optional character specifying the control array's
-        precision. Possible values are 'h', 'i', 'l' or 'q'. Consult
-        :mod:`struct` for more details. Defaults to 'i', single precision
-        integers.
-    """
-    if not isinstance(fname, basestring):
-        raise TypeError("Invalid mode: %r" % fname)
-    if not isinstance(endian, basestring):
-        raise TypeError("Invalid endian: %r" % endian)
-    if not isinstance(rec_head_prec, basestring):
-        raise TypeError("Invalid rec_head_prec: %r" % rec_head_prec)
-    if not isinstance(c_array_prec, basestring):
-        raise TypeError("Invalid c_array_prec: %r" % c_array_prec)
-    #
-    if not c_array_prec in 'hilq':
-        raise ValueError("Invalid precision specified: %r" % c_array_prec)
-    # defaults
-    tmp = {
-        'dcdtype':None,
-        'nframes':None,
-        'npriv':None,           # number of previous dynamics steps
-        'nsav':None,
-        'nsteps':None,
-        'ndegfree':None,
-        'has_xtl':None,
-        'has_d4':None,
-        'validated':None,       # NOT OFFICIAL -- Flag if we know header info matches data
-        'title':'',
-        'natoms':None,
-        'header_size':0
-        }
-    # read file
-    with open_fort(fname, mode='r', buffering=None, endian=endian,
-                rec_head_prec=rec_head_prec) as fp:
-        control_array = fp.read_record()
-        title = fp.read_record()
-        natoms = fp.read_record()
-    # parse header
-    ## rec0 - control Array
-    tmp['dcdtype'] = ''.join(struct.unpack('cccc', control_array[:4])).lower()
-    c_array = array(c_array_prec, control_array[4:])
-    tmp['nframes'] = c_array[0]
-    tmp['npriv'] = c_array[1]
-    tmp['nsav'] = c_array[2]
-    tmp['nsteps'] = c_array[3]
-    tmp['ndegfree'] = c_array[7]
-    tmp['has_xtl'] = c_array[10] == 1
-    tmp['has_d4'] = c_array[11] == 1
-    tmp['validated'] = c_array[18] == 1
-    ## rec1 - title
-    tmp['title'] = array('c', title)
-    tmp['title'] = [ char for char in tmp['title'] if True ]
-    tmp['title'] = ''.join(tmp['title'])
-    ## rec2 - natoms
-    if len(natoms) == 4:
-        tmp['natoms'] = struct.unpack(c_array_prec, natoms)[0]
-    else:
-        raise IOError("Something went wrong when reading natoms")
-    # check first four chars in rec0 for gibberish
-    if tmp['dcdtype'] not in ['cord', 'taco']:
-        raise ValueError("This function expected a dcd file with a header, something has gone wrong.")
-    # calc header_size and return
-    tmp['header_size'] = len(control_array) + len(title) + len(natoms) + 24
-    return tmp
-
-
-def pack_header(header_size=None, **kwargs):
-    """DOCME
-    """
-    if header_size is None:
-        warnings.warn("Not specifying a header_size may corrupt your traj file if in update mode")
-    else:
-        if not isinstance(header_size, int):
-            raise TypeError("invalid header_size: %r" % header_size)
-    #
-    defaults = {
-        'dcdtype':'taco',
-        'nframes':0,
-        'npriv':0,
-        'nsav':0,
-        'nsteps':0,
-        'ndegfree':0,
-        'has_xtl':False,
-        'has_4d':False,
-        'validated':False,
-        'title':' ' * 78,
-        'natoms':0
-        }
-    defaults.update(kwargs)
-    kwargs = defaults
-    del defaults
-    # guess a reasonable value for the header_size if its not present
-    if header_size is None:
-        header_size = len(kwargs['title']) + 112 # (4+84+4) + (4+len(title)+4) + (4+4+4)
-    # check if title is too long
-    if len(kwargs['title']) + 112 > header_size:
-        raise ValueError('title is too long for header: %d vs %d' % (len(kwargs['title']), header_size))
-    # Pad title if too short
-    while len(kwargs['title']) + 112 < header_size:
-        kwargs['title'] += ' '
-    ##
-    # First record
-    rec0 = []
-    rec0.append(84)
-    rec0.extend(list(kwargs['dcdtype'][:4].upper()))
-    rec0.append(int(kwargs['nframes']))             # carray 1
-    rec0.append(int(kwargs['npriv']))
-    rec0.append(int(kwargs['nsav']))
-    rec0.append(int(kwargs['nsteps']))
-    rec0.append(0)                                  # carray 5
-    rec0.append(0)
-    rec0.append(0)
-    rec0.append(int(kwargs['ndegfree']))
-    rec0.append(0)
-    rec0.append(0)                                  # carray 10
-    rec0.append(int(kwargs['has_xtl']))
-    rec0.append(int(kwargs['has_4d']))
-    rec0.append(0)
-    rec0.append(0)
-    rec0.append(0)                                  # carray 15
-    rec0.append(0)
-    rec0.append(0)
-    rec0.append(0)
-    rec0.append(int(kwargs['validated']))
-    rec0.append(0)                                  # carray 20
-    rec0.append(84)
-    rec0_string = 'i 4c 20i i'
-    # Second record
-    rec1 = []
-    rec1.append(header_size - 112)
-    rec1.extend(list(kwargs['title']))
-    rec1.append(header_size - 112)
-    rec1_string = 'i %dc i' % (header_size - 112)
-    ####
-    ####
-    # Third record
-    rec2 = []
-    rec2.append(4)
-    rec2.append(int(kwargs['natoms']))
-    rec2.append(4)
-    rec2_string = 'i i i'
-    #
-    final_string = rec0_string + ' ' + rec1_string + ' ' + rec2_string
-    final_rec = rec0 + rec1 + rec2
-    return struct.pack(final_string, *final_rec)
-
-
-def guess_natoms(fname, endian='@', rec_head_prec='i', xyz_prec='f'):
-    """Attempts to guess the number of atoms in the file, by using
-    fortran record marker information. This function should *only* be
-    called on a charmm trajectory *with* record markers and *without* a
-    trajectory header.
-
-    Parameters
-    ----------
-    fname : a string representing the path to a fortran binary file
-    endian: an optional character specifying the endian-ness of the file.
-        Possible values are '>', '<', '@', '=' or '!'. Consult :mod:`struct`
-        for more details. Defaults to '@', native byte order.
-    rec_head_prec: an optional character specifying the fortran record header's
-        precision. Possible values are 'h', 'i', 'l' or 'q'. Consult
-        :mod:`struct` for more details. Defaults to 'i', single precision
-        integers.
-    xyz_prec: an optional character specifying the fortran record data's
-        precision. Possible values are 'f' and 'd'. Consult :mod:`struct`
-        for more details. Defaults to 'f', single precision floats.
-    """
-    with open_fort(fname, mode='r', buffering=None, endian=endian,
-                rec_head_prec=rec_head_prec) as fp:
-        tmp = fp.read_record() # ignore the first record, as it could contain xtl data
-        l = fp._read_chk()
-        if l % fp._byte_dict[xyz_prec]:
-            raise ValueError("Invalid record length: %r" % l)
-        tmp = fp._read_exactly(l)
-        chk = fp._read_chk()
-        if chk != l:
-            raise IOError("Chk failure.")
-        return l / fp._byte_dict[xyz_prec]
-
-
-def guess_xtl(fname, endian='@', rec_head_prec='i', xtl_prec='d'):
-    """Attempts to guess if the charmm trajectory has xtl information by
-    examining the length of the first two fortran records. This function
-    should *only* be called on a charmm trajectory *with* record markers
-    and *without* a trajectory header.
-
-    Parameters
-    ----------
-    fname : a string representing the path to a fortran binary file
-    endian: an optional character specifying the endian-ness of the file.
-        Possible values are '>', '<', '@', '=' or '!'. Consult :mod:`struct`
-        for more details. Defaults to '@', native byte order.
-    rec_head_prec: an optional character specifying the fortran record header's
-        precision. Possible values are 'h', 'i', 'l' or 'q'. Consult
-        :mod:`struct` for more details. Defaults to 'i', single precision
-        integers.
-    xtl_prec: an optional character specifying the fortran record data's
-        precision. Possible values are 'f' and 'd'. Consult :mod:`struct`
-        for more details. Defaults to 'd', single precision floats.
-    """
-    with open_fort(fname, mode='r', buffering=None, endian=endian,
-                rec_head_prec=rec_head_prec) as fp:
-        # read first frame, and see if it could be 6 real numbers
-        l = fp._read_chk()
-        if l % fp._byte_dict[xtl_prec]:
-            raise ValueError("Invalid record length: %r" % l)
-        tmp = fp._read_exactly(l)
-        chk = fp._read_chk()
-        if chk != l:
-            raise IOError("Chk failure.")
-        if l != 6 * fp._byte_dict[xtl_prec]: # could this be 6 reals?
-            return False                            # no, then not xtl
-        # first frame was 6 * 8 (if 'd') = 56 bytes long
-        # this could be xtl data or fortuitous natoms
-        # read second frame, if length is different, first frame was xtl
-        l = fp._read_chk()
-        if l % fp._byte_dict[xtl_prec]:
-            raise ValueError("Invalid record length: %r" % l)
-        tmp = fp._read_exactly(l)
-        chk = fp._read_chk()
-        if chk != l:
-            raise IOError("Chk failure.")
-        if l != 6 * fp._byte_dict[xtl_prec]: # could this be 6 reals?
-            return True
-        # first and second frame were 6 * 8 = 56 bytes long
-        # this means we have no idea about xtl data
-        raise ValueError("unable to guess has_xtl")
 
 
 class DCDFile(CharmmBin):
-    def __init__(self, fname, mode='rb', buffering=None,
-                endian='@', rec_head_prec='i', **kwargs):
+    """This class has no public constructor, please use :func:`open_dcd`
+    instead."""
+    def __init__(self, fname, mode='rb', buffering=None, endian='@',
+                rec_head_prec='i', c_array_prec='i', xyz_prec='f',
+                xtl_prec=None, d4_prec=None, q_prec=None):
         super(DCDFile, self).__init__(fname=fname, mode=mode,
             buffering=buffering, endian=endian, rec_head_prec=rec_head_prec)
-        """The `func:open_dcd` should be used in lieu of this constructor.
-        """
-        # assign kwargs
-        for k, v in kwargs.iteritems():
-            setattr(self, k, v)
+        self.C_ARRAY_PREC = c_array_prec
+        self.XTL_PREC = xtl_prec
+        self.XYZ_PREC = xyz_prec
+        self.D4_PREC = d4_prec
+        self.Q_PREC = q_prec
+        # header metadata
+        self.dcdtype = None
+        self.nframes = None
+        self.npriv = None
+        self.nsavc = None
+        self.nsteps = None
+        self.nsavv = None
+        self.ndegfree = None
+        self.nfix = None
+        self.del_t = None
+        # self.has_xtl # this is a property set from self.XTL_PREC
+        # self.has_d4 # this is a property set from self.D4_PREC
+        # self.has_q # this is a property set from self.Q_PREC
+        self.inconsistent = None
+        self.validated = None
+        self.charmm_ver = None
+        self.title = None
+        self.natoms = None
+        self.header_size = None
         # build frame data structure
-        self._frame_dt = self.compile_npdt()
-        self._frame_size = self._frame_dt.itemsize
+        self._frame_dt = None
+        self._frame_size = None
         # etc
         self._leftovers = []
 
+    # Header reading, writing , importing, exporting ##########################
+    def read_header(self):
+        with FortFile(fname=self.name, mode='rb', buffering=self.buffer_size,
+                    endian=self.ENDIAN, rec_head_prec=self.REC_HEAD_PREC) as fp:
+            rec0 = fp.read_record()
+            rec1 = fp.read_record()
+            rec2 = fp.read_record()
+        # read rec0
+        self.dcdtype = ''.join(struct.unpack('cccc', rec0[:4])).lower()
+        c_array = array(self.C_ARRAY_PREC, rec0[4:])
+        self.nframes = c_array[0]
+        self.npriv = c_array[1]
+        self.nsavc = c_array[2]
+        self.nsteps = c_array[3]
+        self.nsavv = c_array[4]
+        self.ndegfree = c_array[7]
+        self.nfix = c_array[8]
+        self.del_t = c_array[9]
+        if c_array[10] == 1:
+            self._xtl_prec = 'd'
+        if c_array[11] == 1:
+            self._d4_prec = 'f'
+        if c_array[12] == 1:
+            self._q_prec = 'f'
+        self.inconsistent = bool(c_array[13])
+        self.validated = c_array[18] == 1
+        self.charmm_ver = c_array[19]
+        # read rec1
+        self.title = ''.join(list(array('c', rec1)))
+        # read rec2
+        if len(rec2) == self.C_ARRAY_BLEN:
+            self.natoms = struct.unpack(self.C_ARRAY_PREC, rec2)[0]
+        else:
+            raise IOError("Error when parsing natoms record of dcd header")
+        # check first four chars in rec0 for gibberish
+        if self.dcdtype not in ['cord', 'taco']:
+            warnings.warn("unexpected dcdtype: %s" %self.dcdtype)
+        # calc header_size
+        self.header_size = len(rec0) + len(rec1) + len(rec2) + 24
+        # compile frame info
+        self._frame_dt = self.compile_npdt()
+        self._frame_size = self._frame_dt.itemsize
+
+    def write_header(self):
+        """The class' current values for attributes defined by a CHARMM DCD
+        header are read from the class, mapped to a binary format, and written
+        to disk.
+        """
+        # length of header less the title
+        hlen_minus_title = 6 * self.REC_HEAD_BLEN + 4 + 21 * self.C_ARRAY_BLEN
+        if '+' in self.mode:
+            # TODO if len(self.title) is too long, truncate it
+            # TODO if len(self.title) is too short, pad with whitespace
+            return
+        # build rec0
+        rec0 = list(self.dcdtype[:4].upper())
+        rec0.append(int(self.nframes))      # c_array 1
+        rec0.append(int(self.npriv))
+        rec0.append(int(self.nsavc))
+        rec0.append(int(self.nsteps))
+        rec0.append(int(self.nsavv))        # c_array 5
+        rec0.append(0)
+        rec0.append(0)
+        rec0.append(int(self.ndegfree))
+        rec0.append(int(self.nfix))
+        rec0.append(int(self.del_t))        # c_array 10
+        rec0.append(int(self.has_xtl))
+        rec0.append(int(self.has_d4))
+        rec0.append(int(self.has_q))
+        rec0.append(int(self.inconsistent))
+        rec0.append(0)                      # c_array 15
+        rec0.append(0)
+        rec0.append(0)
+        rec0.append(0)
+        rec0.append(int(self.validated))
+        rec0.append(int(self.charmm_ver))   # c_array 20
+        rec0_formatting = '4c 20%s' % self.C_ARRAY_PREC
+        rec0 = struct.pack(rec0_formatting, *rec0)
+        # build rec1
+        rec1 = list(self.title)
+        rec1_formatting = '%dc' % len(self.title)
+        rec1 = struct.pack(rec1_formatting, *rec1)
+        # build rec2
+        rec2 = int(self.natoms)
+        rec2_formatting = self.C_ARRAY_PREC
+        rec2 = struct.pack(rec2_formatting, rec2)
+        # write
+        self.fp.seek(0, 0)
+        self.write_record(rec0)
+        self.write_record(rec1)
+        self.write_record(rec2)
+        # verify and set frame vars
+        self.read_header()
+
+    def import_header(self, arg):
+        tmp = self.export_header()
+        try:
+            for k, v in arg.iteritems():
+                setattr(self, k, v)
+        except:
+            warnings.warn("Error importing values, reverting to previous")
+            for k, v in tmp.iteritems():
+                setattr(self, k, v)
+
+    def export_header(self):
+        tmp = {
+            'C_ARRAY_PREC': self.C_ARRAY_PREC,
+            'XTL_PREC': self.XTL_PREC,
+            'XYZ_PREC': self.XYZ_PREC,
+            'D4_PREC': self.D4_PREC,
+            'Q_PREC': self.Q_PREC,
+            'dcdtype': self.dcdtype,
+            'nframes': self.nframes,
+            'npriv': self.npriv,
+            'nsavc': self.nsavc,
+            'nsteps': self.nsteps,
+            'nsavv': self.nsavv,
+            'ndegfree': self.ndegfree,
+            'nfix': self.nfix,
+            'del_t': self.del_t,
+            'inconsistent': self.inconsistent,
+            'validated': self.validated,
+            'charmm_ver': self.charmm_ver,
+            'title': self.title,
+            'natoms': self.natoms,
+            'header_size': self.header_size
+            }
+        return tmp
+
+    def pprint_header(self):
+        pass
+
     # Highest level methods ###################################################
     def iter_frame(self, begin=0, end=None, stride=None):
+        """Creates a generator over the frames of the DCDFile. Uses the
+        (hopefully) familiar start:stop:stride syntax of :class:`slice`s.
+        This generator returns raw binary data representing one MD frame.
+        """
         if end is not None and not isinstance(end, int):
             raise TypeError("invalid type for end: %r" % end)
         if stride is not None and not isinstance(stride, int):
@@ -465,7 +269,7 @@ class DCDFile(CharmmBin):
         if stride is not None and stride < 1:
             raise ValueError("invalid value for stride: %r" % end)
         #
-        self.seek(begin, whence=0)
+        self.seek_frame(begin, whence=0)
         if end is None:
             if stride is None:
                 while 1:
@@ -473,7 +277,7 @@ class DCDFile(CharmmBin):
             else:
                 while 1:
                     yield self.next()
-                    self.seek(stride-1, whence=1)
+                    self.seek_frame(stride-1, whence=1)
         else:
             if begin > end:
                 warnings.warn("begin > end, this will be an empty iterator")
@@ -488,10 +292,15 @@ class DCDFile(CharmmBin):
                     if begin > end:
                         raise StopIteration
                     yield self.next()
-                    self.seek(stride-1, whence=1)
+                    self.seek_frame(stride-1, whence=1)
                     begin += stride
 
     def iter_nparray(self, begin=0, end=None, stride=None):
+        """Creates a generator over the frames of the DCDFile. Uses the
+        (hopefully) familiar start:stop:stride syntax of :class:`slice`s.  This
+        generator returns a :class:`numpy.ndarray` object representing one MD
+        frame.
+        """
         if end is not None and not isinstance(end, int):
             raise TypeError("invalid type for end: %r" % end)
         if stride is not None and not isinstance(stride, int):
@@ -499,7 +308,7 @@ class DCDFile(CharmmBin):
         if stride is not None and stride < 1:
             raise ValueError("invalid value for stride: %r" % end)
         #
-        self.seek(begin, whence=0)
+        self.seek_frame(begin, whence=0)
         if end is None:
             if stride is None:
                 try:
@@ -511,7 +320,7 @@ class DCDFile(CharmmBin):
                 try:
                     while 1:
                         yield np.fromfile(self.fp, dtype=self.frame_dt, count=1)
-                        self.seek(stride-1, whence=1)
+                        self.seek_frame(stride-1, whence=1)
                 except MemoryError:
                     raise StopIteration
         else:
@@ -532,45 +341,41 @@ class DCDFile(CharmmBin):
                         if begin > end:
                             raise StopIteration
                         yield np.fromfile(self.fp, dtype=self.frame_dt, count=1)
-                        self.seek(stride-1, whence=1)
+                        self.seek_frame(stride-1, whence=1)
                         begin += stride
                 except MemoryError:
                     raise StopIteration
 
     def get_massive_dump(self):
-        self.seek(0, whence=0)
+        """Returns a large 3-D :class:`numpy.ndarray` containing all of the
+        frame data for the entire trajectory.
+        """
+        self.seek_frame(0, whence=0)
         tmp = np.fromfile(self.fp, dtype=self.frame_dt, count=-1)
         self.readline()
         return tmp
 
     def read_frame(self):
+        """Reads and returns a full frame in binary format, an empty binary
+        string (if there are no more frames to be read) or reads a partial
+        frame into the :attr:`leftovers` attribute.
+        """
         return self.readline()
 
     def read_nparray(self):
+        """Reads and returns a full frame formatted as a
+        :class:`numpy.ndarray`.
+        """
         return np.fromfile(self.fp, dtype=self.frame_dt, count=1)
 
-    def put_massive_dump(self, dump, order='C'):
-        # untested
-        for frame in dump:
-            self.write_nparray(frame, order)
-
-    def update_header(self):
-        tmp = pack_header(header_size=self.header_size,
-                        dcdtype=self.dcdtype,
-                        nframes=self.nframes,
-                        npriv=self.npriv,
-                        nsav=self.nsav,
-                        nsteps=self.nsteps,
-                        ndegfree=self.ndegfree,
-                        has_xtl=int(self.has_xtl),
-                        has_d4=int(self.has_d4),
-                        validated=int(self.validated),
-                        title=self.title,
-                        natoms=self.natoms)
-        self.fp.seek(0, 0)
-        self.fp.write(tmp)
-
     def write_nparray(self, nparray, order='C'):
+        """Takes an appropriately structed :class:`numpy.ndarray`, converts it
+        to binary format and writes it to disk.
+
+        *Untested*
+
+        :TODO: Error checking, right now it blindly writes
+        """
         if not isinstance(nparray, np.ndarray):
             raise TypeError("invalid nparray")
         self.fp.write(nparray.tostring(order))
@@ -581,6 +386,11 @@ class DCDFile(CharmmBin):
 
     # Frame (meta)data ########################################################
     def compile_npdt(self):
+        """Uses the availible precision specifications to build a
+        :class:`numpy.dtype` object. This is then used in turn to convert
+        between :class:`numpy.ndarray` objects and binary formatting for
+        writing to disk.
+        """
         tmp = []
         if self.has_xtl:
             tmp.append(('xtl', self.ENDIAN + self.XTL_PREC + self.XTL_BLEN, 6))
@@ -598,7 +408,7 @@ class DCDFile(CharmmBin):
                         self.natoms))
         # add record markers
         tmp2 = []
-        if self.has_rec:
+        if True:
             for i, t in enumerate(tmp):
                 tmp2.append(('pad%d' % (i*2), '%s%s%d' % (self.ENDIAN,
                             self.REC_HEAD_PREC, self.REC_HEAD_BLEN), (1,)))
@@ -618,6 +428,10 @@ class DCDFile(CharmmBin):
 
     # Wrapper to python file API ##############################################
     def readline(self):
+        """Reads and returns a full frame in binary format, an empty binary
+        string (if there are no more frames to be read) or reads a partial
+        frame into the :attr:`leftovers` attribute.
+        """
         tmp = self.fp.read(self.frame_size)
         if len(tmp) == self.frame_size:
             return tmp
@@ -628,7 +442,7 @@ class DCDFile(CharmmBin):
             warnings.warn("Dumping fractional frame to leftovers.")
             self._leftovers.append(tmp)
 
-    def seek(self, offset, whence=0):
+    def seek_frame(self, offset, whence=0):
         """Seek the dcd file using a byframe `offset` instead of a
         bytewise `offset`. If you want to seek the file in a bytewise
         manner, use the underlying file pointer directly.
@@ -644,7 +458,7 @@ class DCDFile(CharmmBin):
 
         To seek to the very first frame in the file, use...
         >>> taco = open_dcd("some_file")
-        >>> taco.seek(0, 0)
+        >>> taco.seek_frame(0, 0)
 
         To seek to the 8109th byte of the file, use...
         >>> taco = open_dcd("some_file")
@@ -658,7 +472,7 @@ class DCDFile(CharmmBin):
         else:
             self.fp.seek(offset * self.frame_size, whence)
 
-    def tell(self):
+    def tell_frame(self):
         """Returns the current position of the filepointer as a function
         of the frame. If an integer is returned the filepointer is between
         frames, if a float is returned the filepointer is in a frame.
@@ -669,7 +483,7 @@ class DCDFile(CharmmBin):
         else:
             return tmp
 
-    def truncate(self, offset):
+    def truncate_frame(self, offset):
         """Truncates the file after the specified frame. If you want to
         truncate in a bytewise manner, the underlying filepointer should be
         used.  Offset must be an integer.
@@ -712,6 +526,10 @@ class DCDFile(CharmmBin):
     def XTL_BLEN(self):
         return self._byte_dict[self._xtl_prec]
 
+    @property
+    def has_xtl(self):
+        return not self._xtl_prec is None
+
     @rwprop
     def XYZ_PREC():
         def fget(self):
@@ -727,6 +545,10 @@ class DCDFile(CharmmBin):
     @property
     def XYZ_BLEN(self):
         return self._byte_dict[self._xyz_prec]
+
+    @property
+    def has_xyz(self):
+        return not self._xyz_prec is None
 
     @rwprop
     def D4_PREC():
@@ -744,6 +566,10 @@ class DCDFile(CharmmBin):
     def D4_BLEN(self):
         return self._byte_dict[self._d4_prec]
 
+    @property
+    def has_d4(self):
+        return not self._d4_prec is None
+
     @rwprop
     def Q_PREC():
         def fget(self):
@@ -759,3 +585,7 @@ class DCDFile(CharmmBin):
     @property
     def Q_BLEN(self):
         return self._byte_dict[self._q_prec]
+
+    @property
+    def has_q(self):
+        return not self._q_prec is None
