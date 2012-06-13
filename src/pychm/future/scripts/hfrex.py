@@ -2,10 +2,12 @@
 
 import os.path
 from collections import deque
+from contextlib import closing
 
-from pychm.future.tools import paragraphs, _myexpandpath, _myopenzip_context
+from pychm.future.tools import paragraphs, _myexpandpath, _myopenzip
 from pychm.future.io import open_dcd
 
+import pdb, sys
 
 class LogError(Exception):
     """Exception raised when exchange log parsing goes wrong."""
@@ -56,7 +58,7 @@ class ExchangeLog(object):
 
     def _init_text(self, fname, ftype):
         """open input file, normalize the text, dump it to a deque"""
-        with _myopenzip_context(fname, ftype) as inp_fp:
+        with closing(_myopenzip(fname, ftype=ftype)) as inp_fp:
             iterator = ( line.lower() for line in inp_fp )
             iterator = ( line.strip() for line in iterator )
             iterator = ( line for line in iterator if line )
@@ -129,7 +131,7 @@ def get_nsavc(*fnames):
 ###############################################################################
 # work time ###################################################################
 ###############################################################################
-def rex_map(log_fname, out_dir, *dcd_fnames):
+def rex_map(log_fname, out_dir, log_ftype='auto', dcd_fnames=[]):
     # validate inputs
     if not isinstance(log_fname, basestring):
         raise TypeError("invalid log_fname")
@@ -138,7 +140,7 @@ def rex_map(log_fname, out_dir, *dcd_fnames):
     if not dcd_fnames:
         raise ValueError("must specify input dcd files")
     # parse rexlog
-    rexlog = ExchangeLog(log_fname)
+    rexlog = ExchangeLog(fname=log_fname, validate=True, ftype=log_ftype)
     # parse nsavc value
     nsavc = get_nsavc(*dcd_fnames)
     # make nsavc is compatible with step values from log

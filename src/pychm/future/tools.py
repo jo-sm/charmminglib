@@ -98,12 +98,3 @@ def _myopenzip(fname, mode='r', buffering=8192, ftype=None):
     else:
         raise ValueError("??? Invalid ftype: %r" % ftype)
     return fp
-
-
-@contextmanager
-def _myopenzip_context(fname, mode='r', buffering=8192, ftype=None):
-    try:
-        fp = _myopen(fname=fname, mode=mode, buffering=buffering, ftype=ftype)
-        yield fp
-    finally:
-        fp.close()
