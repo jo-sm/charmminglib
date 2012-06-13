@@ -30,7 +30,7 @@ setup(
         'pychm.analysis',
         'pychm.cg', 'pychm.cg.analysis',
         'pychm.const',
-        'pychm.future', 'pychm.future.io', 'pychm.future.io.charmm', 'pychm.future.lib',
+        'pychm.future', 'pychm.future.io', 'pychm.future.io.charmm', 'pychm.future.lib', 'pychm.future.scripts',
         'pychm.io',
         'pychm.lib',
         'pychm.scripts'

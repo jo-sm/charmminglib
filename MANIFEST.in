@@ -6,6 +6,9 @@ include src/pychm/cg/*py
 include src/pychm/cg/analysis/*py
 include src/pychm/const/*py
 include src/pychm/future/*py
+include src/pychm/future/io/*py
+include src/pychm/future/lib/*py
+include src/pychm/future/scripts/*py
 include src/pychm/io/*py
 include src/pychm/lib/*py
 include src/pychm/scripts/*py
