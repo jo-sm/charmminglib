@@ -159,7 +159,7 @@ class DCDFile(CharmmBin):
         else:
             raise IOError("Error when parsing natoms record of dcd header")
         # check first four chars in rec0 for gibberish
-        if self.dcdtype not in ['cord', 'taco']:
+        if self.dcdtype not in ['cord', 'veld']:
             warnings.warn("unexpected dcdtype: %s" %self.dcdtype)
         # calc header_size
         self.header_size = len(rec0) + len(rec1) + len(rec2) + 24

@@ -5,7 +5,10 @@ generators. These objects should have very broad applicability.
 This module should *NEVER* import from other pychm modules.
 """
 
+
+from contextlib import contextmanager
 from os.path import expanduser, abspath
+
 
 def rwprop(func):
     """A decorator similar to the built in `property`, however this one allows
@@ -52,3 +55,55 @@ def paragraphs(iterable, splitter):
             tmp.append(line)
     if tmp:
         yield tmp
+
+
+def _myopenzip(fname, mode='r', buffering=8192, ftype=None):
+    import zipfile
+    import tarfile
+    import gzip
+    import bz2
+
+
+    if not isinstance(fname, basestring):
+        raise TypeError("Invalid fname")
+    if not isinstance(mode, basestring):
+        raise TypeError("Invalid mode")
+    if not isinstance(buffering, int):
+        raise TypeError("Invalid buffering")
+    if ftype not in [None, 'zip', 'tar', 'gz', 'gzip', 'bz', 'bz2',
+                    'bzip', 'bzip2', 'auto']:
+        raise ValueError("Invalid ftype: %r" % ftype)
+    #
+    if ftype is None:
+        fp = open(fname, mode=mode, buffering=buffering)
+    elif ftype == 'zip':
+        fp = zipfile.ZipFile(fname, mode=mode)
+    elif ftype == 'tar':
+        fp = tarfile.open(fname, mode=mode, bufsize=buffering)
+    elif ftype in ['gz', 'gzip']:
+        fp = gzip.open(fname, mode=mode)
+    elif ftype in ['bz', 'bz2', 'bzip', 'bzip2']:
+        fp = bz2.BZ2File(fname, mode=mode, buffering=buffering)
+    elif ftype == 'auto':
+        if zipfile.is_zipfile(fname):
+            fp = zipfile.ZipFile(fname, mode=mode)
+        elif tarfile.is_tarfile(fname):
+            fp = tarfile.open(fname, mode=mode, bufsize=buffering)
+        elif fname.endswith(('.gz', '.gzip')):
+            fp = gzip.open(fname, mode=mode)
+        elif fname.endswith(('.bz', '.bz2', '.bzip', '.bzip2')):
+            fp = bz2.BZ2File(fname, mode=mode, buffering=buffering)
+        else:
+            fp = open(fname, mode=mode, buffering=buffering)
+    else:
+        raise ValueError("??? Invalid ftype: %r" % ftype)
+    return fp
+
+
+@contextmanager
+def _myopenzip_context(fname, mode='r', buffering=8192, ftype=None):
+    try:
+        fp = _myopen(fname=fname, mode=mode, buffering=buffering, ftype=ftype)
+        yield fp
+    finally:
+        fp.close()

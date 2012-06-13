@@ -3,7 +3,7 @@
 import os.path
 from collections import deque
 
-from pychm.future.tools import paragraphs, _myexpandpath
+from pychm.future.tools import paragraphs, _myexpandpath, _myopenzip_context
 from pychm.future.io import open_dcd
 
 
@@ -39,8 +39,8 @@ class LogEntry(object):
 class ExchangeLog(object):
     """
     """
-    def __init__(self, fname, validate=True):
-        self.text = self._init_text(fname)
+    def __init__(self, fname, validate=True, ftype=None):
+        self.text = self._init_text(fname, ftype)
         self._validate_text()
         self.header = self.text.popleft()
         self.log = self.parse_log()
@@ -54,9 +54,9 @@ class ExchangeLog(object):
         except IndexError:
             return None
 
-    def _init_text(self, fname):
+    def _init_text(self, fname, ftype):
         """open input file, normalize the text, dump it to a deque"""
-        with open(fname) as inp_fp:
+        with _myopenzip_context(fname, ftype) as inp_fp:
             iterator = ( line.lower() for line in inp_fp )
             iterator = ( line.strip() for line in iterator )
             iterator = ( line for line in iterator if line )

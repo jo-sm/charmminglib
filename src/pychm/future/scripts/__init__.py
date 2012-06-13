@@ -1,3 +1,3 @@
 
 
-from pychm.future.scripts.rex_map import rex_map
+from pychm.future.scripts.hfrex import rex_map
