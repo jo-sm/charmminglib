@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Installation script for standalone usage of pychmlib.
+Installation script for standalone usage of pychm.
 
 :Author: fcp
 :Date: 10/28/2010
@@ -21,10 +21,10 @@ if not (ver[0] == 2 and ver[1] in [6,7]):
 setup(
     name = 'pychm',
     version = '0.2',
-    description = 'Python backend to pychm',
+    description = 'Python backend to charmming',
     author = 'Frank C. Pickard IV and Tim Miller',
     author_email = 'pickard81@gmail.com, btamiller@gmail.com',
-    url = 'www.pychm.googlecode.com/svn/',
+    url = 'www.charmming.googlecode.com/svn/',
     packages = [
         'pychm',
         'pychm.analysis',
