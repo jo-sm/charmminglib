@@ -17,7 +17,6 @@ from array import array
 import os
 import struct
 import warnings
-import pdb
 
 import numpy as np
 

@@ -9,7 +9,6 @@ import warnings
 from pychm.future.lib import toppar as tp
 from pychm.future.io.charmm.base import CharmmCard
 from pychm.future.tools import _mydict, paragraphs
-import pdb
 
 
 def open_rtf(fname, mode='r', buffering=None):
@@ -172,23 +171,23 @@ class RTFFile(CharmmCard):
     def _export_mass(self, toppar):
         if self.mass is not None:
             masses = [ massobj_from_charmm(line) for line in self.mass ]
-        merged = tp._merge_mass(masses, toppar.mass)
-        if merged is not None:
-            toppar.mass = merged
+            merged = tp._merge_mass(masses, toppar.mass)
+            if merged is not None:
+                toppar.mass = merged
 
     def _export_residue(self, toppar):
         if self.residue is not None:
             resi = [ resiobj_from_charmm(block) for block in self.residue ]
-        merged = tp._merge_section(resi, toppar.residue)
-        if merged is not None:
-            toppar.residue = merged
+            merged = tp._merge_section(resi, toppar.residue)
+            if merged is not None:
+                toppar.residue = merged
 
     def _export_patch(self, toppar):
         if self.patch is not None:
             pres = [ presobj_from_charmm(block) for block in self.patch ]
-        merged = tp._merge_section(pres, toppar.patch)
-        if merged is not None:
-            toppar.patch = merged
+            merged = tp._merge_section(pres, toppar.patch)
+            if merged is not None:
+                toppar.patch = merged
 
     def _export_commands(self, toppar):
         commands = ('declare', 'autogen', 'default')
@@ -231,18 +230,24 @@ class RTFFile(CharmmCard):
         tmp.append(self.pack_title())
         tmp.append(self.pack_version())
         tmp.append('')
-        tmp.extend(self.mass)
-        tmp.append('')
-        tmp.append(self.commands['declare'])
-        tmp.append('')
-        tmp.append(self.commands['default'])
-        tmp.append('')
-        tmp.append(self.commands['autogen'])
-        tmp.append('')
-        tmp.extend(self.residue)
-        tmp.append('')
-        tmp.extend(self.patch)
-        tmp.append('')
+        if self.mass is not None:
+            tmp.extend(self.mass)
+            tmp.append('')
+        if self.commands['declare'] is not None:
+            tmp.append(self.commands['declare'])
+            tmp.append('')
+        if self.commands['default'] is not None:
+            tmp.append(self.commands['default'])
+            tmp.append('')
+        if self.commands['autogen'] is not None:
+            tmp.append(self.commands['autogen'])
+            tmp.append('')
+        if self.residue is not None:
+            tmp.extend(self.residue)
+            tmp.append('')
+        if self.patch is not None:
+            tmp.extend(self.patch)
+            tmp.append('')
         tmp.append('end')
         tmp.append('')
         tmp.append('')
