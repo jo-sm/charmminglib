@@ -27,7 +27,6 @@ class SansomBLN(KTGoSolv):
     _parameters = {
         'nscale':1.00,
         'domainscale':1,
-        'contactrad':4.5,
         'kBondHelix':2.988,
         'kBondSheet':2.988,
         'kBondCoil':2.988,
