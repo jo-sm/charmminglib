@@ -145,3 +145,17 @@ class Res(BaseStruct):
             for atom in self:
                 return atom.segType
         return locals()
+
+###################
+# private methods #
+###################
+
+    def _dogmans_rename(self):
+        elements = set(( atom.element for atom in self ))
+        for this_element in elements:
+            tmp = [ atom for atom in self if atom.element == this_element ]
+            if len(tmp) == 1:
+                tmp[0].atomType = this_element
+            else:
+                for i, atom in enumerate(tmp):
+                    atom.atomType = "%s%d" % (this_element, i+1)
