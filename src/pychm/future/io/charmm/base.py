@@ -84,7 +84,12 @@ class CharmmCard(TextFile):
             self.deque.popleft()
             return (ver, subver)
         except ValueError:
-            return None
+            try:
+                ver = int(test_line)
+                self.deque.popleft()
+                return (ver, 0)
+            except ValueError:
+                return None
 
     def pack_title(self):
         try:
