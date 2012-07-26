@@ -299,12 +299,13 @@ class BondPRM(BasePRM):
     set at initialization, but not equal if set afterwards. Changing the spring
     constant, 'k' and the equilibrium bond length 'eq' is fine at any time.
     """
-    __slots__ = ['atom0', 'atom1', 'k', 'eq']
+    __slots__ = ['atom0', 'atom1', 'k', 'eq', 'comment']
 
-    def __init__(self, atom0=None, atom1=None, k=None, eq=None):
+    def __init__(self, atom0=None, atom1=None, k=None, eq=None, comment=None):
         self.atom0, self.atom1 = sorted((atom0, atom1))
         self.k = _myfloat(k)
         self.eq = _myfloat(eq)
+        self.comment = comment
 
     @property
     def _sortkey(self):
@@ -328,15 +329,16 @@ class AnglePRM(BasePRM):
     spring constant, 'k' and the equilibrium bond length 'eq' is fine at any
     time. The 1-3 interaction parameters may be optionally set.
     """
-    __slots__ = ['atom0', 'atom1', 'atom2', 'k', 'eq', 'k13', 'eq13']
+    __slots__ = ['atom0', 'atom1', 'atom2', 'k', 'eq', 'k13', 'eq13', 'comment']
 
-    def __init__(self, atom0=None, atom1=None, atom2=None, k=None, eq=None, k13=None, eq13=None):
+    def __init__(self, atom0=None, atom1=None, atom2=None, k=None, eq=None, k13=None, eq13=None, comment=None):
         self.atom0, self.atom2 = sorted((atom0, atom2))
         self.atom1 = atom1
         self.k = _myfloat(k)
         self.eq = _myfloat(eq)
         self.k13 = _myfloat(k13)
         self.eq13 = _myfloat(eq13)
+        self.comment = comment
 
     @property
     def _sortkey(self):
@@ -365,9 +367,9 @@ class DihedralPRM(BasePRM):
     determining parameter uniqueness. Changing the spring constant, 'k' and the
     equilibrium bond length 'eq' is fine at any time.
     """
-    __slots__ = ['atom0', 'atom1', 'atom2', 'atom3' 'k', 'mult', 'eq']
+    __slots__ = ['atom0', 'atom1', 'atom2', 'atom3' 'k', 'mult', 'eq', 'comment']
 
-    def __init__(self, atom0=None, atom1=None, atom2=None, atom3=None, k=None, mult=None, eq=None):
+    def __init__(self, atom0=None, atom1=None, atom2=None, atom3=None, k=None, mult=None, eq=None, comment=None):
         self.atom0, self.atom3 = sorted((atom0, atom3))
         if self.atom0 == atom0:
             self.atom1, self.atom2 = (atom1, atom2)
@@ -376,6 +378,7 @@ class DihedralPRM(BasePRM):
         self.k = _myfloat(k)
         self.mult = _myint(mult)
         self.eq = _myfloat(eq)
+        self.comment = comment
 
     @property
     def _sortkey(self):
@@ -400,7 +403,7 @@ class ImproperPRM(DihedralPRM):
     determining parameter uniqueness. Changing the spring constant, 'k' and the
     equilibrium bond length 'eq' is fine at any time.
     """
-    __slots__ = ['atom0', 'atom1', 'atom2', 'atom3' 'k', 'mult', 'eq']
+    __slots__ = ['atom0', 'atom1', 'atom2', 'atom3' 'k', 'mult', 'eq', 'comment']
 
 
 class CmapPRM(BasePRM):
@@ -428,9 +431,9 @@ class NonbondPRM(BasePRM):
     arguments are optional, and only used for calculating 1-4 nonbonded
     interactions.
     """
-    __slots__ = ['atom', 'ig', 'k', 'eq', 'ig14', 'k14', 'eq14']
+    __slots__ = ['atom', 'ig', 'k', 'eq', 'ig14', 'k14', 'eq14', 'comment']
 
-    def __init__(self, atom=None, ig=None, k=None, eq=None, ig14=None, k14=None, eq14=None):
+    def __init__(self, atom=None, ig=None, k=None, eq=None, ig14=None, k14=None, eq14=None, comment=None):
         self.atom = atom
         self.ig = _myfloat(ig)     # ignored
         self.k = _myfloat(k)       # epsilon
@@ -438,6 +441,7 @@ class NonbondPRM(BasePRM):
         self.ig14 = _myfloat(ig14)
         self.k14 = _myfloat(k14)
         self.eq14 = _myfloat(eq14)
+        self.comment = comment
 
     @property
     def _sortkey(self):
@@ -470,14 +474,15 @@ class NBFixPRM(BasePRM):
     respectively. The last two arguments are optional, and are used for 1-4
     nonbonded interactions.
     """
-    __slots__ = ['atom0', 'atom1', 'k', 'eq', 'k14', 'eq14']
+    __slots__ = ['atom0', 'atom1', 'k', 'eq', 'k14', 'eq14', 'comment']
 
-    def __init__(self, atom0=None, atom1=None, k=None, eq=None, k14=None, eq14=None):
+    def __init__(self, atom0=None, atom1=None, k=None, eq=None, k14=None, eq14=None, comment=None):
         self.atom0, self.atom1 = sorted((atom0, atom1))
         self.k = _myfloat(k)
         self.eq = _myfloat(eq)
         self.k14 = _myfloat(k14)
         self.eq14 = _myfloat(eq14)
+        self.comment = comment
 
     @property
     def _sortkey(self):
@@ -507,12 +512,13 @@ class HBondPRM(BasePRM):
     if set at initialization, but not equal if set afterwards. The arguments
     'k' and 'eq' are the well depth and equilibrium distances, respectively.
     """
-    __slots__ = ['atom0', 'atom1', 'k', 'eq']
+    __slots__ = ['atom0', 'atom1', 'k', 'eq', 'comment']
 
-    def __init__(self, atom0=None, atom1=None, k=None, eq=None):
+    def __init__(self, atom0=None, atom1=None, k=None, eq=None, comment=None):
         self.atom0, self.atom1 = sorted((atom0, atom1))
         self.k = _myfloat(k)
         self.eq = _myfloat(eq)
+        self.comment = comment
 
     @property
     def _sortkey(self):
@@ -533,13 +539,14 @@ class Mass(BasePRM):
     representing the mass in AMU. The fourth argument is an optional string
     representing the elemental symbol.
     """
-    __slots__ = ['atom', 'id', 'mass', 'element']
+    __slots__ = ['atom', 'id', 'mass', 'element', 'comment']
 
-    def __init__(self, id=None, atom=None, mass=None, element=None):
+    def __init__(self, id=None, atom=None, mass=None, element=None, comment=None):
         self.id = int(id)
         self.atom = atom
         self.mass = _myfloat(mass)
         self.element = element
+        self.comment = comment
 
     @property
     def _sortkey(self):
@@ -558,10 +565,11 @@ class Residue(BasePRM):
     information is stored as a black box in the third argument. This will likely change
     in the near future and a fully featured residue object will be implemented.
     """
-    def __init__(self, name=None, charge=None, body=None):
+    def __init__(self, name=None, charge=None, body=None, comment=None):
         self.name = name
         self.charge = _myfloat(charge)
         self.body = body
+        self.comment = comment
 
     @property
     def _sortkey(self):

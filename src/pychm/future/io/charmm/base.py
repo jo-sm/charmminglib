@@ -34,34 +34,15 @@ class CharmmCard(TextFile):
         self.body = None
         self.deque = None
 
-    def iter_normalize_card(self):
+    def iter_normalize_card(self, comments=False):
         """Returns an iterator over the card file's lines, with comments,
         exterior whitespace and blanklines removed. Also, lines that are
         broken over multiple physical lines in the file are combined.
         """
-        cc = self.comment_char
-        self.seek(0, 0)
-        # filter comments, whitespace, blanklines
-        iterable = ( line.strip() for line in self )
-        iterable = ( line for line in iterable if line )
-        iterable = ( line.lower() for line in iterable if not line.startswith(cc) )
-        iterable = ( line.split(cc)[0] for line in iterable )
-        iterable = ( line.strip() for line in iterable )
-        # account for line continuation chars
-        tmp = []
-        for line in iterable:
-            if line.endswith(self.continue_char):
-                tmp.append(line[:-1].strip())
-            else:
-                if tmp:
-                    tmp.append(line)
-                    yield ' '.join(tmp)
-                    tmp = []
-                else:
-                    yield line
-        # flush
-        if tmp:
-            yield ' '.join(tmp)
+        if comments:
+            return self._iter_normalize_card_yes_comments()
+        else:
+            return self._iter_normalize_card_no_comments()
 
     def parse(self):
         self.deque = deque(self.iter_normalize_card())
@@ -106,3 +87,69 @@ class CharmmCard(TextFile):
             return "%5d%5d" % self.version
         except TypeError:
             return "    0    0"
+
+    def _iter_normalize_card_no_comments(self):
+        cc = self.comment_char
+        self.seek(0, 0)
+        # filter comments, whitespace, blanklines
+        iterable = ( line.strip() for line in self )
+        iterable = ( line for line in iterable if line )
+        iterable = ( line.lower() for line in iterable if not line.startswith(cc) )
+        iterable = ( line.split(cc)[0] for line in iterable )
+        iterable = ( line.strip() for line in iterable )
+        # account for line continuation chars
+        tmp = []
+        for line in iterable:
+            if line.endswith(self.continue_char):
+                tmp.append(line[:-1].strip())
+            else:
+                if tmp:
+                    tmp.append(line)
+                    yield ' '.join(tmp)
+                    tmp = []
+                else:
+                    yield line
+        # flush
+        if tmp:
+            yield ' '.join(tmp)
+
+    def _iter_normalize_card_yes_comments(self):
+        cc = self.comment_char
+        self.seek(0, 0)
+        # filters
+        iterable = ( line.strip() for line in self )
+        iterable = ( line for line in iterable if line )
+        iterable = ( line for line in iterable if not line.startswith(cc) )
+        #
+        tmp_line = []
+        tmp_comm = []
+        for line in iterable:
+            if cc in line:
+                line, comment = line.split(cc, 1)
+                line = line.strip()
+                comment = comment.strip()
+            else:
+                comment = ""
+
+            if line.endswith(self.continue_char):
+                tmp_line.append(line[:-1].strip())
+                tmp_comm.append(comment)
+                continue
+
+            tmp_line.append(line)
+            tmp_comm.append(comment)
+            line = ' '.join(tmp_line).strip()
+            comment = ' '.join(tmp_comm).strip()
+            if comment:
+                line += ' %s %s' % (cc, comment)
+            yield line.lower()
+            tmp_line = []
+            tmp_comm = []
+        # flush
+        if tmp_line or tmp_comm:
+            line = ' '.join(tmp_line).strip()
+            comment = ' '.join(tmp_comm).strip()
+            if comment:
+                line += ' %s %s' % (cc, comment)
+            yield line.lower()
+

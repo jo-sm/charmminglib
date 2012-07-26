@@ -9,66 +9,16 @@ import warnings
 from pychm.future.lib import toppar as tp
 from pychm.future.io.charmm.base import CharmmCard
 from pychm.future.tools import _mydict, paragraphs
+from pychm.future.io.charmm import readwrite as rw
 
 
-def open_rtf(fname, mode='r', buffering=None):
+def open_rtf(fname, mode='r', buffering=None, inline_comments=False):
     tmp = RTFFile(fname, mode, buffering)
     if 'r' in mode:
-        tmp.parse()
+        tmp.parse(inline_comments=inline_comments)
     if 'w' in mode:
         tmp.version = (35, 1)
     return tmp
-
-
-def massobj_from_charmm(arg):
-    if not isinstance(arg, basestring):
-        raise TypeError("Invalid arg: %r" % arg)
-    return tp.Mass(*arg.split())
-
-
-def resiobj_from_charmm(arg):
-    x, name, charge = arg[0].split()
-    body = arg[1:]
-    return tp.Residue(name=name, charge=charge, body=body)
-
-
-def presobj_from_charmm(arg):
-    x, name, charge = arg[0].split()
-    body = arg[1:]
-    return tp.Patch(name=name, charge=charge, body=body)
-
-
-def massobj_printer(arg):
-    if isinstance(arg, tp.Mass):
-        args = (arg.id, arg.atom, arg.mass, arg.element)
-        if None in args:
-            return 'mass %-5d%-8s%10.4f' % args[:3]
-        else:
-            return 'mass %-5d%-8s%10.4f%3s' % args
-    else:
-        raise TypeError("Invalid class: %s" % arg.__class__.__name__)
-
-
-def resiobj_printer(arg):
-    if isinstance(arg, tp.Residue):
-        tmp = []
-        tmp.append('resi %6s%8.2f' % (arg.name, arg.charge))
-        tmp.extend(arg.body)
-        tmp.append('')
-        return '\n'.join(tmp)
-    else:
-        raise TypeError("Invalid class: %s" % arg.__class__.__name__)
-
-
-def presobj_printer(arg):
-    if isinstance(arg, tp.Patch):
-        tmp = []
-        tmp.append('pres %6s%8.2f' % (arg.name, arg.charge))
-        tmp.extend(arg.body)
-        tmp.append('')
-        return '\n'.join(tmp)
-    else:
-        raise TypeError("Invalid class: %s" % arg.__class__.__name__)
 
 
 class RTFFile(CharmmCard):
@@ -82,10 +32,12 @@ class RTFFile(CharmmCard):
         self.commands = _mydict()
         super(RTFFile, self).__init__(fname, mode, buffering)
 
-    def parse(self):
+    def parse(self, inline_comments=False):
         """
         """
-        super(RTFFile, self).parse()
+        self.deque = deque(self.iter_normalize_card(comments=inline_comments))
+        self.title = self._parse_title()
+        self.version = self._parse_version()
         while 1:
             if self.deque[0].startswith('mass'):
                 self._parse_mass()
@@ -100,6 +52,7 @@ class RTFFile(CharmmCard):
             elif self.deque[0].startswith('end'):
                 break
             else:
+                print self.deque[0]
                 raise AssertionError("Parse: How did I get here?")
         if self.mass is None:
             warnings.warn("No mass section found.")
@@ -114,11 +67,54 @@ class RTFFile(CharmmCard):
         if self.commands['autogen'] is None:
             warnings.warn("No autogenerate section found.")
 
+    def export_to_toppar(self, toppar):
+        self._export_mass(toppar)
+        self._export_residue(toppar)
+        self._export_patch(toppar)
+        self._export_commands(toppar)
+
+    def import_from_toppar(self, toppar):
+        self._import_mass(toppar)
+        self._import_residue(toppar)
+        self._import_patch(toppar)
+        self._import_commands(toppar)
+
+    def pack(self):
+        tmp = []
+        tmp.append(self.pack_title())
+        tmp.append(self.pack_version())
+        tmp.append('')
+        if self.mass is not None:
+            tmp.extend(self.mass)
+            tmp.append('')
+        if self.commands['declare'] is not None:
+            tmp.append(self.commands['declare'])
+            tmp.append('')
+        if self.commands['default'] is not None:
+            tmp.append(self.commands['default'])
+            tmp.append('')
+        if self.commands['autogen'] is not None:
+            tmp.append(self.commands['autogen'])
+            tmp.append('')
+        if self.residue is not None:
+            tmp.extend(self.residue)
+            tmp.append('')
+        if self.patch is not None:
+            tmp.extend(self.patch)
+            tmp.append('')
+        tmp.append('end')
+        tmp.append('')
+        tmp.append('')
+        return '\n'.join(tmp)
+
+    def write_all(self):
+        self.write(self.pack())
+
+# parsing private methods
     def _parse_mass(self):
         tmp = []
         while self.deque[0].startswith('mass'):
             tmp.append(self.deque.popleft())
-        tmp = [ ' '.join(line.split()[1:]) for line in tmp ]
         if self.mass is None and tmp:
             self.mass = tmp
         elif self.mass is not None and tmp:
@@ -162,29 +158,24 @@ class RTFFile(CharmmCard):
             self.patch.extend(pres)
         self.deque = deque(other)
 
-    def export_to_toppar(self, toppar):
-        self._export_mass(toppar)
-        self._export_residue(toppar)
-        self._export_patch(toppar)
-        self._export_commands(toppar)
-
+# exporting private methods
     def _export_mass(self, toppar):
         if self.mass is not None:
-            masses = [ massobj_from_charmm(line) for line in self.mass ]
+            masses = [ rw.mass_reader(line) for line in self.mass ]
             merged = tp._merge_mass(masses, toppar.mass)
             if merged is not None:
                 toppar.mass = merged
 
     def _export_residue(self, toppar):
         if self.residue is not None:
-            resi = [ resiobj_from_charmm(block) for block in self.residue ]
+            resi = [ rw.residue_reader(block) for block in self.residue ]
             merged = tp._merge_section(resi, toppar.residue)
             if merged is not None:
                 toppar.residue = merged
 
     def _export_patch(self, toppar):
         if self.patch is not None:
-            pres = [ presobj_from_charmm(block) for block in self.patch ]
+            pres = [ rw.patch_reader(block) for block in self.patch ]
             merged = tp._merge_section(pres, toppar.patch)
             if merged is not None:
                 toppar.patch = merged
@@ -198,60 +189,25 @@ class RTFFile(CharmmCard):
                 if merged is not None:
                     toppar.commands[command] = cmd
 
-    def import_from_toppar(self, toppar):
-        self._import_mass(toppar)
-        self._import_residue(toppar)
-        self._import_patch(toppar)
-        self._import_commands(toppar)
-
+# importing private methods
     def _import_mass(self, toppar):
         if toppar.mass is not None:
-            self.mass = [ massobj_printer(mass) for mass in toppar.mass ]
+            self.mass = [ rw.mass_writer(mass) for mass in toppar.mass ]
 
     def _import_residue(self, toppar):
         if toppar.residue is None:
             self.residue = None
         else:
-            self.residue = [ resiobj_printer(resi) for resi in toppar.residue ]
+            self.residue = [ rw.residue_writer(resi) for resi in toppar.residue ]
 
     def _import_patch(self, toppar):
         if toppar.patch is None:
             self.patch = None
         else:
-            self.patch = [ presobj_printer(pres) for pres in toppar.patch ]
+            self.patch = [ rw.patch_writer(pres) for pres in toppar.patch ]
 
     def _import_commands(self, toppar):
         self.commands['declare'] = toppar.commands['declare']
         self.commands['autogen'] = toppar.commands['autogen']
         self.commands['default'] = toppar.commands['default']
 
-    def pack(self):
-        tmp = []
-        tmp.append(self.pack_title())
-        tmp.append(self.pack_version())
-        tmp.append('')
-        if self.mass is not None:
-            tmp.extend(self.mass)
-            tmp.append('')
-        if self.commands['declare'] is not None:
-            tmp.append(self.commands['declare'])
-            tmp.append('')
-        if self.commands['default'] is not None:
-            tmp.append(self.commands['default'])
-            tmp.append('')
-        if self.commands['autogen'] is not None:
-            tmp.append(self.commands['autogen'])
-            tmp.append('')
-        if self.residue is not None:
-            tmp.extend(self.residue)
-            tmp.append('')
-        if self.patch is not None:
-            tmp.extend(self.patch)
-            tmp.append('')
-        tmp.append('end')
-        tmp.append('')
-        tmp.append('')
-        return '\n'.join(tmp)
-
-    def write_all(self):
-        self.write(self.pack())

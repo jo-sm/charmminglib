@@ -392,7 +392,7 @@ class DCDFile(CharmmBin):
         """
         tmp = []
         if self.has_xtl:
-            tmp.append(('xtl', self.ENDIAN + self.XTL_PREC + self.XTL_BLEN, 6))
+            tmp.append(('xtl', '%s%s%s%d' % (self.ENDIAN, self.XTL_PREC, self.XTL_BLEN, 6)))
         tmp.append(('x', '%s%s%d' % (self.ENDIAN, self.XYZ_PREC, self.XYZ_BLEN),
                     self.natoms))
         tmp.append(('y', '%s%s%d' % (self.ENDIAN, self.XYZ_PREC, self.XYZ_BLEN),
