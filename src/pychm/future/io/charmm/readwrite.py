@@ -3,9 +3,8 @@
 """
 
 from pychm.future.lib import toppar as tp
+from pychm.future.io.charmm import COMMENT_CHAR as CC
 
-# Constants
-CC = '!' # comment character
 
 # Exceptions
 class ReaderError(Exception):

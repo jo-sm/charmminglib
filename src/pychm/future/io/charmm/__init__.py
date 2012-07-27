@@ -1,5 +1,8 @@
 
 
+COMMENT_CHAR = '!'
+CONTINUE_CHAR = '-'
+
 import pychm.future.io.charmm.base
 import pychm.future.io.charmm.dcd
 import pychm.future.io.charmm.prm

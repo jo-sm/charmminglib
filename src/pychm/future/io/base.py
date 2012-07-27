@@ -9,10 +9,14 @@ from io import DEFAULT_BUFFER_SIZE
 import os
 import struct
 import warnings
+import logging
 
 import numpy as np
 
 from pychm.future.tools import rwprop
+
+
+logger = logging.getLogger('pychm.io.base')
 
 
 def get_buffer_size(arg=None):
@@ -89,6 +93,9 @@ class File(object):
         super(File, self).__init__()
         self._buffer_size = get_buffer_size(buffering)
         self.fp = open(name=fname, mode=mode, buffering=self._buffer_size)
+        logger.debug("opening file: %s" % self.fp.name)
+        logger.debug("mode set to: %s" % self.fp.mode)
+        logger.debug("buffering set to: %d" % self._buffer_size)
 
     # Wrapper to python file API ##############################################
     def close(self):
@@ -213,6 +220,7 @@ class BinFile(File):
             mode += 'b'
         super(BinFile, self).__init__(fname=fname, mode=mode, buffering=buffering)
         self.ENDIAN = endian
+        logger.debug("ENDIAN set to %s" % self._endian)
 
     def _read_exactly(self, nbytes):
         """Read exactly nbytes, raise an error otherwise."""
@@ -274,6 +282,7 @@ class FortFile(BinFile):
         super(FortFile, self).__init__(fname=fname, mode=mode,
                                     buffering=buffering, endian=endian)
         self.REC_HEAD_PREC = rec_head_prec
+        logger.debug("record marker precision set to %s" % self._rec_head_prec)
 
     def _read_chk(self):
         return struct.unpack(self.ENDIAN + self.REC_HEAD_PREC,
@@ -292,7 +301,7 @@ class FortFile(BinFile):
         data = self._read_exactly(l)
         chk = self._read_chk()
         if chk != l:
-            raise IOError("Chk failure.")
+            raise IOError("Record markers do not match.")
         return data
 
     def write_record(self, s):

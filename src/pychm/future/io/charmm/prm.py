@@ -9,7 +9,7 @@ import warnings
 
 from pychm.future.lib import toppar as tp
 from pychm.future.io.charmm.base import CharmmCard
-from pychm.future.tools import _mydict
+from pychm.future.tools import mydict
 from pychm.future.io.charmm import readwrite as rw
 
 
@@ -93,7 +93,7 @@ class PRMFile(CharmmCard):
         self.nbfix = None
         self.hbond = None
         #
-        self.commands = _mydict()
+        self.commands = mydict()
         super(PRMFile, self).__init__(fname=fname, mode=mode,
                                     buffering=buffering)
 

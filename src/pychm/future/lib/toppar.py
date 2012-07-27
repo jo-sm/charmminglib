@@ -23,6 +23,8 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 from copy import deepcopy
 import warnings
 
+from pychm.future.tools import myfloat, myint
+
 
 class CMAP_Exception(Exception):
     """This is a temporary exception, and will be removed/changed in a future
@@ -30,32 +32,6 @@ class CMAP_Exception(Exception):
     CHARMMing release.
     """
     pass
-
-
-# Convenience functions ############################
-def _myfloat(k):
-    """Casts a variable to a float, but doesn't barf exceptions on
-    uninitialized (`None`) values.
-    """
-    try:
-        return float(k)
-    except TypeError:
-        if k is None:
-            return None
-        else:
-            raise
-
-def _myint(k):
-    """Casts a variable to an int, but doesn't barf exceptions on
-    uninitialized (`None`) values.
-    """
-    try:
-        return int(k)
-    except TypeError:
-        if k is None:
-            return None
-        else:
-            raise
 
 
 # Merging functions #################################
@@ -303,8 +279,8 @@ class BondPRM(BasePRM):
 
     def __init__(self, atom0=None, atom1=None, k=None, eq=None, comment=None):
         self.atom0, self.atom1 = sorted((atom0, atom1))
-        self.k = _myfloat(k)
-        self.eq = _myfloat(eq)
+        self.k = myfloat(k)
+        self.eq = myfloat(eq)
         self.comment = comment
 
     @property
@@ -312,7 +288,7 @@ class BondPRM(BasePRM):
         return (self.atom0, self.atom1)
 
     def _validate(self):
-        for attrname in self.__slots__:
+        for attrname in self.__slots__[:4]:
             if getattr(self, attrname) is None:
                 warnings.warn("%r has uninitialized attr: %s" % (self, attrname))
 
@@ -334,10 +310,10 @@ class AnglePRM(BasePRM):
     def __init__(self, atom0=None, atom1=None, atom2=None, k=None, eq=None, k13=None, eq13=None, comment=None):
         self.atom0, self.atom2 = sorted((atom0, atom2))
         self.atom1 = atom1
-        self.k = _myfloat(k)
-        self.eq = _myfloat(eq)
-        self.k13 = _myfloat(k13)
-        self.eq13 = _myfloat(eq13)
+        self.k = myfloat(k)
+        self.eq = myfloat(eq)
+        self.k13 = myfloat(k13)
+        self.eq13 = myfloat(eq13)
         self.comment = comment
 
     @property
@@ -375,9 +351,9 @@ class DihedralPRM(BasePRM):
             self.atom1, self.atom2 = (atom1, atom2)
         else:
             self.atom1, self.atom2 = (atom2, atom1)
-        self.k = _myfloat(k)
-        self.mult = _myint(mult)
-        self.eq = _myfloat(eq)
+        self.k = myfloat(k)
+        self.mult = myint(mult)
+        self.eq = myfloat(eq)
         self.comment = comment
 
     @property
@@ -385,7 +361,7 @@ class DihedralPRM(BasePRM):
         return (self.atom0, self.atom1, self.atom2, self.atom3, self.mult)
 
     def _validate(self):
-        for attrname in self.__slots__:
+        for attrname in self.__slots__[:7]:
             if getattr(self, attrname) is None:
                 warnings.warn("%r has uninitialized attr: %s" % (self, attrname))
 
@@ -435,12 +411,12 @@ class NonbondPRM(BasePRM):
 
     def __init__(self, atom=None, ig=None, k=None, eq=None, ig14=None, k14=None, eq14=None, comment=None):
         self.atom = atom
-        self.ig = _myfloat(ig)     # ignored
-        self.k = _myfloat(k)       # epsilon
-        self.eq = _myfloat(eq)     # r_min/2
-        self.ig14 = _myfloat(ig14)
-        self.k14 = _myfloat(k14)
-        self.eq14 = _myfloat(eq14)
+        self.ig = myfloat(ig)     # ignored
+        self.k = myfloat(k)       # epsilon
+        self.eq = myfloat(eq)     # r_min/2
+        self.ig14 = myfloat(ig14)
+        self.k14 = myfloat(k14)
+        self.eq14 = myfloat(eq14)
         self.comment = comment
 
     @property
@@ -478,10 +454,10 @@ class NBFixPRM(BasePRM):
 
     def __init__(self, atom0=None, atom1=None, k=None, eq=None, k14=None, eq14=None, comment=None):
         self.atom0, self.atom1 = sorted((atom0, atom1))
-        self.k = _myfloat(k)
-        self.eq = _myfloat(eq)
-        self.k14 = _myfloat(k14)
-        self.eq14 = _myfloat(eq14)
+        self.k = myfloat(k)
+        self.eq = myfloat(eq)
+        self.k14 = myfloat(k14)
+        self.eq14 = myfloat(eq14)
         self.comment = comment
 
     @property
@@ -516,8 +492,8 @@ class HBondPRM(BasePRM):
 
     def __init__(self, atom0=None, atom1=None, k=None, eq=None, comment=None):
         self.atom0, self.atom1 = sorted((atom0, atom1))
-        self.k = _myfloat(k)
-        self.eq = _myfloat(eq)
+        self.k = myfloat(k)
+        self.eq = myfloat(eq)
         self.comment = comment
 
     @property
@@ -544,7 +520,7 @@ class Mass(BasePRM):
     def __init__(self, id=None, atom=None, mass=None, element=None, comment=None):
         self.id = int(id)
         self.atom = atom
-        self.mass = _myfloat(mass)
+        self.mass = myfloat(mass)
         self.element = element
         self.comment = comment
 
@@ -567,7 +543,7 @@ class Residue(BasePRM):
     """
     def __init__(self, name=None, charge=None, body=None, comment=None):
         self.name = name
-        self.charge = _myfloat(charge)
+        self.charge = myfloat(charge)
         self.body = body
         self.comment = comment
 

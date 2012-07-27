@@ -8,7 +8,7 @@ import warnings
 
 from pychm.future.lib import toppar as tp
 from pychm.future.io.charmm.base import CharmmCard
-from pychm.future.tools import _mydict, paragraphs
+from pychm.future.tools import mydict, paragraphs
 from pychm.future.io.charmm import readwrite as rw
 
 
@@ -29,7 +29,7 @@ class RTFFile(CharmmCard):
         self.residue = None
         self.patch = None
         #
-        self.commands = _mydict()
+        self.commands = mydict()
         super(RTFFile, self).__init__(fname, mode, buffering)
 
     def parse(self, inline_comments=False):

@@ -8,6 +8,10 @@ This module should *NEVER* import from other pychm modules.
 
 from contextlib import contextmanager
 from os.path import expanduser, abspath
+import logging
+
+
+logger = logging.getLogger('pychm.tools')
 
 
 def rwprop(func):
@@ -17,15 +21,41 @@ def rwprop(func):
     return property(**func())
 
 
-class _mydict(dict):
+class mydict(dict):
     """The same as a regular class:`dict`, except instead of raising exec:`KeyError`
     `None` is returned.
     """
     def __getitem__(self, key):
         try:
-            return super(_mydict, self).__getitem__(key)
+            return super(mydict, self).__getitem__(key)
         except KeyError:
             return None
+
+
+def myfloat(k):
+    """Casts a variable to a float, but doesn't barf exceptions on
+    uninitialized (`None`) values.
+    """
+    try:
+        return float(k)
+    except TypeError:
+        if k is None:
+            return None
+        else:
+            raise
+
+
+def myint(k):
+    """Casts a variable to an int, but doesn't barf exceptions on
+    uninitialized (`None`) values.
+    """
+    try:
+        return int(k)
+    except TypeError:
+        if k is None:
+            return None
+        else:
+            raise
 
 
 def _myexpandpath(path):
@@ -75,25 +105,35 @@ def _myopenzip(fname, mode='r', buffering=8192, ftype=None):
         raise ValueError("Invalid ftype: %r" % ftype)
     #
     if ftype is None:
+        logger.info("opening file: %s, without compression" % fname)
         fp = open(fname, mode=mode, buffering=buffering)
     elif ftype == 'zip':
+        logger.info("opening file: %s, with zip compression" % fname)
         fp = zipfile.ZipFile(fname, mode=mode)
     elif ftype == 'tar':
+        logger.info("opening file: %s, with tar compression" % fname)
         fp = tarfile.open(fname, mode=mode, bufsize=buffering)
     elif ftype in ['gz', 'gzip']:
+        logger.info("opening file: %s, with gzip compression" % fname)
         fp = gzip.open(fname, mode=mode)
     elif ftype in ['bz', 'bz2', 'bzip', 'bzip2']:
+        logger.info("opening file: %s, with bzip compression" % fname)
         fp = bz2.BZ2File(fname, mode=mode, buffering=buffering)
     elif ftype == 'auto':
         if zipfile.is_zipfile(fname):
+            logger.info("opening file: %s, with zip compression" % fname)
             fp = zipfile.ZipFile(fname, mode=mode)
         elif tarfile.is_tarfile(fname):
+            logger.info("opening file: %s, with tar compression" % fname)
             fp = tarfile.open(fname, mode=mode, bufsize=buffering)
         elif fname.endswith(('.gz', '.gzip')):
+            logger.info("opening file: %s, with gzip compression" % fname)
             fp = gzip.open(fname, mode=mode)
         elif fname.endswith(('.bz', '.bz2', '.bzip', '.bzip2')):
+            logger.info("opening file: %s, with bzip compression" % fname)
             fp = bz2.BZ2File(fname, mode=mode, buffering=buffering)
         else:
+            logger.info("opening file: %s, without compression" % fname)
             fp = open(fname, mode=mode, buffering=buffering)
     else:
         raise ValueError("??? Invalid ftype: %r" % ftype)
