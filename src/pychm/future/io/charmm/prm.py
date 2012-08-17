@@ -226,7 +226,7 @@ class PRMFile(CharmmCard):
 
     def _export_atom(self, toppar):
         if self.atom is not None:
-            masses = [ rw.mass_reader for line in self.atom ]
+            masses = [ rw.mass_reader(line) for line in self.atom ]
             toppar.mass = tp._merge_mass(masses, toppar.mass)
 
     def _export_section(self, section, toppar):
