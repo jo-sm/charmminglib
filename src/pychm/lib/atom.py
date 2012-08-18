@@ -153,6 +153,16 @@ class Atom(BaseAtom):
             self.resid = self._text[112:120]
             self.weight = self._text[120:140]
             self.bFactor = 1.
+        elif inFormat == 'mol2':
+            self.atomNum = self._text[0:6]
+            self.resIndex = self._text[51:55]
+            self.resid = self.resIndex
+            self.resName = self._text[58:61]
+            self.atomType = self._text[8:12]
+            self.cart = (self._text[17:25],self._text[27:35],self._text[37:45])
+            self.chainid = 'a'
+            self.weight = 1.0
+            self.bFactor = 1.
         elif inFormat == 'amber':
             raise NotImplementedError
         else:
@@ -361,6 +371,9 @@ class Atom(BaseAtom):
             taco = '%10i%10i  %-8s  %-8s    %20.10f%20.10f%20.10f  %-8s  %-8i    %20.10f' % \
                 (atomNum, self.resIndex, self.resName, tmpAtomType,
                 x, y, z, chainid + segType, resid, self.weight)
+        elif outFormat == 'mol2':
+            taco = '%-6i %8s %9.4f %9.4f %9.4f %7s %2i %4s' % \
+                (atomNum, tmpAtomType, x, y, z, tmpAtomType, resid, self.resName)
         else:
             raise AtomError('Print: unknown inFormat %s' % inFormat)
         return taco.upper()

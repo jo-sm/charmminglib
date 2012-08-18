@@ -151,7 +151,7 @@ class MetaAtom(object):
         elif isinstance(text, str):
             # card format files are whitespace sensitive
             if inFormat in ['crd', 'cor', 'card', 'short', 'shortcard'] or \
-                inFormat in ['xcrd', 'xcor', 'xcard', 'long', 'longcard']:
+                inFormat in ['xcrd', 'xcor', 'xcard', 'long', 'longcard', 'mol2']:
                 self._text  = text.lower().rstrip()
             else:
                 self._text  = text.lower().split(commentChar)[0].strip()

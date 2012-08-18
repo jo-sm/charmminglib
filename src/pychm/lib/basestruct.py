@@ -519,7 +519,7 @@ class BaseStruct(list):
                     ter = True
                 if end is None:
                     end = True
-        elif outFormat in ['debug', 'xdebug']:
+        elif outFormat in ['debug', 'xdebug','mol2']:
             for atom in self:
                 writeMe.append(atom.Print(**kwargs))
         elif outFormat in ['crd', 'cor', 'card', 'short', 'shortcard',
