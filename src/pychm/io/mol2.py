@@ -43,6 +43,25 @@ class MOL2File(object):
                     inHeader = False
                     inCrd = False
                     inBonds = False
+            else:
+                if inHeader:
+                    self._header.append(line)
+                elif inCrd:
+                    self._crd.append(line)
+                elif inBonds:
+                    self._bonds.append(line)
+
+    def _buildmodel(self):
+        iterator = ( Atom(text=line, informat='mol2', index=i) ) \
+                   for i, line in enumerate(self._crd)
+        self._mymol = Mol(iterable=iterator, name='model0', autofix=True)
+
+    def write_out(self, filename, **kwargs):
+        pass
+
+    @Property
+    def mol(self):
+        return self._mymol
 
     def __init__(self, filename=None, **kwargs):
         super(MOL2File, self).__init__()
@@ -50,6 +69,7 @@ class MOL2File(object):
         if filename is not None:
             self.filename = filename
             self._partition()
+            self._buildmodel()
         else:            
             self.filename = 'null'
             self._header = 'null'
