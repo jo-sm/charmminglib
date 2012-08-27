@@ -491,7 +491,7 @@ class BaseStruct(list):
         :class:`BaseStruct` object.
 
         **kwargs:**
-            | ``outformat``     ["charmm","pdborg","debug","xdebug","crd","xcrd"]
+            | ``outformat``     ["charmm","pdborg","debug","xdebug","crd","xcrd","mol2"]
             | ``old_chainid``   [False,True]
             | ``old_segType``   [False,True]
             | ``old_resid``     [False,True]
@@ -519,7 +519,28 @@ class BaseStruct(list):
                     ter = True
                 if end is None:
                     end = True
-        elif outFormat in ['debug', 'xdebug','mol2']:
+        elif outFormat == 'mol2':
+            header = kwargs.get('header', None)
+            bonds  = kwargs.get('bonds', None)
+
+            writeMe.append('@<TRIPOS>MOLECULE')
+            if header:
+                for line in header:
+                    writeMe.append(line)
+            writeMe.append('')
+
+            writeMe.append('@<TRIPOS>ATOM')
+            for atom in self:    
+                writeMe.append(atom.Print(**kwargs))
+            writeMe.append('')
+
+            writeMe.append('@<TRIPOS>BOND')
+            if bonds:
+                for bond in bonds:
+                    writeMe.append(bond.writeOut())
+            writeMe.append('')
+
+        elif outFormat in ['debug', 'xdebug']:
             for atom in self:
                 writeMe.append(atom.Print(**kwargs))
         elif outFormat in ['crd', 'cor', 'card', 'short', 'shortcard',

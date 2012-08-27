@@ -154,12 +154,17 @@ class Atom(BaseAtom):
             self.weight = self._text[120:140]
             self.bFactor = 1.
         elif inFormat == 'mol2':
-            self.atomNum = self._text[0:6]
-            self.resIndex = self._text[51:55]
+            # FixMe: most MOL2 files break nicely into columns, and because the
+            # atom number field is right justified, we read this column-wise rather
+            # than position-wise. It would be better not to call cleanStrings and
+            # do this by column.
+            textarr = self._text.split()
+            self.atomNum = textarr[0]
+            self.resIndex = textarr[6]
             self.resid = self.resIndex
-            self.resName = self._text[58:61]
-            self.atomType = self._text[8:12]
-            self.cart = (self._text[17:25],self._text[27:35],self._text[37:45])
+            self.resName = textarr[7]
+            self.atomType = textarr[1]
+            self.cart = (textarr[2],textarr[3],textarr[4])
             self.chainid = 'a'
             self.weight = 1.0
             self.bFactor = 1.
@@ -372,7 +377,7 @@ class Atom(BaseAtom):
                 (atomNum, self.resIndex, self.resName, tmpAtomType,
                 x, y, z, chainid + segType, resid, self.weight)
         elif outFormat == 'mol2':
-            taco = '%-6i %8s %9.4f %9.4f %9.4f %7s %2i %4s' % \
+            taco = '%6i %-8s %9.4f %9.4f %9.4f %-7s %2i %4s' % \
                 (atomNum, tmpAtomType, x, y, z, tmpAtomType, resid, self.resName)
         else:
             raise AtomError('Print: unknown inFormat %s' % inFormat)
