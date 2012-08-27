@@ -8,6 +8,11 @@
     Temperature = "KELVIN"
 """
 
+# stuff needed for DD code -- Frank don't remove!
+JOULE2CAL   = 0.239005736   # Calorie * Joule**-1
+CAL2JOULE   = JOULE2CAL**-1
+
+
 # base units
 RADIAN = 1.
 ANGSTROM = 1.
