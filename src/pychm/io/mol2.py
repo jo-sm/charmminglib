@@ -70,7 +70,7 @@ class MOL2File(object):
             seq, atmi, atmj, order = bondline.split()
             tmp_bond = MOL2Bond(self._mymol[int(atmi)-1], self._mymol[int(atmj)-1])
             tmp_bond.seq = seq
-            tmp_bond.order = int(order)
+            tmp_bond.order = order
             self._bonds.append(tmp_bond)
 
     def _buildmodel(self):

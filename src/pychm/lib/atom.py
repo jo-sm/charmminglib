@@ -164,6 +164,7 @@ class Atom(BaseAtom):
             self.resid = self.resIndex
             self.resName = textarr[7]
             self.atomType = textarr[1]
+            self.elementType = textarr[5]
             self.cart = (textarr[2],textarr[3],textarr[4])
             self.chainid = 'a'
             self.weight = 1.0
@@ -378,7 +379,7 @@ class Atom(BaseAtom):
                 x, y, z, chainid + segType, resid, self.weight)
         elif outFormat == 'mol2':
             taco = '%6i %-8s %9.4f %9.4f %9.4f %-7s %2i %4s' % \
-                (atomNum, tmpAtomType, x, y, z, tmpAtomType, resid, self.resName)
+                (atomNum, tmpAtomType, x, y, z, self.elementType, resid, self.resName)
         else:
             raise AtomError('Print: unknown inFormat %s' % inFormat)
         return taco.upper()
