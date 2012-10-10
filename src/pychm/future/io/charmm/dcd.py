@@ -14,6 +14,7 @@ __author__ = ("Frank C. Pickard <frank.pickard@nih.gov>")
 __all__ = ["open_dcd"]
 
 from array import array
+from collections import deque
 import os
 import struct
 import warnings
@@ -114,6 +115,7 @@ class DCDFile(CharmmBin):
         self.inconsistent = None
         self.validated = None
         self.charmm_ver = None
+        self.title_lines = None
         self.title = None
         self.natoms = None
         self.header_size = None
@@ -151,7 +153,17 @@ class DCDFile(CharmmBin):
         self.validated = c_array[18] == 1
         self.charmm_ver = c_array[19]
         # read rec1
-        self.title = ''.join(list(array('c', rec1)))
+        self.title_lines = struct.unpack('i', rec1[:4])[0]
+        self.title = []
+        title_deque = deque(array('c', rec1[4:]))
+        for n_line in range(self.title_lines):
+            tmp = []
+            try:
+                for i in range(80):
+                    tmp.append(title_deque.popleft())
+            except IndexError:
+                pass
+            self.title.append(''.join(tmp))
         # read rec2
         if len(rec2) == self.C_ARRAY_BLEN:
             self.natoms = struct.unpack(self.C_ARRAY_PREC, rec2)[0]
@@ -202,8 +214,12 @@ class DCDFile(CharmmBin):
         rec0_formatting = '4c 20%s' % self.C_ARRAY_PREC
         rec0 = struct.pack(rec0_formatting, *rec0)
         # build rec1
-        rec1 = list(self.title)
-        rec1_formatting = '%dc' % len(self.title)
+        rec1 = []
+        rec1.append(struct.pack('i', self.title_lines))
+        for n_line in range(self.title_lines):
+            rec1.append("%-80s" % self.title[n_line][:80])
+        rec1 = ''.join(rec1)
+        rec1_formatting = '%dc' % len(rec1)
         rec1 = struct.pack(rec1_formatting, *rec1)
         # build rec2
         rec2 = int(self.natoms)
@@ -246,6 +262,7 @@ class DCDFile(CharmmBin):
             'inconsistent': self.inconsistent,
             'validated': self.validated,
             'charmm_ver': self.charmm_ver,
+            'title_lines': self.title_lines,
             'title': self.title,
             'natoms': self.natoms,
             'header_size': self.header_size
