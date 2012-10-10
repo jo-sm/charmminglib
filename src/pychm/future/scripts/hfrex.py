@@ -131,7 +131,7 @@ def get_nsavc(*fnames):
 ###############################################################################
 # work time ###################################################################
 ###############################################################################
-def rex_map(log_fname, out_dir, log_ftype='auto', dcd_fnames=[]):
+def rex_map(log_fname, out_dir, dcd_fnames, log_ftype='auto'):
     # validate inputs
     if not isinstance(log_fname, basestring):
         raise TypeError("invalid log_fname")
@@ -198,4 +198,4 @@ if __name__ == '__main__':
             "/u/tim/projects/hfreq_rex/test1/rex_standard_repeat.dcd_2",
             "/u/tim/projects/hfreq_rex/test1/rex_standard_repeat.dcd_3"]
     out_dcd_dir = "/u/fpickard/hrex_testing/tim_test/"
-    rex_map(inp_fname, out_dcd_dir, *inp_dcd_fname)
+    rex_map(inp_fname, out_dcd_dir, inp_dcd_fname)
