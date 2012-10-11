@@ -409,7 +409,7 @@ class DCDFile(CharmmBin):
         """
         tmp = []
         if self.has_xtl:
-            tmp.append(('xtl', '%s%s%s%d' % (self.ENDIAN, self.XTL_PREC, self.XTL_BLEN, 6)))
+            tmp.append(('xtl', '%s%s%d' % (self.ENDIAN, self.XTL_PREC, self.XTL_BLEN), 6))
         tmp.append(('x', '%s%s%d' % (self.ENDIAN, self.XYZ_PREC, self.XYZ_BLEN),
                     self.natoms))
         tmp.append(('y', '%s%s%d' % (self.ENDIAN, self.XYZ_PREC, self.XYZ_BLEN),
@@ -457,6 +457,7 @@ class DCDFile(CharmmBin):
             warnings.warn("Did not read enough data, wanted %r bytes, received %r bytes." % (self.frame_size, len(tmp)))
             warnings.warn("Dumping fractional frame to leftovers.")
             self._leftovers.append(tmp)
+            return b''
 
     def seek_frame(self, offset, whence=0):
         """Seek the dcd file using a byframe `offset` instead of a
