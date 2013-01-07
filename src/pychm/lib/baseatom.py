@@ -83,8 +83,7 @@ class BaseAtom(MetaAtom):
     """
 
 
-    _
-sortSegType = None
+    _sortSegType = None
     """
     This is a dictionary which defines the recognized ``segTypes`` (keys)
     for the ``_sort`` scoring method, and their weighting (values).
