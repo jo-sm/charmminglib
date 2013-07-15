@@ -146,6 +146,10 @@ class Res(BaseStruct):
                 return atom.segType
         return locals()
 
+    @property
+    def resid0():
+        return self.iter_atom().next().resid0
+
 ###################
 # private methods #
 ###################
