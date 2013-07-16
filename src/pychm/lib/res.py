@@ -147,7 +147,7 @@ class Res(BaseStruct):
         return locals()
 
     @property
-    def resid0():
+    def resid0(self):
         return self.iter_atom().next().resid0
 
 ###################
