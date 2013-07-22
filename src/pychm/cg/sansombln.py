@@ -356,6 +356,9 @@ class SansomBLN(KTGoSolv):
         String = []
         String.extend(self._prm_header())
         String.append('')
+        String.append('Atom\n')
+        String.extend(self._rtf_masses())
+        String.append('')
         String.extend(self._prm_bond())
         String.append('')
         String.extend(self._prm_angle())

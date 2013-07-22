@@ -471,6 +471,9 @@ class KTGo(Mol):
         String = []
         String.extend(self._prm_header())
         String.append('')
+        String.append('ATOM\n')
+        String.extend(self._rtf_mass())
+        String.append('')
         String.extend(self._prm_bond())
         String.append('')
         String.extend(self._prm_angle())
