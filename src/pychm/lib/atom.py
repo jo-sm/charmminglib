@@ -427,14 +427,14 @@ class Atom(BaseAtom):
            self.atomType = ' oh2'
         elif (self.resName == 'ile' and self.atomType == ' cd1'):
            self.atomType = ' cd '
-        elif (self.atomType == 'na  ' and self.resName == 'na'):
+        elif (self.atomType == 'na  ' and (self.resName == 'na' or self.resName == 'sod')):
            self.atomType = 'sod '
-        elif (self.atomType == 'cs  ' and self.resName == 'cs'):
+        elif (self.atomType == 'cs  ' and (self.resName == 'cs' or self.resName == 'ces')):
            self.atomType = 'ces '
-        elif (self.atomType == 'cl  ' and self.resName == 'cl'):
+        elif (self.atomType == 'cl  ' and (self.resName == 'cl' or self.resName == 'cla')):
            self.atomType = 'cla '
-        elif (self.atomType == 'ca  ' and self.resName == 'ca'):
+        elif (self.atomType == 'ca  ' and (self.resName == 'ca' or self.resName == 'cal')):
            self.atomType = 'cal '
-        elif (self.atomType == ' k  ' and self.resName == 'k'):
+        elif (self.atomType == ' k  ' and (self.resName == 'k' or self.resName == 'pot')):
            self.atomType = 'pot '
 
