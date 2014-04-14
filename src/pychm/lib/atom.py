@@ -105,15 +105,18 @@ class Atom(BaseAtom):
             | ``"longcard"``
             | ``"amber"``   **TODO**
         """
+
+	# Changed to reflect current PDB spec
+	# http://www.wwpdb.org/documentation/format33/sect9.html#ATOM
         if inFormat == 'pdborg':
             self.atomNum = self._text[6:11]
-            self.resName = self._text[16:20]
+            self.resName = self._text[17:20]
             self.atomType = self._text[12:16]
             self.chainid = self._text[21]
             self.resid = self._text[22:26]
-            self.cart = (self._text[30:38], self._text[38:46], self._text[46:54])
-            self.weight = self._text[55:60]
-            self.bFactor = self._text[61:66]
+            self.cart = (self._text[30:38], self._text[38:46], self._text[46:53])
+            self.weight = self._text[54:60]
+            self.bFactor = self._text[60:66]
             self.resIndex = self.resid
         elif inFormat == 'charmm':
             self.atomNum = self._text[6:11]
