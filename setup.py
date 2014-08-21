@@ -35,7 +35,7 @@ setup(
         'pychm.lib',
         'pychm.scripts'
         ],
-    package_dir = {'pychm': 'src/pychm'},
+    package_dir = {'pychm': 'pychm'},
     package_data = {'pychm': ['data/*']},
     requires = ['numpy'],
     license = 'Public Domain',
